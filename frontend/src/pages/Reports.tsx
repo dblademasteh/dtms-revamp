@@ -192,9 +192,9 @@ export default function Reports() {
             <div className="space-y-6">
               {turnaround?.summary && (
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 bg-primary-50 rounded-lg">
-                    <p className="text-sm text-primary-600 font-medium">Avg. Turnaround</p>
-                    <p className="text-2xl font-bold text-primary-700">
+                  <div className="p-4 bg-primary-50 dark:bg-primary-900/30 rounded-lg">
+                    <p className="text-sm text-primary-600 dark:text-primary-400 font-medium">Avg. Turnaround</p>
+                    <p className="text-2xl font-bold text-primary-700 dark:text-primary-300">
                       {Math.round(turnaround.summary.average_turnaround_hours || 0)}h
                     </p>
                   </div>
@@ -286,9 +286,9 @@ export default function Reports() {
               ) : volumeData.length > 0 ? (
                 <>
                   <div className="grid grid-cols-3 gap-4">
-                    <div className="p-4 bg-primary-50 rounded-lg text-center">
-                      <p className="text-sm text-primary-600 font-medium">Total</p>
-                      <p className="text-2xl font-bold text-primary-700">
+                    <div className="p-4 bg-primary-50 dark:bg-primary-900/30 rounded-lg text-center">
+                      <p className="text-sm text-primary-600 dark:text-primary-400 font-medium">Total</p>
+                      <p className="text-2xl font-bold text-primary-700 dark:text-primary-300">
                         {volumeData.reduce((s: number, d: any) => s + d.total, 0)}
                       </p>
                     </div>

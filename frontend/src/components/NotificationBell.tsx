@@ -180,7 +180,7 @@ export default function NotificationBell() {
             const text = getNotificationText(latest)
             new Notification(text.title, {
               body: text.message,
-              icon: '/dtms-logo.png',
+              icon: '/logo.png',
             })
           }
         })

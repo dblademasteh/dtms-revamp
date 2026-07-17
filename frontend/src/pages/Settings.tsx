@@ -222,8 +222,8 @@ export default function Settings() {
       onClick={() => setActiveTab(id)}
       className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
         activeTab === id
-          ? 'border-primary-500 text-primary-700'
-          : 'border-transparent text-slate-500 hover:text-slate-700'
+          ? 'border-primary-500 dark:border-primary-400 text-primary-700 dark:text-primary-300'
+          : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
       }`}
     >
       <Icon className="w-4 h-4" />
@@ -264,7 +264,7 @@ export default function Settings() {
                 {/* Avatar + upload */}
                 <div className="flex flex-col items-center gap-3 sm:border-r sm:border-slate-200 sm:pr-6 sm:flex-shrink-0">
                   <div className="relative">
-                    <div className="w-24 h-24 rounded-full overflow-hidden bg-primary-100 ring-2 ring-primary-200 flex items-center justify-center">
+                    <div className="w-24 h-24 rounded-full overflow-hidden bg-primary-100 dark:bg-primary-900/40 ring-2 ring-primary-200 dark:ring-primary-700 flex items-center justify-center">
                       {avatarPreview || user?.avatar ? (
                         <img
                           src={avatarPreview || user?.avatar || ''}
@@ -272,7 +272,7 @@ export default function Settings() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <span className="text-primary-700 text-2xl font-bold">
+                        <span className="text-primary-700 dark:text-primary-300 text-2xl font-bold">
                           {(user?.name?.charAt(0) || 'U').toUpperCase()}
                         </span>
                       )}

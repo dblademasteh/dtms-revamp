@@ -547,7 +547,7 @@ export default function DocumentDetail() {
       </tr>`
     }).join('')
 
-    const logoUrl = window.location.origin + '/dtms-logo.png'
+    const logoUrl = window.location.origin + '/logo.png'
 
     w.document.write(`<!DOCTYPE html>
 <html>
@@ -973,7 +973,7 @@ export default function DocumentDetail() {
                                    <ArrowRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
                                  )}
                                  {history.toOffice && (
-                                   <div className="flex-1 min-w-0 truncate font-medium text-primary-700">
+                                   <div className="flex-1 min-w-0 truncate font-medium text-primary-700 dark:text-primary-300">
                                      {history.toOffice.name}
                                    </div>
                                  )}
@@ -1461,7 +1461,7 @@ export default function DocumentDetail() {
                             <p className="text-sm font-medium text-slate-900 truncate">
                               {attachment.file_name}
                             </p>
-                            <span className="flex-shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide bg-primary-100 text-primary-700 border border-primary-200">
+                            <span className="flex-shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-700/60">
                               v{attachment.version}
                             </span>
                           </div>
@@ -1553,8 +1553,8 @@ export default function DocumentDetail() {
                 ) : (
                   document.comments?.map((comment: any) => (
                     <div key={comment.id} className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
-                        <span className="text-primary-700 text-xs font-semibold">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center">
+                        <span className="text-primary-700 dark:text-primary-300 text-xs font-semibold">
                           {comment.user?.name?.charAt(0) || '?'}
                         </span>
                       </div>
@@ -1707,7 +1707,7 @@ export default function DocumentDetail() {
               <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
                 <div className="flex items-center gap-2 min-w-0">
                   <h3 className="text-lg font-semibold text-slate-900 truncate">{previewAttachment.file_name}</h3>
-                  <span className="flex-shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide bg-primary-100 text-primary-700 border border-primary-200">
+                  <span className="flex-shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-700/60">
                     v{previewAttachment.version}
                   </span>
                 </div>

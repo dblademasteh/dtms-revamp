@@ -224,8 +224,8 @@ export default function Users() {
                   <tr key={u.id}>
                     <td>
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
-                          <span className="text-primary-700 text-sm font-semibold">
+                        <div className="w-9 h-9 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center flex-shrink-0">
+                          <span className="text-primary-700 dark:text-primary-300 text-sm font-semibold">
                             {u.name?.charAt(0) || '?'}
                           </span>
                         </div>

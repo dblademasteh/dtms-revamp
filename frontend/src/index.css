@@ -464,3 +464,32 @@ html.font-jetbrains-mono, html.font-jetbrains-mono body, html.font-jetbrains-mon
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
 }
 
+/* ------------------------------------------------------------------ */
+/* Dark mode: remap primary-600 / primary-700 text (very dark navy)  */
+/* to a readable light-blue so any remaining un-patched elements work */
+/* without needing per-element dark: classes.                         */
+/* ------------------------------------------------------------------ */
+.dark :is(.text-primary-600, .text-primary-700) {
+  color: rgb(141 162 201) !important; /* primary-300 */
+}
+.dark :is(.hover\:text-primary-600:hover, .hover\:text-primary-700:hover,
+           .hover\:text-primary-800:hover) {
+  color: rgb(103 131 183) !important; /* primary-400 */
+}
+
+/* Dark mode: remap bg-primary-100 (light blue tint) to deep primary tint */
+.dark :is(.bg-primary-100) {
+  background-color: rgb(28 42 70 / 0.5) !important; /* ~primary-900/50 */
+}
+
+/* Fix browser autofill in dark mode */
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover, 
+.dark input:-webkit-autofill:focus, 
+.dark input:-webkit-autofill:active{
+    -webkit-box-shadow: 0 0 0 30px rgb(30 41 59) inset !important;
+    -webkit-text-fill-color: white !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+

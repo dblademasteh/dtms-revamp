@@ -141,7 +141,7 @@ export default function RoutingTemplates() {
                 <div className="space-y-3">
                   {steps.map((step, i) => (
                     <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-100 text-primary-700 text-xs font-bold flex items-center justify-center">{i + 1}</span>
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 text-xs font-bold flex items-center justify-center">{i + 1}</span>
                       <select className="input flex-1" value={step.office_id} onChange={e => updateStep(i, 'office_id', Number(e.target.value))} required>
                         <option value="">Office...</option>
                         {offices?.map((o: any) => <option key={o.id} value={o.id}>{o.name}</option>)}

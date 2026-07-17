@@ -123,8 +123,8 @@ export default function Login() {
         <div className="w-full max-w-[380px]">
           {/* Brand + Form header */}
           <div className="mb-8 flex flex-col items-center text-center">
-            <div className="mb-6">
-              <img src="/dtms-logo.png" alt="DTMS logo" className="w-36 h-36 object-contain" />
+            <div className="mb-6 bg-white p-4 rounded-2xl shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10 inline-flex">
+              <img src="/logo.png" alt="DTMS logo" className="w-28 h-28 object-contain" />
             </div>
             <h2 className="text-[28px] font-bold text-slate-900 tracking-tight">Welcome back</h2>
             <p className="mt-2 text-sm text-slate-500">
@@ -187,7 +187,7 @@ export default function Login() {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-0.5"
                   >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 h-4" />}
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
                 {errors.password && (

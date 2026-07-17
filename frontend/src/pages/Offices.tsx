@@ -17,7 +17,7 @@ const OFFICE_TYPES = [
 ]
 
 const OFFICE_TYPE_BADGE: Record<string, string> = {
-  regional_office: 'bg-primary-50 text-primary-700 border border-primary-200',
+  regional_office: 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 border border-primary-200 dark:border-primary-700/60',
   provincial_office: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
   fire_station: 'bg-red-50 text-red-700 border border-red-200',
   division: 'bg-slate-100 text-slate-600 border border-slate-200',
@@ -195,10 +195,10 @@ export default function Offices() {
               const badge = getRankBadge(office.head.rank)
               return (
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  <div className="w-5 h-5 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center flex-shrink-0">
+                  <div className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 flex items-center justify-center flex-shrink-0">
                     <UserCheck className="w-3 h-3" />
                   </div>
-                  <span className="text-xs font-medium text-primary-700">
+                  <span className="text-xs font-medium text-primary-700 dark:text-primary-300">
                     {[office.head.rank, office.head.name].filter(Boolean).join(' ')}
                   </span>
                   {badge && (

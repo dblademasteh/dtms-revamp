@@ -184,8 +184,8 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
         <Link to="/reports" className="card p-5 hover:shadow-md transition-shadow cursor-pointer">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary-50 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-primary-600" />
+            <div className="w-10 h-10 rounded-lg bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 text-primary-600 dark:text-primary-400" />
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-900">Reports</p>
@@ -196,8 +196,8 @@ export default function Dashboard() {
         </Link>
         <Link to="/documents/new" className="card p-5 hover:shadow-md transition-shadow cursor-pointer">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
-              <FileText className="w-5 h-5 text-green-600" />
+            <div className="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/30 flex items-center justify-center">
+              <FileText className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-900">New Document</p>
@@ -208,8 +208,8 @@ export default function Dashboard() {
         </Link>
         <Link to="/track" className="card p-5 hover:shadow-md transition-shadow cursor-pointer">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
-              <BarChart3 className="w-5 h-5 text-amber-600" />
+            <div className="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
+              <BarChart3 className="w-5 h-5 text-amber-600 dark:text-amber-400" />
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-900">Track Document</p>
@@ -223,37 +223,37 @@ export default function Dashboard() {
       {/* Announcements Bulletin */}
       {(announcements as any[])?.length > 0 && (
         <div className="card overflow-hidden">
-          <div className="card-header flex items-center justify-between bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-b-0 rounded-t-xl py-4">
+          <div className="card-header flex items-center justify-between bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-900/40 dark:to-slate-800/40 text-white dark:text-blue-50 border-b-0 dark:border-b dark:border-slate-700/50 rounded-t-xl py-4">
             <div className="flex items-center gap-2">
-              <Megaphone className="w-5 h-5" />
+              <Megaphone className="w-5 h-5 dark:text-blue-400" />
               <h2 className="text-base font-bold tracking-wide">Announcements</h2>
-              <span className="text-xs bg-white/20 text-white px-2 py-0.5 rounded-full font-semibold">
+              <span className="text-xs bg-white/20 dark:bg-blue-500/20 text-white dark:text-blue-200 px-2 py-0.5 rounded-full font-semibold">
                 {(announcements as any[]).length} posted
               </span>
             </div>
-            <Link to="/documents?is_public=1" className="text-xs text-white/80 hover:text-white flex items-center gap-1 font-medium">
+            <Link to="/documents?is_public=1" className="text-xs text-white/80 dark:text-blue-300/80 hover:text-white dark:hover:text-blue-300 flex items-center gap-1 font-medium">
               View all <ChevronRight className="w-3.5 h-3.5" />
             </Link>
           </div>
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-slate-100 dark:divide-slate-700/50">
             {(announcements as any[]).map((doc: any) => (
               <Link
                 key={doc.id}
                 to={`/documents/${doc.id}`}
-                className="flex items-start gap-4 px-5 py-4 hover:bg-blue-50/40 transition-colors group"
+                className="flex items-start gap-4 px-5 py-4 hover:bg-blue-50/40 dark:hover:bg-slate-800/50 transition-colors group"
               >
-                <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center mt-0.5">
-                  <Megaphone className="w-4 h-4 text-blue-600" />
+                <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center mt-0.5">
+                  <Megaphone className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-800 group-hover:text-blue-700 truncate">{doc.subject}</p>
+                  <p className="text-sm font-semibold text-slate-800 group-hover:text-blue-700 dark:group-hover:text-blue-400 truncate">{doc.subject}</p>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-xs text-slate-400">{doc.tracking_number}</span>
-                    <span className="text-slate-300">·</span>
+                    <span className="text-slate-300 dark:text-slate-600">·</span>
                     <span className="text-xs text-slate-400">
                       {doc.released_at ? new Date(doc.released_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}
                     </span>
-                    <span className="text-slate-300">·</span>
+                    <span className="text-slate-300 dark:text-slate-600">·</span>
                     <span className="text-xs text-slate-500">{doc.current_office?.name || ''}</span>
                   </div>
                 </div>
@@ -268,7 +268,7 @@ export default function Dashboard() {
       <div className="card">
         <div className="card-header flex items-center justify-between">
           <h2 className="text-base font-semibold text-slate-900">Recent Documents</h2>
-          <Link to="/documents" className="text-sm font-medium text-primary-600 hover:text-primary-700 flex items-center gap-1">
+          <Link to="/documents" className="text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 flex items-center gap-1">
             View all <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
@@ -286,7 +286,7 @@ export default function Dashboard() {
               {recentDocs.map((doc: any) => (
                 <tr key={doc.id}>
                   <td>
-                    <Link to={`/documents/${doc.id}`} className="font-medium text-primary-600 hover:text-primary-700">
+                    <Link to={`/documents/${doc.id}`} className="font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">
                       {doc.tracking_number}
                     </Link>
                   </td>

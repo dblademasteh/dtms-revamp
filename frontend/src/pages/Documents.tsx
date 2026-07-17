@@ -194,9 +194,9 @@ export default function Documents() {
 
       {/* Bulk Actions Bar */}
       {selected.size > 0 && (
-        <div className="card border-primary-200 bg-primary-50">
+        <div className="card border-primary-200 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/30">
           <div className="card-body py-3 flex items-center justify-between">
-            <span className="text-sm font-medium text-primary-700">
+            <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
               {selected.size} document(s) selected
             </span>
             <div className="flex items-center gap-2">
@@ -274,7 +274,7 @@ export default function Documents() {
                   <tr
                     key={doc.id}
                     onClick={() => navigate(`/documents/${doc.id}`)}
-                    className={`cursor-pointer transition-colors ${selected.has(doc.id) ? 'bg-primary-50/50 hover:bg-primary-50' : 'hover:bg-slate-50/80'}`}
+                    className={`cursor-pointer transition-colors ${selected.has(doc.id) ? 'bg-primary-50/50 dark:bg-primary-900/20 hover:bg-primary-50 dark:hover:bg-primary-900/30' : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/50'}`}
                   >
                     <td className="py-4 pl-6 pr-3" onClick={(e) => e.stopPropagation()}>
                       {isActionable(doc) ? (
@@ -294,7 +294,7 @@ export default function Documents() {
                           {doc.subject}
                         </span>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-[11px] font-bold tracking-wide text-primary-700 bg-primary-100 px-2 py-0.5 rounded border border-primary-200 shadow-sm">
+                          <span className="font-mono text-[11px] font-bold tracking-wide text-primary-700 dark:text-primary-300 bg-primary-100 dark:bg-primary-900/40 px-2 py-0.5 rounded border border-primary-200 dark:border-primary-700/60 shadow-sm">
                             {doc.tracking_number}
                           </span>
                         </div>
@@ -305,7 +305,7 @@ export default function Documents() {
                     </td>
                     <td className="py-4 px-4 whitespace-nowrap">
                       <div className="flex flex-col gap-1.5 items-start">
-                        <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded shadow-sm border border-slate-200 uppercase tracking-wide">
+                        <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded shadow-sm border border-slate-200 dark:border-slate-600 uppercase tracking-wide">
                           {documentTypeLabel(doc.document_type)}
                         </span>
                         <span className={`badge text-[10px] shadow-sm ${priorityBadgeClass(doc.priority)}`}>{doc.priority}</span>

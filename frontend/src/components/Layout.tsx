@@ -48,8 +48,15 @@ export default function Layout() {
     <div className="flex flex-col h-full bg-navy-900">
       {/* Brand */}
       <div className="flex items-center gap-3 px-5 h-16 border-b border-white/10">
-        <div className="flex items-center justify-center w-9 h-9 bg-primary-500 rounded-lg">
-          <Shield className="w-5 h-5 text-white" />
+        <div className="relative flex items-center justify-center w-9 h-9 rounded-lg bg-white/10 overflow-hidden flex-shrink-0">
+          <img
+            src="/logo.png"
+            alt="DTMS logo"
+            className="w-7 h-7 object-contain"
+            draggable={false}
+            onError={(e) => (e.currentTarget.style.display = 'none')}
+          />
+          <Shield className="absolute w-5 h-5 text-white" />
         </div>
         <div>
           <div className="text-white font-bold text-base leading-tight tracking-tight">DTMS</div>
@@ -184,11 +191,11 @@ export default function Layout() {
             {/* Profile: account number + role, with logout */}
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-primary-100 ring-1 ring-primary-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/40 ring-1 ring-primary-200 dark:ring-primary-700 flex items-center justify-center overflow-hidden flex-shrink-0">
                   {user?.avatar ? (
                     <img src={user.avatar} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-primary-700 text-sm font-semibold">
+                    <span className="text-primary-700 dark:text-primary-300 text-sm font-semibold">
                       {user?.name?.charAt(0) || 'U'}
                     </span>
                   )}
