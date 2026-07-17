@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Environment
+backend/.env
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+dist/
+build/
+
+# PHP / Laravel
+vendor/
+backend/storage/*.key
+backend/storage/logs/
+backend/storage/framework/cache/
+backend/storage/framework/sessions/
+backend/storage/framework/views/
+backend/storage/app/public/avatars/
+backend/storage/app/backups/
+backend/bootstrap/cache/*.php
+*.log
+.phpunit.result.cache
+
+
+# Local DB / OS temp
+db_items.txt
+
