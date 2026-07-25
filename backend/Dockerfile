@@ -37,9 +37,6 @@ RUN apk add --no-cache \
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) gd pdo pdo_pgsql mbstring zip pcntl bcmath
 
-RUN pecl install --nosig redis || true \
-    && docker-php-ext-enable redis 2>/dev/null || true
-
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
