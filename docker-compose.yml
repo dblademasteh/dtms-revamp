@@ -3,69 +3,138 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+    platform: linux/arm64
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     environment:
-      - APP_ENV=production
-      - APP_DEBUG=false
+      - APP_NAME=${APP_NAME:-DTS - Document Tracking System}
+      - APP_ENV=${APP_ENV:-production}
+      - APP_KEY=${APP_KEY}
+      - APP_DEBUG=${APP_DEBUG:-false}
+      - APP_TIMEZONE=${APP_TIMEZONE:-Asia/Manila}
+      - APP_URL=${APP_URL:-http://localhost:8000}
+      - DB_CONNECTION=pgsql
       - DB_HOST=postgres
-      - DB_DATABASE=dts_database
-      - DB_USERNAME=dts_user
-      - DB_PASSWORD=dts_password
+      - DB_PORT=5432
+      - DB_DATABASE=${DB_DATABASE:-dts_database}
+      - DB_USERNAME=${DB_USERNAME:-dts_user}
+      - DB_PASSWORD=${DB_PASSWORD:-dts_password}
+      - SESSION_DRIVER=redis
+      - SESSION_LIFETIME=${SESSION_LIFETIME:-120}
+      - SESSION_DOMAIN=${SESSION_DOMAIN}
+      - SANCTUM_STATEFUL_DOMAINS=${SANCTUM_STATEFUL_DOMAINS}
+      - CACHE_DRIVER=redis
+      - QUEUE_CONNECTION=redis
       - REDIS_HOST=redis
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-null}
+      - REDIS_PORT=6379
       - MEILISEARCH_HOST=http://meilisearch:7700
-      - APP_URL=http://localhost:8000
+      - MEILISEARCH_KEY=${MEILISEARCH_KEY:-dts_master_key_2024}
+      - SCOUT_DRIVER=${SCOUT_DRIVER:-meilisearch}
+      - MAIL_MAILER=${MAIL_MAILER:-log}
+      - MAIL_HOST=${MAIL_HOST}
+      - MAIL_PORT=${MAIL_PORT:-587}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_ENCRYPTION=${MAIL_ENCRYPTION:-tls}
+      - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS:-noreply@dts.gov.ph}
+      - SEMAPHORE_API_KEY=${SEMAPHORE_API_KEY}
+      - SEMAPHORE_SENDER_NAME=${SEMAPHORE_SENDER_NAME:-DTS}
+      - QRCODE_SIZE=${QRCODE_SIZE:-300}
+      - LOG_LEVEL=${LOG_LEVEL:-warning}
+      - BCRYPT_ROUNDS=${BCRYPT_ROUNDS:-12}
     depends_on:
-      - postgres
-      - redis
-      - meilisearch
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
     networks:
       - dts-network
+    restart: unless-stopped
+    volumes:
+      - backend-storage:/var/www/html/storage/app/public
 
   frontend:
     build:
       context: .
       dockerfile: frontend/Dockerfile
       args:
-        VITE_API_URL: https://api-dtms.devbry.online
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+        VITE_APP_NAME: ${VITE_APP_NAME:-DTS}
+    platform: linux/arm64
     ports:
-      - "3000:80"
+      - "${FRONTEND_PORT:-3000}:80"
     depends_on:
       - backend
     networks:
       - dts-network
+    restart: unless-stopped
 
   postgres:
     image: postgres:16-alpine
+    platform: linux/arm64
     environment:
-      POSTGRES_DB: dts_database
-      POSTGRES_USER: dts_user
-      POSTGRES_PASSWORD: dts_password
+      POSTGRES_DB: ${DB_DATABASE:-dts_database}
+      POSTGRES_USER: ${DB_USERNAME:-dts_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dts_password}
     volumes:
       - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     networks:
       - dts-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-dts_user} -d ${DB_DATABASE:-dts_database}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    platform: linux/arm64
+    command: >
+      redis-server
+      --appendonly yes
+      --requirepass ${REDIS_PASSWORD:-}
+    volumes:
+      - redisdata:/data
     networks:
       - dts-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   meilisearch:
     image: getmeili/meilisearch:v1.10
+    platform: linux/arm64
     environment:
-      MEILI_MASTER_KEY: dts_master_key_2024
-    ports:
-      - "7700:7700"
+      MEILI_MASTER_KEY: ${MEILISEARCH_KEY:-dts_master_key_2024}
+      MEILI_ENV: production
+      MEILI_NO_ANALYTICS: true
+    volumes:
+      - meilidata:/meili_data
     networks:
       - dts-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:7700/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 volumes:
   pgdata:
+  redisdata:
+  meilidata:
+  backend-storage:
 
 networks:
   dts-network:
+    driver: bridge
