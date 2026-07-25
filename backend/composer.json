@@ -5,7 +5,7 @@
     "keywords": ["laravel", "document-tracking", "government"],
     "license": "proprietary",
     "require": {
-        "php": "^8.5",
+        "php": "^8.2",
         "barryvdh/laravel-dompdf": "^2.0",
         "http-interop/http-factory-guzzle": "^1.2",
         "intervention/image": "^3.0",
@@ -89,7 +89,17 @@
                     "PKSA-w7xr-vk7n-rstm",
                     "PKSA-p3rx-dfwp-73ny",
                     "PKSA-ckwp-rt7t-c46m",
-                    "PKSA-njrm-6dtg-m2pc"
+                    "PKSA-njrm-6dtg-m2pc",
+                    "PKSA-cv56-2228-pzr6",
+                    "PKSA-6r8f-nxsb-67bq",
+                    "PKSA-gh7h-hhy4-byg7",
+                    "PKSA-mwt3-h9tv-kx78",
+                    "PKSA-hp6n-n4kz-21wk",
+                    "PKSA-mckv-s5hg-868k",
+                    "PKSA-7ztm-rpt3-qqzk",
+                    "PKSA-2kw5-jd8w-5mvh",
+                    "PKSA-4jrs-y99s-q8j6",
+                    "PKSA-hbk6-2vfz-8f8n"
                 ]
             }
         }
