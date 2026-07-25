@@ -46,7 +46,7 @@ RUN COMPOSER_MEMORY_LIMIT=-1 composer update --no-dev --optimize-autoloader --no
 
 COPY backend/ .
 
-RUN mkdir -p bootstrap/cache storage \
+RUN mkdir -p bootstrap/cache storage /run/nginx \
     && chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html/storage \
     && chmod -R 755 /var/www/html/bootstrap/cache
