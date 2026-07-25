@@ -46,14 +46,15 @@ RUN COMPOSER_MEMORY_LIMIT=-1 composer update --no-dev --optimize-autoloader --no
 
 COPY backend/ .
 
-RUN php artisan key:generate --force \
-    && php artisan config:cache \
-    && php artisan route:cache \
-    && php artisan view:cache
+RUN mkdir -p bootstrap/cache storage && \
+    chown -R www-data:www-data /var/www/html && \
+    chmod -R 755 /var/www/html/storage && \
+    chmod -R 755 /var/www/html/bootstrap/cache
 
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html/storage \
-    && chmod -R 755 /var/www/html/bootstrap/cache
+RUN php artisan key:generate --force && \
+    php artisan config:cache && \
+    php artisan route:cache && \
+    php artisan view:cache
 
 COPY backend/nginx.conf /etc/nginx/conf.d/default.conf
 COPY backend/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
