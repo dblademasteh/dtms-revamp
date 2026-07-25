@@ -6,44 +6,38 @@ services:
     image: dts-backend:latest
     platform: linux/arm64
     ports:
-      - "${BACKEND_PORT:-8000}:8000"
+      - "8000:8000"
     environment:
-      - APP_NAME=${APP_NAME:-DTS - Document Tracking System}
-      - APP_ENV=${APP_ENV:-production}
-      - APP_KEY=${APP_KEY}
-      - APP_DEBUG=${APP_DEBUG:-false}
-      - APP_TIMEZONE=${APP_TIMEZONE:-Asia/Manila}
-      - APP_URL=${APP_URL:-http://localhost:8000}
+      - APP_NAME=DTS - Document Tracking System
+      - APP_ENV=production
+      - APP_KEY=base64:A1KIAODRUlD5Sm1EBrevDodwnqkVa+C32SBTb0CTc3E=
+      - APP_DEBUG=false
+      - APP_TIMEZONE=Asia/Manila
+      - APP_URL=https://api-dtms.devbry.online
       - DB_CONNECTION=pgsql
       - DB_HOST=postgres
       - DB_PORT=5432
-      - DB_DATABASE=${DB_DATABASE:-dts_database}
-      - DB_USERNAME=${DB_USERNAME:-dts_user}
-      - DB_PASSWORD=${DB_PASSWORD:-dts_password}
+      - DB_DATABASE=dts_database
+      - DB_USERNAME=dts_user
+      - DB_PASSWORD=dts_password_2024
       - SESSION_DRIVER=redis
-      - SESSION_LIFETIME=${SESSION_LIFETIME:-120}
-      - SESSION_DOMAIN=${SESSION_DOMAIN}
-      - SANCTUM_STATEFUL_DOMAINS=${SANCTUM_STATEFUL_DOMAINS}
+      - SESSION_LIFETIME=120
+      - SESSION_DOMAIN=dtms.devbry.online
+      - SANCTUM_STATEFUL_DOMAINS=dtms.devbry.online
       - CACHE_DRIVER=redis
       - QUEUE_CONNECTION=redis
       - REDIS_HOST=redis
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-null}
+      - REDIS_PASSWORD=
       - REDIS_PORT=6379
       - MEILISEARCH_HOST=http://meilisearch:7700
-      - MEILISEARCH_KEY=${MEILISEARCH_KEY:-dts_master_key_2024}
-      - SCOUT_DRIVER=${SCOUT_DRIVER:-meilisearch}
-      - MAIL_MAILER=${MAIL_MAILER:-log}
-      - MAIL_HOST=${MAIL_HOST}
-      - MAIL_PORT=${MAIL_PORT:-587}
-      - MAIL_USERNAME=${MAIL_USERNAME}
-      - MAIL_PASSWORD=${MAIL_PASSWORD}
-      - MAIL_ENCRYPTION=${MAIL_ENCRYPTION:-tls}
-      - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS:-noreply@dts.gov.ph}
-      - SEMAPHORE_API_KEY=${SEMAPHORE_API_KEY}
-      - SEMAPHORE_SENDER_NAME=${SEMAPHORE_SENDER_NAME:-DTS}
-      - QRCODE_SIZE=${QRCODE_SIZE:-300}
-      - LOG_LEVEL=${LOG_LEVEL:-warning}
-      - BCRYPT_ROUNDS=${BCRYPT_ROUNDS:-12}
+      - MEILISEARCH_KEY=dts_meili_key_2024
+      - SCOUT_DRIVER=meilisearch
+      - MAIL_MAILER=log
+      - MAIL_FROM_ADDRESS=noreply@dts.gov.ph
+      - SEMAPHORE_SENDER_NAME=DTS
+      - QRCODE_SIZE=300
+      - LOG_LEVEL=warning
+      - BCRYPT_ROUNDS=12
     depends_on:
       postgres:
         condition: service_healthy
@@ -69,12 +63,12 @@ services:
       context: https://github.com/dblademasteh/dtms-revamp.git#master
       dockerfile: frontend/Dockerfile
       args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
-        VITE_APP_NAME: ${VITE_APP_NAME:-DTS}
+        VITE_API_URL: https://api-dtms.devbry.online
+        VITE_APP_NAME: DTS
     image: dts-frontend:latest
     platform: linux/arm64
     ports:
-      - "${FRONTEND_PORT:-3000}:80"
+      - "3000:80"
     depends_on:
       - backend
     networks:
@@ -92,16 +86,16 @@ services:
     image: postgres:16-alpine
     platform: linux/arm64
     environment:
-      POSTGRES_DB: ${DB_DATABASE:-dts_database}
-      POSTGRES_USER: ${DB_USERNAME:-dts_user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-dts_password}
+      POSTGRES_DB: dts_database
+      POSTGRES_USER: dts_user
+      POSTGRES_PASSWORD: dts_password_2024
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
       - dts-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-dts_user} -d ${DB_DATABASE:-dts_database}"]
+      test: ["CMD-SHELL", "pg_isready -U dts_user -d dts_database"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -110,10 +104,7 @@ services:
   redis:
     image: redis:7-alpine
     platform: linux/arm64
-    command: >
-      redis-server
-      --appendonly yes
-      --requirepass ${REDIS_PASSWORD:-}
+    command: redis-server --appendonly yes
     volumes:
       - redisdata:/data
     networks:
@@ -130,9 +121,9 @@ services:
     image: getmeili/meilisearch:v1.10
     platform: linux/arm64
     environment:
-      MEILI_MASTER_KEY: ${MEILISEARCH_KEY:-dts_master_key_2024}
+      MEILI_MASTER_KEY: dts_meili_key_2024
       MEILI_ENV: production
-      MEILI_NO_ANALYTICS: true
+      MEILI_NO_ANALYTICS: "true"
     volumes:
       - meilidata:/meili_data
     networks:
