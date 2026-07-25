@@ -1,8 +1,5 @@
 services:
   backend:
-    build:
-      context: https://github.com/dblademasteh/dtms-revamp.git#master
-      dockerfile: backend/Dockerfile
     image: dts-backend:latest
     platform: linux/arm64
     ports:
@@ -57,12 +54,6 @@ services:
       - traefik.http.services.dts-backend.loadbalancer.server.port=8000
 
   frontend:
-    build:
-      context: https://github.com/dblademasteh/dtms-revamp.git#master
-      dockerfile: frontend/Dockerfile
-      args:
-        VITE_API_URL: https://api-dtms.devbry.online
-        VITE_APP_NAME: DTS
     image: dts-frontend:latest
     platform: linux/arm64
     ports:
