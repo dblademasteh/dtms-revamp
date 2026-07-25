@@ -1,6 +1,7 @@
 services:
   backend:
     image: dts-backend:latest
+    pull_policy: never
     platform: linux/arm64
     ports:
       - "8000:8000"
@@ -55,6 +56,7 @@ services:
 
   frontend:
     image: dts-frontend:latest
+    pull_policy: never
     platform: linux/arm64
     ports:
       - "3000:80"
