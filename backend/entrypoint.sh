@@ -1,8 +1,14 @@
 #!/bin/sh
 set -e
 
-if ! grep -q "APP_KEY=base64:" .env 2>/dev/null; then
-    cp -n .env.example .env 2>/dev/null || true
+if [ ! -f .env ]; then
+    cp .env.example .env 2>/dev/null || true
+fi
+
+if ! grep -q "^APP_KEY=base64:" .env 2>/dev/null; then
+    if ! grep -q "^APP_KEY=" .env 2>/dev/null; then
+        echo "APP_KEY=" >> .env
+    fi
     php artisan key:generate --force || true
 fi
 

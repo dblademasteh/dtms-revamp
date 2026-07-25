@@ -29,6 +29,7 @@ RUN mkdir -p bootstrap/cache storage /run/nginx \
     && chown -R www-data:www-data /var/www/html storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
+RUN rm -rf /etc/nginx/conf.d/* /etc/nginx/http.d/*
 COPY backend/nginx.conf /etc/nginx/http.d/default.conf
 COPY backend/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY backend/entrypoint.sh /entrypoint.sh
