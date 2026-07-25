@@ -19,7 +19,9 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
-        $user = User::where('accnt_no', $request->accnt_no)->first();
+        $user = User::whereRaw('LOWER(accnt_no) = ?', [strtolower($request->accnt_no)])
+            ->orWhereRaw('LOWER(email) = ?', [strtolower($request->accnt_no)])
+            ->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([

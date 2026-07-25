@@ -23,7 +23,7 @@ export default function Login() {
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true)
     try {
-      await login((data.accnt_no || '').toUpperCase(), data.password)
+      await login(data.accnt_no || '', data.password)
       if (useAuthStore.getState().twoFaToken) {
         toast('Enter your authenticator code', { icon: '🔐' })
         return
@@ -151,15 +151,11 @@ export default function Login() {
                   id="accnt_no"
                   type="text"
                   autoComplete="username"
-                  className="input h-11 uppercase"
+                  className="input h-11"
                   placeholder="P12345"
                   {...register('accnt_no', {
                     required: 'Account Number is required',
-                    setValueAs: (v: string) => (v || '').toUpperCase(),
                   })}
-                  onChange={(e) => {
-                    e.target.value = (e.target.value || '').toUpperCase()
-                  }}
                 />
                 {errors.accnt_no && (
                   <p className="mt-1.5 text-xs text-danger-600 flex items-center gap-1">
