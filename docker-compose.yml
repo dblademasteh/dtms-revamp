@@ -64,7 +64,7 @@ services:
       - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dts_user -d dts_database"]
+      test: [ "CMD-SHELL", "pg_isready -U dts_user -d dts_database" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -78,7 +78,7 @@ services:
       - redisdata:/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -95,20 +95,18 @@ services:
       - meilidata:/meili_data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:7700/health || exit 1"]
+      test: [ "CMD-SHELL", "curl -sf http://localhost:7700/health || exit 1" ]
       interval: 15s
       timeout: 10s
       retries: 10
       start_period: 60s
 
-  localtonet:
-    image: localtonet/localtonet:latest
+  tunnel:
+    image: cloudflare/cloudflared:latest
     platform: linux/arm64
     restart: unless-stopped
-    environment:
-      - AUTH_TOKEN=YOUR_LOCALTONET_AUTH_TOKEN
+    command: tunnel --url http://frontend:80
     depends_on:
-      - backend
       - frontend
 
 volumes:
