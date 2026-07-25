@@ -58,6 +58,6 @@ COPY backend/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY backend/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-EXPOSE 80
+EXPOSE 8000
 
 CMD ["/entrypoint.sh"]
