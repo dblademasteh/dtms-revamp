@@ -3,8 +3,6 @@ services:
     image: dts-backend:latest
     pull_policy: never
     platform: linux/arm64
-    ports:
-      - "8000:8000"
     environment:
       - APP_NAME=DTS - Document Tracking System
       - APP_ENV=production
@@ -58,8 +56,6 @@ services:
     image: dts-frontend:latest
     pull_policy: never
     platform: linux/arm64
-    ports:
-      - "3000:80"
     depends_on:
       - backend
     restart: unless-stopped
