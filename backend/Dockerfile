@@ -10,7 +10,10 @@ RUN apk add --no-cache \
     oniguruma-dev \
     unzip \
     git \
-    curl
+    curl \
+    supervisor \
+    spawn-fcgi \
+    fcgiwrap
 
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) gd pdo pdo_pgsql mbstring zip pcntl bcmath
@@ -36,10 +39,11 @@ RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html/storage \
     && chmod -R 755 /var/www/html/bootstrap/cache
 
-EXPOSE 8000
-
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+
+EXPOSE 8000
 
 CMD ["/entrypoint.sh"]
