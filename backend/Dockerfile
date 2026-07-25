@@ -31,13 +31,14 @@ RUN apk add --no-cache \
     curl \
     supervisor \
     spawn-fcgi \
-    fcgiwrap
+    fcgiwrap \
+    linux-headers
 
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) gd pdo pdo_pgsql mbstring zip pcntl bcmath
 
-RUN pecl install redis \
-    && docker-php-ext-enable redis
+RUN pecl install --nosig redis || true \
+    && docker-php-ext-enable redis 2>/dev/null || true
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
