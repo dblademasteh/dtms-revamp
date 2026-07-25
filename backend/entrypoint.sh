@@ -3,11 +3,11 @@ set -e
 
 if ! grep -q "APP_KEY=base64:" .env 2>/dev/null; then
     cp -n .env.example .env 2>/dev/null || true
-    php artisan key:generate --force
+    php artisan key:generate --force || true
 fi
 
-php artisan config:cache
-php artisan route:cache
+php artisan config:clear || true
+php artisan route:clear || true
 php artisan migrate --force || true
 
 exec supervisord -c /etc/supervisor/conf.d/supervisord.conf
