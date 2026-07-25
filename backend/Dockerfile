@@ -1,4 +1,4 @@
-FROM php:8.2-fpm-alpine
+FROM --platform=linux/arm64 php:8.4-fpm-alpine
 
 RUN apk add --no-cache \
     nginx \
