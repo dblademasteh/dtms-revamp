@@ -47,9 +47,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.http.routers.dts-backend.rule=Host(`api-dtms.devbry.online`)
-      - traefik.http.routers.dts-backend.entrypoints=https
-      - traefik.http.routers.dts-backend.tls=true
-      - traefik.http.routers.dts-backend.tls.certresolver=letsencrypt
+      - traefik.http.routers.dts-backend.entrypoints=web
       - traefik.http.services.dts-backend.loadbalancer.server.port=8000
 
   frontend:
@@ -62,9 +60,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.http.routers.dts-frontend.rule=Host(`dtms.devbry.online`)
-      - traefik.http.routers.dts-frontend.entrypoints=https
-      - traefik.http.routers.dts-frontend.tls=true
-      - traefik.http.routers.dts-frontend.tls.certresolver=letsencrypt
+      - traefik.http.routers.dts-frontend.entrypoints=web
       - traefik.http.services.dts-frontend.loadbalancer.server.port=80
 
   postgres:
@@ -78,7 +74,7 @@ services:
       - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dts_user -d dts_database"]
+      test: [ "CMD-SHELL", "pg_isready -U dts_user -d dts_database" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -92,7 +88,7 @@ services:
       - redisdata:/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -109,7 +105,7 @@ services:
       - meilidata:/meili_data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:7700/health || exit 1"]
+      test: [ "CMD-SHELL", "curl -sf http://localhost:7700/health || exit 1" ]
       interval: 15s
       timeout: 10s
       retries: 10
