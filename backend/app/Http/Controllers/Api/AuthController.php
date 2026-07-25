@@ -15,12 +15,15 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'accnt_no' => 'required|string',
+            'accnt_no' => 'required_without:email|nullable|string',
+            'email' => 'nullable|string',
             'password' => 'required',
         ]);
 
-        $user = User::whereRaw('LOWER(accnt_no) = ?', [strtolower($request->accnt_no)])
-            ->orWhereRaw('LOWER(email) = ?', [strtolower($request->accnt_no)])
+        $identifier = strtolower($request->input('accnt_no') ?? $request->input('email') ?? '');
+
+        $user = User::whereRaw('LOWER(accnt_no) = ?', [$identifier])
+            ->orWhereRaw('LOWER(email) = ?', [$identifier])
             ->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {

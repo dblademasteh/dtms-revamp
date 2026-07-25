@@ -90,8 +90,8 @@ class DocumentController extends Controller
             'mode_of_transmittal' => 'nullable|in:' . implode(',', array_keys(\App\Models\Document::MODES_OF_TRANSMITTAL)),
             'action_requested' => 'nullable|string|max:100',
             'routing_template_id' => 'nullable|exists:routing_templates,id',
-            'recipient_type' => 'required|in:office,personnel',
-            'recipient_id' => 'required|integer',
+            'recipient_type' => 'nullable|in:office,personnel',
+            'recipient_id' => 'nullable|integer',
             'cc_list' => 'nullable|array',
             'cc_list.*' => 'string',
             'bcc_list' => 'nullable|array',
@@ -307,9 +307,13 @@ class DocumentController extends Controller
             $canonicalAction = \App\Models\Document::canonicalAction($transition);
 
             if ($transition === 'approve') {
-                // Main recipient approves - document goes to APPROVED status
+                $nextStep = $document->current_step + 1;
+                $templateSteps = $document->routingTemplate?->steps ?? [];
+                $isLastStep = empty($templateSteps) || $nextStep >= count($templateSteps);
+
                 $document->update([
-                    'status' => DocumentStatus::APPROVED,
+                    'current_step' => $nextStep,
+                    'status' => $isLastStep ? DocumentStatus::APPROVED : DocumentStatus::IN_PROGRESS,
                 ]);
 
                 RoutingHistory::create([
@@ -449,8 +453,8 @@ class DocumentController extends Controller
                 'description' => 'Document ' . $action,
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),
-                'old_values' => ['status' => $oldStatus->value],
-                'new_values' => ['status' => $newStatus->value],
+                'old_values' => ['status' => is_object($oldStatus) ? $oldStatus->value : $oldStatus],
+                'new_values' => ['status' => is_object($newStatus) ? $newStatus->value : $newStatus],
             ]);
 
             DB::commit();

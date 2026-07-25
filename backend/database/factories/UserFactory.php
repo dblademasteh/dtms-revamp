@@ -30,4 +30,11 @@ class UserFactory extends Factory
             'role' => UserRole::SUPERADMIN->value,
         ]);
     }
+
+    public function administrator(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => UserRole::SUPERADMIN->value,
+        ]);
+    }
 }
