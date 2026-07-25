@@ -30,7 +30,6 @@ backend/bootstrap/cache/*.php
 *.log
 .phpunit.result.cache
 
-
 # Local DB / OS temp
 db_items.txt
 
