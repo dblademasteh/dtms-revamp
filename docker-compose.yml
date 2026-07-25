@@ -45,8 +45,6 @@ services:
         condition: service_healthy
       meilisearch:
         condition: service_healthy
-    networks:
-      - dts-network
     restart: unless-stopped
     volumes:
       - backend-storage:/var/www/html/storage/app/public
@@ -71,8 +69,6 @@ services:
       - "3000:80"
     depends_on:
       - backend
-    networks:
-      - dts-network
     restart: unless-stopped
     labels:
       - traefik.enable=true
@@ -91,8 +87,6 @@ services:
       POSTGRES_PASSWORD: dts_password_2024
     volumes:
       - pgdata:/var/lib/postgresql/data
-    networks:
-      - dts-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U dts_user -d dts_database"]
@@ -107,8 +101,6 @@ services:
     command: redis-server --appendonly yes
     volumes:
       - redisdata:/data
-    networks:
-      - dts-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -126,8 +118,6 @@ services:
       MEILI_NO_ANALYTICS: "true"
     volumes:
       - meilidata:/meili_data
-    networks:
-      - dts-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:7700/health"]
@@ -141,7 +131,3 @@ volumes:
   redisdata:
   meilidata:
   backend-storage:
-
-networks:
-  dts-network:
-    driver: bridge
