@@ -49,7 +49,8 @@ COPY backend/ .
 RUN mkdir -p bootstrap/cache storage && \
     chown -R www-data:www-data /var/www/html && \
     chmod -R 755 /var/www/html/storage && \
-    chmod -R 755 /var/www/html/bootstrap/cache
+    chmod -R 755 /var/www/html/bootstrap/cache && \
+    cp -n .env.example .env 2>/dev/null || true
 
 RUN php artisan key:generate --force && \
     php artisan config:cache && \
