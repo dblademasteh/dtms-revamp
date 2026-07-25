@@ -1,8 +1,9 @@
 services:
   backend:
     build:
-      context: .
+      context: https://github.com/dblademasteh/dtms-revamp.git#master
       dockerfile: backend/Dockerfile
+    image: dts-backend:latest
     platform: linux/arm64
     ports:
       - "${BACKEND_PORT:-8000}:8000"
@@ -65,11 +66,12 @@ services:
 
   frontend:
     build:
-      context: .
+      context: https://github.com/dblademasteh/dtms-revamp.git#master
       dockerfile: frontend/Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
         VITE_APP_NAME: ${VITE_APP_NAME:-DTS}
+    image: dts-frontend:latest
     platform: linux/arm64
     ports:
       - "${FRONTEND_PORT:-3000}:80"
