@@ -72,11 +72,17 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $admin = User::firstOrCreate(['email' => 'admin@dts.gov.ph'], [
+            'accnt_no' => 'ADMIN',
             'name' => 'System Administrator',
             'password' => Hash::make('password'),
             'role' => UserRole::SUPERADMIN,
             'office_id' => $rootOffice->id,
             'phone' => '+639171234567',
+            'status' => 'active',
+        ]);
+        $admin->update([
+            'accnt_no' => 'ADMIN',
+            'password' => Hash::make('password'),
             'status' => 'active',
         ]);
 
