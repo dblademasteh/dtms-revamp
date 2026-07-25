@@ -53,7 +53,7 @@ RUN mkdir -p bootstrap/cache storage /run/nginx \
 
 
 
-COPY backend/nginx.conf /etc/nginx/conf.d/default.conf
+COPY backend/nginx.conf /etc/nginx/nginx.conf
 COPY backend/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY backend/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
