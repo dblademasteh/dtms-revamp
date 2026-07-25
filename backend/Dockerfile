@@ -51,8 +51,7 @@ RUN mkdir -p bootstrap/cache storage \
     && chmod -R 755 /var/www/html/storage \
     && chmod -R 755 /var/www/html/bootstrap/cache
 
-RUN php artisan config:cache \
-    && php artisan route:cache
+
 
 COPY backend/nginx.conf /etc/nginx/conf.d/default.conf
 COPY backend/supervisord.conf /etc/supervisor/conf.d/supervisord.conf

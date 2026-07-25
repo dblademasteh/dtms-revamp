@@ -35,7 +35,7 @@ import {
   User,
   EyeOff,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import {
   documentTypeLabel,
@@ -75,6 +75,12 @@ export default function DocumentDetail() {
   const [loadingVersions, setLoadingVersions] = useState<number | null>(null)
   
   const [recipientMode, setRecipientMode] = useState<'office' | 'personnel'>('personnel')
+
+  // Sidebar panel collapse state: sectionId -> collapsed boolean
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
+  const toggleCollapse = useCallback((id: string) => {
+    setCollapsedSections((prev) => ({ ...prev, [id]: !prev[id] }))
+  }, [])
   const [recipientSelection, setRecipientSelection] = useState<any[]>([])
   const [actionAttachment, setActionAttachment] = useState<File | null>(null)
 
@@ -1004,16 +1010,26 @@ export default function DocumentDetail() {
           </div>
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Actions */}
-          <div className="card">
-            <div className="card-header">
-              <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
-                Actions
-              </h2>
-            </div>
-            <div className="card-body space-y-2.5">
+{/* Sidebar */}
+<div className="space-y-6">
+{/* Actions */}
+<div className="card" id="sidebar-actions">
+<div className="card-header">
+<button
+type="button"
+onClick={() => toggleCollapse('actions')}
+className="flex items-center justify-between w-full text-left"
+>
+<h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">Actions</h2>
+{!collapsedSections['actions'] ? (
+<ChevronDown className="w-4 h-4 text-slate-400" />
+) : (
+<ChevronRight className="w-4 h-4 text-slate-400" />
+)}
+</button>
+</div>
+{collapsedSections['actions'] ? null : (
+<div className="card-body space-y-2.5">
               {isMainRecipient ? (
                 <>
                   {document.status === 'returned' ? (
@@ -1101,11 +1117,12 @@ export default function DocumentDetail() {
                   <Trash2 className="w-4 h-4" />
                   Delete Document
                 </button>
-              )}
-            </div>
-          </div>
+)}
+</div>
+)}
+</div>
 
-          {/* Action Modal */}
+{/* Action Modal */}
           {action && (() => {
             const cfg = {
               approve: {
@@ -1408,12 +1425,21 @@ export default function DocumentDetail() {
           })()}
 
 
-          {/* Attachments */}
-          <div className="card">
-            <div className="card-header flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
-                Attachments
-              </h2>
+{/* Attachments */}
+<div className="card" id="main-attachments">
+<div className="card-header flex items-center justify-between">
+<button
+type="button"
+onClick={() => toggleCollapse('attachments')}
+className="flex items-center gap-2 text-left"
+>
+<h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">Attachments</h2>
+{!collapsedSections['attachments'] ? (
+<ChevronDown className="w-4 h-4 text-slate-400" />
+) : (
+<ChevronRight className="w-4 h-4 text-slate-400" />
+)}
+</button>
               <label className="btn btn-secondary btn-sm cursor-pointer">
                 <Upload className="w-3.5 h-3.5" />
                 Upload

@@ -1,4 +1,4 @@
-﻿#!/bin/sh
+#!/bin/sh
 set -e
 
 if ! grep -q "APP_KEY=base64:" .env 2>/dev/null; then
@@ -6,6 +6,8 @@ if ! grep -q "APP_KEY=base64:" .env 2>/dev/null; then
     php artisan key:generate --force
 fi
 
+php artisan config:cache
+php artisan route:cache
 php artisan migrate --force
 
 exec supervisord -c /etc/supervisor/conf.d/supervisord.conf
