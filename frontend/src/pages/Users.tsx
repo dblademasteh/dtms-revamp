@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/services/api'
 import toast from 'react-hot-toast'
-import { Search, X, UserPlus, Users as UsersIcon, UserCheck, UserX, Shield } from 'lucide-react'
+import { Search, X, UserPlus, Users as UsersIcon, UserCheck, UserX, Shield, Trash2 } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import Select from 'react-select'
 import ModalPortal from '@/components/ModalPortal'
@@ -10,10 +10,10 @@ import StatCard from '@/components/StatCard'
 import { buildSelectStyles } from '@/utils/selectStyles'
 
 const ROLES = [
-  { value: 'superadmin', label: 'Super Admin', color: 'bg-red-50 text-red-700 border border-red-200' },
-  { value: 'officer', label: 'Officer', color: 'bg-violet-50 text-violet-700 border border-violet-200' },
-  { value: 'non_officer', label: 'Non-Officer', color: 'bg-amber-50 text-amber-700 border border-amber-200' },
-  { value: 'fcos', label: 'FCOS', color: 'bg-blue-50 text-blue-700 border border-blue-200' },
+  { value: 'superadmin', label: 'Super Admin', color: 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800' },
+  { value: 'officer', label: 'Officer', color: 'bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-900/30 dark:text-violet-400 dark:border-violet-800' },
+  { value: 'non_officer', label: 'Non-Officer', color: 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800' },
+  { value: 'fcos', label: 'FCOS', color: 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800' },
 ]
 
 const STATUSES = [
@@ -32,6 +32,8 @@ export default function Users() {
   const [editRole, setEditRole] = useState('')
   const [editStatus, setEditStatus] = useState('')
   const [editOffice, setEditOffice] = useState('')
+  const [resetPassword, setResetPassword] = useState('')
+  const [showResetPassword, setShowResetPassword] = useState(false)
   const [showCreate, setShowCreate] = useState(false)
   // Build select styles once on mount (dark-mode aware)
   const selectStyles = useMemo(() => buildSelectStyles(), [])
@@ -40,6 +42,7 @@ export default function Users() {
   })
   const [showPersonnel, setShowPersonnel] = useState(false)
   const [personnelSearch, setPersonnelSearch] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<any>(null)
 
   const { data: users, isLoading } = useQuery({
     queryKey: ['admin-users'],
@@ -102,7 +105,7 @@ export default function Users() {
     u.accnt_no?.toLowerCase().includes(search.toLowerCase())
   ) || []
 
-  const getRoleBadge = (role: string) => ROLES.find(r => r.value === role)?.color || 'bg-slate-50 text-slate-700 border border-slate-200'
+  const getRoleBadge = (role: string) => ROLES.find(r => r.value === role)?.color || 'bg-slate-50 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
   const getRoleLabel = (role: string) => ROLES.find(r => r.value === role)?.label || role
   const getStatusBadge = (status: string) => STATUSES.find(s => s.value === status)?.color || 'badge-neutral'
   const getStatusLabel = (status: string) => STATUSES.find(s => s.value === status)?.label || status
@@ -112,15 +115,28 @@ export default function Users() {
     setEditRole(u.role)
     setEditStatus(u.status)
     setEditOffice(u.office_id ? String(u.office_id) : '')
+    setResetPassword('')
+    setShowResetPassword(false)
   }
 
   const saveEdit = () => {
     if (!editingUser) return
-    updateMutation.mutate({
-      id: editingUser.id,
-      data: { role: editRole, status: editStatus, office_id: editOffice || null },
-    })
+    const data: any = { role: editRole, status: editStatus, office_id: editOffice || null }
+    if (resetPassword) data.password = resetPassword
+    updateMutation.mutate({ id: editingUser.id, data })
   }
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => api.delete(`/admin/users/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] })
+      toast.success('User deleted')
+      setDeleteTarget(null)
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Delete failed')
+    },
+  })
 
   const handleCreate = () => {
     if (!newUser.name || !newUser.accnt_no || !newUser.password || !newUser.office_id) {
@@ -135,17 +151,25 @@ export default function Users() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">User Management</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">User Management</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Manage system users and their roles
           </p>
         </div>
-        <button
-          onClick={() => setShowPersonnel(true)}
-          className="btn btn-secondary btn-sm"
-        >
-          <UserPlus className="w-4 h-4" /> Add from Personnel
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowCreate(true)}
+            className="btn btn-primary btn-sm"
+          >
+            <UserPlus className="w-4 h-4" /> Create User
+          </button>
+          <button
+            onClick={() => setShowPersonnel(true)}
+            className="btn btn-secondary btn-sm"
+          >
+            <UserPlus className="w-4 h-4" /> Add from Personnel
+          </button>
+        </div>
       </div>
 
       {/* Dashboard */}
@@ -198,12 +222,12 @@ export default function Users() {
           <div className="p-8 space-y-4">
             {[...Array(5)].map((_, i) => (
               <div key={i} className="flex items-center gap-4 animate-pulse">
-                <div className="w-10 h-10 bg-slate-200 rounded-full" />
+                <div className="w-10 h-10 bg-slate-200 dark:bg-slate-700 rounded-full" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-4 w-40 bg-slate-200 rounded" />
-                  <div className="h-3 w-28 bg-slate-200 rounded" />
+                  <div className="h-4 w-40 bg-slate-200 dark:bg-slate-700 rounded" />
+                  <div className="h-3 w-28 bg-slate-200 dark:bg-slate-700 rounded" />
                 </div>
-                <div className="h-6 w-20 bg-slate-200 rounded" />
+                <div className="h-6 w-20 bg-slate-200 dark:bg-slate-700 rounded" />
               </div>
             ))}
           </div>
@@ -212,34 +236,32 @@ export default function Users() {
             <table className="table">
               <thead>
                 <tr>
-                  <th>User</th>
+                  <th>Rank</th>
+                  <th>Full Name</th>
+                  <th>Email</th>
+                  <th>Designation</th>
                   <th>Account No</th>
                   <th>Role</th>
                   <th>Status</th>
-                  <th className="text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((u: any) => (
-                  <tr key={u.id}>
+                  <tr key={u.id} className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50" onClick={() => startEdit(u)}>
                     <td>
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center flex-shrink-0">
-                          <span className="text-primary-700 dark:text-primary-300 text-sm font-semibold">
-                            {u.name?.charAt(0) || '?'}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{u.full_name || u.name}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">{u.email || 'No email'}</p>
-                          {u.designation && (
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{u.designation}</p>
-                          )}
-                        </div>
-                      </div>
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{u.rank || '—'}</span>
                     </td>
                     <td>
-                      <span className="text-sm font-mono text-slate-600">{u.accnt_no || '—'}</span>
+                      <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{u.full_name}</span>
+                    </td>
+                    <td>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">{u.email || '—'}</span>
+                    </td>
+                    <td>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">{u.designation || '—'}</span>
+                    </td>
+                    <td>
+                      <span className="text-sm font-mono text-slate-600 dark:text-slate-400">{u.accnt_no || '—'}</span>
                     </td>
                     <td>
                       <span className={`badge ${getRoleBadge(u.role)}`}>
@@ -250,16 +272,6 @@ export default function Users() {
                       <span className={`badge ${getStatusBadge(u.status)}`}>
                         {getStatusLabel(u.status)}
                       </span>
-                    </td>
-                    <td className="text-right">
-                      {u.id !== user?.id && (
-                        <button
-                          onClick={() => startEdit(u)}
-                          className="btn btn-ghost btn-sm"
-                        >
-                          Edit
-                        </button>
-                      )}
                     </td>
                   </tr>
                 ))}
@@ -368,12 +380,47 @@ export default function Users() {
                     onChange={(val: any) => setEditOffice(val ? val.value : '')}
                     placeholder="Search office..."
                     styles={selectStyles}
+                    menuPortalTarget={document.body}
+                    menuPosition="fixed"
                   />
+                </div>
+
+                {/* Reset Password */}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowResetPassword(!showResetPassword)}
+                    className="flex items-center gap-2 text-[13px] font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-700 transition-colors"
+                  >
+                    {showResetPassword ? '−' : '+'} Reset Password
+                  </button>
+                  {showResetPassword && (
+                    <div className="mt-3 flex gap-2">
+                      <input
+                        type="text"
+                        className="input flex-1"
+                        placeholder="Enter new password (min. 6 chars)"
+                        value={resetPassword}
+                        onChange={(e) => setResetPassword(e.target.value)}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Footer */}
-              <div className="px-6 py-4 border-t border-slate-700/30 flex justify-end gap-3 bg-slate-50 dark:bg-slate-800/60">
+              <div className="px-6 py-4 border-t border-slate-700/30 flex justify-between gap-3 bg-slate-50 dark:bg-slate-800/60">
+                <div>
+                  {editingUser.id !== user?.id && (
+                    <button
+                      onClick={() => { setEditingUser(null); setDeleteTarget(editingUser) }}
+                      className="px-3 py-2 text-sm font-semibold text-red-600 dark:text-red-400 hover:text-red-700 transition-colors flex items-center gap-1.5"
+                    >
+                      <Trash2 className="w-4 h-4" /> Delete
+                    </button>
+                  )}
+                </div>
+                <div className="flex gap-3">
                 <button
                   onClick={() => setEditingUser(null)}
                   className="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
@@ -392,6 +439,7 @@ export default function Users() {
                     </span>
                   ) : 'Save Changes'}
                 </button>
+                </div>
               </div>
             </div>
           </div>
@@ -475,13 +523,9 @@ export default function Users() {
                       value={newUser.office_id ? { value: newUser.office_id, label: offices?.find((o: any) => String(o.id) === newUser.office_id)?.name.replace(/^[\d\.]+\s*/, '') } : null}
                       onChange={(val: any) => setNewUser({ ...newUser, office_id: val ? val.value : '' })}
                       placeholder="Search..."
-                      styles={{
-                        ...selectStyles,
-                        control: (base: any, state: any) => ({
-                          ...selectStyles.control(base, state),
-                          backgroundColor: '#fff',
-                        })
-                      }}
+                      styles={selectStyles}
+                      menuPortalTarget={document.body}
+                      menuPosition="fixed"
                     />
                   </div>
                 </div>
@@ -537,7 +581,7 @@ export default function Users() {
                 <input
                   type="text"
                   className="input pl-9"
-                  placeholder="Search by name, rank, item no, unit..."
+                  placeholder="Search by name, rank, designation, unit..."
                   value={personnelSearch}
                   onChange={(e) => setPersonnelSearch(e.target.value)}
                 />
@@ -547,7 +591,7 @@ export default function Users() {
               {personnelLoading ? (
                 <div className="space-y-3">
                   {[...Array(6)].map((_, i) => (
-                    <div key={i} className="h-12 bg-slate-100 rounded-lg animate-pulse" />
+                    <div key={i} className="h-12 bg-slate-100 dark:bg-slate-700 rounded-lg animate-pulse" />
                   ))}
                 </div>
               ) : (
@@ -566,7 +610,7 @@ export default function Users() {
                         className="flex items-center justify-between gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-100 dark:border-slate-700"
                       >
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-slate-900 truncate">
+                          <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
                             {p.rank ? `${p.rank} ` : ''}{p.name}
                           </p>
                           <p className="text-xs text-slate-400 truncate">
@@ -589,6 +633,37 @@ export default function Users() {
             <div className="px-6 py-3 border-t border-slate-200 dark:border-slate-700 text-xs text-slate-400">
               Select a personnel record to provision their login account. Role is derived from rank; default password is <span className="font-mono">bfp12345</span>.
             </div>
+            </div>
+          </div>
+        </ModalPortal>
+      )}
+
+      {/* Delete Confirmation */}
+      {deleteTarget && (
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setDeleteTarget(null)} />
+            <div className="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-6">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">Delete User</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+                Are you sure you want to delete <strong className="text-slate-700 dark:text-slate-300">{deleteTarget.full_name}</strong>?
+                This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setDeleteTarget(null)}
+                  className="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => deleteMutation.mutate(deleteTarget.id)}
+                  disabled={deleteMutation.isPending}
+                  className="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                >
+                  {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
             </div>
           </div>
         </ModalPortal>

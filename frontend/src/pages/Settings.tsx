@@ -17,6 +17,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   ChevronDown,
+  KeyRound,
 } from 'lucide-react'
 
 function formatBytes(bytes: number): string {
@@ -46,6 +47,9 @@ export default function Settings() {
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPincodeForm, setShowPincodeForm] = useState(false)
+  const [pincodeDigits, setPincodeDigits] = useState(['', '', '', ''])
+  const [pincodePassword, setPincodePassword] = useState('')
   const [notifPrefs, setNotifPrefs] = useState<Record<string, boolean>>(
     (user as any)?.notification_preferences || {
       doc_routed: true,
@@ -122,6 +126,22 @@ export default function Settings() {
     },
   })
 
+  const pincodeMutation = useMutation({
+    mutationFn: (data: any) => api.put('/auth/pincode', data),
+    onSuccess: () => {
+      toast.success('PIN code updated')
+      setShowPincodeForm(false)
+      setPincodeDigits(['', '', '', ''])
+      setPincodePassword('')
+      if (user) {
+        setUser({ ...user, has_pincode: true })
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to update PIN')
+    },
+  })
+
   const handleProfileSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     profileMutation.mutate({
@@ -168,6 +188,19 @@ export default function Settings() {
       current_password: currentPassword,
       password: newPassword,
       password_confirmation: confirmPassword,
+    })
+  }
+
+  const handlePincodeSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const pincode = pincodeDigits.join('')
+    if (pincode.length !== 4) {
+      toast.error('Enter a 4-digit PIN')
+      return
+    }
+    pincodeMutation.mutate({
+      current_password: pincodePassword,
+      pincode,
     })
   }
 
@@ -458,60 +491,102 @@ export default function Settings() {
 
       {/* Security */}
       {activeTab === 'security' && (
-        <div className="space-y-6">
+        <div className="space-y-5">
           <TwoFactorCard />
 
-          <div className="card">
-            <div className="card-header flex items-center gap-2">
-              <Lock className="w-4 h-4 text-slate-500" />
-              <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
-                Change Password
-              </h2>
+          {/* PIN Code + Change Password side by side */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* PIN Code */}
+            <div className="card">
+              <div className="card-header flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <KeyRound className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                  <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider truncate">PIN Code</h2>
+                </div>
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border flex-shrink-0 ${user?.has_pincode ? 'bg-success-50 border-success-100 text-success-700' : 'bg-slate-100 border-slate-200 text-slate-500'}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${user?.has_pincode ? 'bg-success-500' : 'bg-slate-400'}`} />
+                  {user?.has_pincode ? 'Set' : 'Not Set'}
+                </span>
+              </div>
+              <div className="card-body">
+                {!showPincodeForm ? (
+                  <div className="flex flex-col gap-3">
+                    <p className="text-sm text-slate-500">
+                      {user?.has_pincode ? 'Use your 4-digit PIN for quick sign-in.' : 'Set a 4-digit PIN for quick sign-in without a password.'}
+                    </p>
+                    <button className="btn btn-primary btn-sm self-start" onClick={() => setShowPincodeForm(true)}>
+                      {user?.has_pincode ? 'Change PIN' : 'Set PIN'}
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handlePincodeSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Current Password</label>
+                      <input type="password" className="input" value={pincodePassword} onChange={(e) => setPincodePassword(e.target.value)} required />
+                    </div>
+                    <div>
+                      <label className="block text-[13px] font-medium text-slate-700 mb-1.5">New 4-Digit PIN</label>
+                      <div className="flex gap-2">
+                        {pincodeDigits.map((digit, idx) => (
+                          <input
+                            key={idx}
+                            type="text" inputMode="numeric" maxLength={1}
+                            className="w-12 h-12 text-center text-lg font-bold rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                            value={digit}
+                            onChange={(e) => {
+                              if (e.target.value && !/^\d$/.test(e.target.value)) return
+                              const next = [...pincodeDigits]
+                              next[idx] = e.target.value
+                              setPincodeDigits(next)
+                              if (e.target.value && idx < 3) document.getElementById(`pin-${idx + 1}`)?.focus()
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Backspace' && !pincodeDigits[idx] && idx > 0) document.getElementById(`pin-${idx - 1}`)?.focus()
+                            }}
+                            id={`pin-${idx}`} autoFocus={idx === 0}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex gap-2 justify-end pt-1">
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setShowPincodeForm(false); setPincodeDigits(['', '', '', '']); setPincodePassword('') }}>Cancel</button>
+                      <button type="submit" disabled={pincodeMutation.isPending} className="btn btn-primary btn-sm">
+                        {pincodeMutation.isPending ? 'Saving...' : 'Save PIN'}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
             </div>
-            <div className="card-body">
-              <form onSubmit={handlePasswordSubmit} className="space-y-4 max-w-md">
-                <div>
-                  <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Current Password</label>
-                  <input
-                    type="password"
-                    className="input"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-[13px] font-medium text-slate-700 mb-1.5">New Password</label>
-                  <input
-                    type="password"
-                    className="input"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    required
-                    minLength={6}
-                  />
-                  <p className="text-xs text-slate-400 mt-1">Must be at least 6 characters.</p>
-                </div>
-                <div>
-                  <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Confirm New Password</label>
-                  <input
-                    type="password"
-                    className="input"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="flex justify-end pt-1">
-                  <button
-                    type="submit"
-                    disabled={passwordMutation.isPending}
-                    className="btn btn-primary btn-sm"
-                  >
-                    {passwordMutation.isPending ? 'Changing...' : 'Change Password'}
-                  </button>
-                </div>
-              </form>
+
+            {/* Change Password */}
+            <div className="card">
+              <div className="card-header flex items-center gap-2">
+                <Lock className="w-4 h-4 text-slate-500" />
+                <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">Change Password</h2>
+              </div>
+              <div className="card-body">
+                <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Current Password</label>
+                    <input type="password" className="input" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
+                  </div>
+                  <div>
+                    <label className="block text-[13px] font-medium text-slate-700 mb-1.5">New Password</label>
+                    <input type="password" className="input" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={6} />
+                    <p className="text-xs text-slate-400 mt-1">Must be at least 6 characters.</p>
+                  </div>
+                  <div>
+                    <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Confirm New Password</label>
+                    <input type="password" className="input" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                  </div>
+                  <div className="flex justify-end pt-1">
+                    <button type="submit" disabled={passwordMutation.isPending} className="btn btn-primary btn-sm">
+                      {passwordMutation.isPending ? 'Changing...' : 'Change Password'}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
         </div>
@@ -971,115 +1046,60 @@ function TwoFactorCard() {
       <div className="card-header flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0">
           <ShieldCheck className="w-4 h-4 text-slate-500 flex-shrink-0" />
-          <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider truncate">
-            Two-Factor Authentication
-          </h2>
+          <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider truncate">Two-Factor Authentication</h2>
         </div>
-        <span
-          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border flex-shrink-0 ${
-            enabled
-              ? 'bg-success-50 border-success-100 text-success-700'
-              : 'bg-slate-100 border-slate-200 text-slate-500'
-          }`}
-        >
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border flex-shrink-0 ${enabled ? 'bg-success-50 border-success-100 text-success-700' : 'bg-slate-100 border-slate-200 text-slate-500'}`}>
           <span className={`w-1.5 h-1.5 rounded-full ${enabled ? 'bg-success-500' : 'bg-slate-400'}`} />
           {enabled ? 'Enabled' : 'Disabled'}
         </span>
       </div>
 
       <div className="card-body space-y-4">
-        {/* Status / intro */}
         {!setup && !recovery && (
           <>
             <p className="text-sm text-slate-500">
-              Add an extra layer of security using an authenticator app such as
-              <span className="font-medium text-slate-700"> Google Authenticator</span> or
-              <span className="font-medium text-slate-700"> Authy</span>. A time-based code (TOTP) will be required at login.
+              Add extra security with an authenticator app like <span className="font-medium text-slate-700">Google Authenticator</span> or <span className="font-medium text-slate-700">Authy</span>.
             </p>
             {!enabled ? (
-              <button
-                className="btn btn-primary btn-sm"
-                disabled={enableMutation.isPending || statusQuery.isLoading}
-                onClick={() => enableMutation.mutate()}
-              >
+              <button className="btn btn-primary btn-sm" disabled={enableMutation.isPending || statusQuery.isLoading} onClick={() => enableMutation.mutate()}>
                 {enableMutation.isPending ? 'Generating...' : 'Enable 2FA'}
               </button>
+            ) : !showDisable ? (
+              <button className="btn btn-danger btn-sm" onClick={() => setShowDisable(true)}>Disable 2FA</button>
             ) : (
-              !showDisable ? (
-                <button className="btn btn-danger btn-sm" onClick={() => setShowDisable(true)}>
-                  Disable 2FA
-                </button>
-              ) : (
-                <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3">
-                  <div className="flex-1 w-full">
-                    <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
-                      Confirm Password to Disable
-                    </label>
-                    <input
-                      type="password"
-                      className="input"
-                      value={disablePw}
-                      onChange={(e) => setDisablePw(e.target.value)}
-                      placeholder="Your password"
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <button className="btn btn-ghost btn-sm" onClick={() => { setShowDisable(false); setDisablePw('') }}>
-                      Cancel
-                    </button>
-                    <button
-                      className="btn btn-danger btn-sm"
-                      disabled={disableMutation.isPending || !disablePw}
-                      onClick={() => disableMutation.mutate()}
-                    >
-                      {disableMutation.isPending ? 'Disabling...' : 'Confirm Disable'}
-                    </button>
-                  </div>
+              <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3">
+                <div className="flex-1 w-full">
+                  <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Confirm Password to Disable</label>
+                  <input type="password" className="input" value={disablePw} onChange={(e) => setDisablePw(e.target.value)} placeholder="Your password" />
                 </div>
-              )
+                <div className="flex gap-2">
+                  <button className="btn btn-ghost btn-sm" onClick={() => { setShowDisable(false); setDisablePw('') }}>Cancel</button>
+                  <button className="btn btn-danger btn-sm" disabled={disableMutation.isPending || !disablePw} onClick={() => disableMutation.mutate()}>
+                    {disableMutation.isPending ? 'Disabling...' : 'Confirm Disable'}
+                  </button>
+                </div>
+              </div>
             )}
           </>
         )}
 
-        {/* Setup: scan QR + enter code */}
         {setup && (
           <div className="space-y-4">
-            <p className="text-sm text-slate-500">
-              Scan this QR code with Google Authenticator, then enter the 6-digit code to confirm.
-            </p>
+            <p className="text-sm text-slate-500">Scan the QR code with your authenticator app, then enter the 6-digit code to confirm.</p>
             <div className="flex flex-col sm:flex-row gap-4 items-start">
-              <div
-                className="w-[220px] h-[220px] p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-center overflow-hidden"
-                dangerouslySetInnerHTML={{ __html: setup.qr_svg }}
-              />
+              <div className="w-[180px] h-[180px] p-2 bg-white rounded-xl border border-slate-200 flex items-center justify-center overflow-hidden" dangerouslySetInnerHTML={{ __html: setup.qr_svg }} />
               <div className="flex-1 space-y-3 w-full">
                 <div>
-                  <p className="text-[13px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Manual Key</p>
-                  <code className="block break-all text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-700 select-all">
-                    {setup.secret}
-                  </code>
+                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1">Manual Key</p>
+                  <code className="block break-all text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-700 select-all">{setup.secret}</code>
                 </div>
                 <div>
                   <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Verification Code</label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={6}
-                    className="input text-center text-xl tracking-[0.4em] font-semibold"
-                    value={confirmCode}
-                    onChange={(e) => setConfirmCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    placeholder="••••••"
-                  />
+                  <input type="text" inputMode="numeric" maxLength={6} className="input text-center text-xl tracking-[0.4em] font-semibold" value={confirmCode} onChange={(e) => setConfirmCode(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="••••••" />
                 </div>
                 <div className="flex gap-2">
-                  <button className="btn btn-ghost btn-sm" onClick={() => setSetup(null)}>
-                    Cancel
-                  </button>
-                  <button
-                    className="btn btn-primary btn-sm"
-                    disabled={confirmMutation.isPending || confirmCode.length !== 6}
-                    onClick={() => confirmMutation.mutate()}
-                  >
+                  <button className="btn btn-ghost btn-sm" onClick={() => setSetup(null)}>Cancel</button>
+                  <button className="btn btn-primary btn-sm" disabled={confirmMutation.isPending || confirmCode.length !== 6} onClick={() => confirmMutation.mutate()}>
                     {confirmMutation.isPending ? 'Verifying...' : 'Confirm & Enable'}
                   </button>
                 </div>
@@ -1088,23 +1108,16 @@ function TwoFactorCard() {
           </div>
         )}
 
-        {/* Recovery codes */}
         {recovery && (
           <div className="rounded-xl border border-warning-200 bg-warning-50 p-4 space-y-3">
             <p className="text-sm font-semibold text-warning-800">Save these recovery codes</p>
-            <p className="text-xs text-warning-700">
-              Each code can be used once if you lose access to your authenticator. Store them somewhere safe.
-            </p>
+            <p className="text-xs text-warning-700">Each code can be used once if you lose access to your authenticator.</p>
             <div className="grid grid-cols-2 gap-2">
               {recovery.map((c) => (
-                <code key={c} className="text-xs font-mono bg-white border border-warning-200 rounded px-2 py-1.5 text-center text-slate-700 select-all">
-                  {c}
-                </code>
+                <code key={c} className="text-xs font-mono bg-white border border-warning-200 rounded px-2 py-1.5 text-center text-slate-700 select-all">{c}</code>
               ))}
             </div>
-            <button className="btn btn-primary btn-sm" onClick={() => { setRecovery(null); statusQuery.refetch() }}>
-              I've saved them
-            </button>
+            <button className="btn btn-primary btn-sm" onClick={() => { setRecovery(null); statusQuery.refetch() }}>I've saved them</button>
           </div>
         )}
       </div>

@@ -25,6 +25,7 @@ class User extends Authenticatable
         'last_name',
         'first_name',
         'middle_name',
+        'suffix',
         'item_no',
         'accnt_no',
         'unit_assignment',
@@ -34,16 +35,18 @@ class User extends Authenticatable
         'two_factor_confirmed_at',
         'two_factor_recovery_codes',
         'avatar',
+            'pincode',
     ];
+
+    protected $appends = ['full_name', 'has_pincode'];
 
     protected $hidden = [
         'password',
         'remember_token',
         'two_factor_secret',
         'two_factor_recovery_codes',
+        'pincode',
     ];
-
-    protected $appends = ['full_name'];
 
     protected $casts = [
         'email_verified_at' => 'datetime',
@@ -68,7 +71,17 @@ class User extends Authenticatable
 
     public function getFullNameAttribute(): string
     {
-        return collect([$this->rank, $this->name])->filter()->implode(' ');
+        if ($this->first_name && $this->last_name) {
+            $middle = $this->middle_name ? ' ' . $this->middle_name : '';
+            $suffix = $this->suffix ? ', ' . $this->suffix : '';
+            return $this->first_name . $middle . ' ' . $this->last_name . $suffix;
+        }
+        return $this->name ?? 'Unknown';
+    }
+
+    public function getHasPincodeAttribute(): bool
+    {
+        return !is_null($this->pincode);
     }
 
     public function documents()

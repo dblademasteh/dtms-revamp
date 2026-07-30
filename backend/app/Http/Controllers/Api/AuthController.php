@@ -98,6 +98,35 @@ class AuthController extends Controller
         ]);
     }
 
+    public function loginViaPincode(Request $request)
+    {
+        $request->validate([
+            'accnt_no' => 'required|string',
+            'pincode' => 'required|string|min:4|max:6',
+        ]);
+
+        $user = User::whereRaw('LOWER(accnt_no) = ?', [strtolower($request->accnt_no)])->first();
+
+        if (!$user || $user->pincode !== $request->pincode) {
+            throw ValidationException::withMessages([
+                'accnt_no' => ['The provided credentials are incorrect.'],
+            ]);
+        }
+
+        if ($user->status !== 'active') {
+            throw ValidationException::withMessages([
+                'accnt_no' => ['Your account has been deactivated.'],
+            ]);
+        }
+
+        $token = $user->createToken('auth-token-pincode')->plainTextToken;
+
+        return response()->json([
+            'user' => $user->load('office'),
+            'token' => $token,
+        ]);
+    }
+
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
@@ -274,5 +303,25 @@ class AuthController extends Controller
         $user->update(['password' => Hash::make($request->password)]);
 
         return response()->json(['message' => 'Password changed successfully']);
+    }
+
+    public function changePincode(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required',
+            'pincode' => 'required|string|digits:4',
+        ]);
+
+        $user = $request->user();
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['Current password is incorrect.'],
+            ]);
+        }
+
+        $user->update(['pincode' => $request->pincode]);
+
+        return response()->json(['message' => 'PIN code changed successfully']);
     }
 }

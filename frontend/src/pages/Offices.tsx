@@ -1,11 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/services/api'
 import toast from 'react-hot-toast'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import Select from 'react-select'
 import ModalPortal from '@/components/ModalPortal'
 import { Plus, Edit, Trash2, Building2, X, ChevronRight, ChevronDown, Save, UserCheck, Search } from 'lucide-react'
 import ConfirmModal from '@/components/ConfirmModal'
+import { buildSelectStyles } from '@/utils/selectStyles'
 
 const OFFICE_TYPES = [
   { value: 'regional_office', label: 'Regional Office' },
@@ -18,11 +19,11 @@ const OFFICE_TYPES = [
 
 const OFFICE_TYPE_BADGE: Record<string, string> = {
   regional_office: 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 border border-primary-200 dark:border-primary-700/60',
-  provincial_office: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
-  fire_station: 'bg-red-50 text-red-700 border border-red-200',
-  division: 'bg-slate-100 text-slate-600 border border-slate-200',
-  unit: 'bg-slate-100 text-slate-600 border border-slate-200',
-  others: 'bg-slate-100 text-slate-600 border border-slate-200',
+  provincial_office: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800',
+  fire_station: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800',
+  division: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700',
+  unit: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700',
+  others: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700',
 }
 
 const officeTypeLabel = (v?: string) =>
@@ -34,8 +35,8 @@ const getRankBadge = (rank?: string | null) => {
   if (!rank) return null
   const isOfficer = OFFICER_RANKS.includes(rank)
   return isOfficer
-    ? { label: 'Officer', className: 'bg-violet-50 text-violet-700 border border-violet-200' }
-    : { label: 'Non-Officer', className: 'bg-amber-50 text-amber-700 border border-amber-200' }
+    ? { label: 'Officer', className: 'bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-900/30 dark:text-violet-400 dark:border-violet-800' }
+    : { label: 'Non-Officer', className: 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800' }
 }
 
 const cleanOfficeName = (name?: string) =>
@@ -43,18 +44,6 @@ const cleanOfficeName = (name?: string) =>
     .replace(/^\s*\d+(?:\.\d+)?[a-z]?\s+/i, '')
     .replace(/\s+/g, ' ')
     .trim()
-
-const singleSelectStyles = {
-  control: (base: any, state: any) => ({
-    ...base,
-    minHeight: '42px',
-    borderColor: state.isFocused ? '#6366f1' : '#e2e8f0',
-    borderRadius: '0.5rem',
-    boxShadow: state.isFocused ? '0 0 0 1px #6366f1' : 'none',
-    '&:hover': { borderColor: '#6366f1' },
-  }),
-  menu: (base: any) => ({ ...base, zIndex: 50 }),
-}
 
 const filterOffices = (nodes: any[], type: string, query: string): any[] => {
   const matchesType = (n: any) => !type || n.office_type === type
@@ -90,6 +79,7 @@ export default function Offices() {
   const [searchQuery, setSearchQuery] = useState('')
   const [expanded, setExpanded] = useState<Record<number, boolean>>({})
   const [deleteTarget, setDeleteTarget] = useState<any>(null)
+  const selectStyles = useMemo(() => buildSelectStyles(), [])
 
   const { data: offices, isLoading } = useQuery({
     queryKey: ['offices-hierarchy'],
@@ -276,7 +266,7 @@ export default function Offices() {
         <ModalPortal>
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={resetForm} />
-            <div className="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             {/* Header */}
             <div className="flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-primary-600 to-primary-700 text-white">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15">
@@ -304,23 +294,23 @@ export default function Offices() {
               <div className="px-6 py-5 space-y-6">
                 {/* Details */}
                 <section>
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Details</h3>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">Details</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
+                      <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                         Office Name <span className="text-danger-500">*</span>
                       </label>
                       <input className="input" value={name} onChange={e => setName(e.target.value)} required />
                     </div>
                     <div>
-                      <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
+                      <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                         Code <span className="text-danger-500">*</span>
                       </label>
                       <input className="input" value={code} onChange={e => setCode(e.target.value)} required maxLength={10} />
                     </div>
                   </div>
                   <div className="mt-4">
-                    <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Description</label>
+                    <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-1.5">Description</label>
                     <input className="input" value={description} onChange={e => setDescription(e.target.value)} />
                   </div>
                 </section>
@@ -332,9 +322,11 @@ export default function Offices() {
                     <div>
                       <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Parent Office</label>
                       <Select
-                        styles={singleSelectStyles}
+                        styles={selectStyles}
                         placeholder="None (Root)"
                         isClearable
+                        menuPortalTarget={document.body}
+                        menuPosition="fixed"
                         options={(offices || [])
                           .filter((o: any) => !editingOffice || o.id !== editingOffice.id)
                           .map((o: any) => ({ value: o.id, label: cleanOfficeName(o.name) }))}
@@ -361,10 +353,12 @@ export default function Offices() {
                       </div>
                       <p className="text-[12px] text-slate-500 mb-3">Select the officer-in-charge who leads this office.</p>
                       <Select
-                        styles={singleSelectStyles}
+                        styles={selectStyles}
                         placeholder="Search and select a chief..."
                         isClearable
                         menuPlacement="top"
+                        menuPortalTarget={document.body}
+                        menuPosition="fixed"
                         options={(users || []).map((u: any) => ({
                           value: u.id,
                           label: [u.rank, u.name].filter(Boolean).join(' '),

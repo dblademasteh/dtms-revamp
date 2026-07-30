@@ -7,6 +7,7 @@ export interface User {
   phone?: string
   status: 'active' | 'inactive' | 'suspended'
   office?: Office
+  has_pincode?: boolean
   created_at: string
   updated_at: string
 }
@@ -106,6 +107,19 @@ export interface AuditTrail {
   new_values?: Record<string, any>
   user?: User
   created_at: string
+}
+
+export interface Suggestion {
+  id: number
+  user_id: number
+  title: string
+  description: string
+  category: 'feature' | 'improvement' | 'bug' | 'other'
+  status: 'open' | 'under_review' | 'planned' | 'implemented' | 'closed'
+  admin_response?: string
+  user?: { id: number; name: string }
+  created_at: string
+  updated_at: string
 }
 
 export interface PaginatedResponse<T> {

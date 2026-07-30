@@ -60,6 +60,8 @@ export default function MultiSelect(props: {
       placeholder={props.placeholder}
       isDisabled={props.isDisabled}
       styles={styles}
+      menuPortalTarget={document.body}
+      menuPosition="fixed"
       classNamePrefix="rs"
       components={{ Control, Option: CheckboxOption, MultiValueContainer }}
     />

@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { useForm } from 'react-hook-form'
+import api from '@/services/api'
 import toast from 'react-hot-toast'
-import { Eye, EyeOff, FileText, GitBranch, ShieldCheck, Smartphone, ArrowLeft } from 'lucide-react'
+import { Eye, EyeOff, FileText, GitBranch, ShieldCheck, Smartphone, ArrowLeft, KeyRound, X } from 'lucide-react'
+import ModalPortal from '@/components/ModalPortal'
 
 interface LoginForm {
   accnt_no: string
@@ -13,6 +15,7 @@ interface LoginForm {
 export default function Login() {
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [showPincodeModal, setShowPincodeModal] = useState(false)
   const login = useAuthStore((state) => state.login)
   const verify2fa = useAuthStore((state) => state.verify2fa)
   const twoFaToken = useAuthStore((state) => state.twoFaToken)
@@ -214,49 +217,22 @@ export default function Login() {
             </form>
           )}
 
-          {/* Divider */}
-          <div className="relative my-8">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-200" />
-            </div>
-            <div className="relative flex justify-center text-xs">
-              <span className="bg-white px-3 text-slate-400 uppercase tracking-wider font-medium">Sign in with social media</span>
-            </div>
+          {/* PIN code button */}
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              onClick={() => setShowPincodeModal(true)}
+              className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-primary-600 font-medium transition-colors"
+            >
+              <KeyRound className="w-4 h-4" />
+              Sign in with PIN code
+            </button>
           </div>
 
-          {/* Social sign-in */}
-          <div className="grid grid-cols-3 gap-3">
-            <button
-              type="button"
-              className="flex items-center justify-center h-11 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
-              aria-label="Sign in with Google"
-            >
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z" />
-                <path fill="#FBBC05" d="M5.84 14.1a6.6 6.6 0 0 1 0-4.2V7.06H2.18a11 11 0 0 0 0 9.88l3.66-2.84z" />
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1a11 11 0 0 0-9.82 6.06l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              className="flex items-center justify-center h-11 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
-              aria-label="Sign in with Facebook"
-            >
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#1877F2">
-                <path d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.69 4.53-4.69 1.31 0 2.68.24 2.68.24v2.97h-1.5c-1.49 0-1.96.93-1.96 1.89v2.25h3.33l-.53 3.49h-2.8V24C19.61 23.1 24 18.1 24 12.07z" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              className="flex items-center justify-center h-11 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
-              aria-label="Sign in with Twitter"
-            >
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#000000">
-                <path d="M18.9 1.15h3.68l-8.04 9.19L24 22.85h-7.41l-5.8-7.58-6.64 7.58H.46l8.6-9.83L0 1.15h7.6l5.24 6.93 6.06-6.93zm-1.29 19.5h2.04L6.48 3.24H4.29L17.61 20.65z" />
-              </svg>
-            </button>
-          </div>
+          {/* PIN code modal */}
+          {showPincodeModal && (
+            <PincodeModal onClose={() => setShowPincodeModal(false)} />
+          )}
 
           <div className="mt-4 text-center flex items-center justify-center gap-4">
             <Link to="/track" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
@@ -278,6 +254,147 @@ export default function Login() {
         </div>
       </div>
     </div>
+  )
+}
+
+function PincodeModal({ onClose }: { onClose: () => void }) {
+  const navigate = useNavigate()
+  const [accntNo, setAccntNo] = useState('')
+  const [pincode, setPincode] = useState<string[]>(Array(4).fill(''))
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([])
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleDigit = (index: number, value: string) => {
+    if (value && !/^\d$/.test(value)) return
+    const newPincode = [...pincode]
+    newPincode[index] = value
+    setPincode(newPincode)
+    if (value && index < 3) {
+      inputRefs.current[index + 1]?.focus()
+    }
+  }
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !pincode[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus()
+    }
+  }
+
+  const submitPincode = async () => {
+    if (!accntNo.trim()) {
+      toast.error('Enter your account number')
+      return
+    }
+    const code = pincode.join('')
+    if (code.length !== 4) {
+      toast.error('Enter your 4-digit PIN')
+      return
+    }
+    setSubmitting(true)
+    try {
+      const res = await api.post('/auth/login-pincode', { accnt_no: accntNo, pincode: code })
+      const { token, user } = res.data
+      useAuthStore.getState().setAuth(user, token)
+      toast.success('Welcome back!')
+      navigate('/')
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Invalid PIN or account number')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
+        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          {/* Header */}
+          <div className="bg-gradient-to-br from-primary-600 to-primary-800 px-6 pt-6 pb-8 relative overflow-hidden">
+            <div className="absolute inset-0 opacity-10">
+              <div className="absolute -top-4 -right-4 w-32 h-32 rounded-full bg-white" />
+              <div className="absolute -bottom-8 -left-4 w-24 h-24 rounded-full bg-white" />
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="absolute top-4 right-4 p-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="relative flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center shadow-lg">
+                <KeyRound className="w-7 h-7 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-white">Sign in with PIN</h3>
+                <p className="text-sm text-white/75 mt-0.5">Enter your account number and 4-digit PIN</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Body */}
+          <div className="p-6 space-y-4">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">
+                Account Number
+              </label>
+              <input
+                type="text"
+                className="input w-full bg-slate-50/50 border-slate-200 focus:bg-white text-sm h-11"
+                placeholder="P12345"
+                value={accntNo}
+                onChange={(e) => setAccntNo(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">
+                PIN Code
+              </label>
+              <div className="flex gap-2 justify-center">
+                {pincode.map((digit, idx) => (
+                  <input
+                    key={idx}
+                    ref={(el) => { inputRefs.current[idx] = el }}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleDigit(idx, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(idx, e)}
+                    className="w-12 h-14 text-center text-xl font-bold rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
+                    autoFocus={idx === 0}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-200/60 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={submitPincode}
+              className="inline-flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold bg-primary-600 hover:bg-primary-700 text-white transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {submitting ? (
+                <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Signing in...</>
+              ) : (
+                <><KeyRound className="w-4 h-4" /> Sign in</>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </ModalPortal>
   )
 }
 

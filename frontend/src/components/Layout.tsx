@@ -9,12 +9,13 @@ import {
   Menu,
   X,
   Search,
+  Users,
   Shield,
   GitBranch,
   Building2,
   History,
-  Users,
-  Megaphone
+  Megaphone,
+  Lightbulb
 } from 'lucide-react'
 import { useState } from 'react'
 import NotificationBell from '@/components/NotificationBell'
@@ -23,8 +24,8 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Documents', href: '/documents', icon: FileText },
   { name: 'Announcements', href: '/announcements', icon: Megaphone },
-  { name: 'Personnel', href: '/personnel', icon: Users },
   { name: 'Reports', href: '/reports', icon: BarChart3 },
+  { name: 'Suggestions', href: '/suggestions', icon: Lightbulb },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]
 
@@ -116,6 +117,16 @@ export default function Layout() {
             >
               <Building2 className="w-5 h-5 flex-shrink-0" />
               Offices
+            </Link>
+            <Link
+              to="/personnel"
+              className={`nav-item ${
+                isActive('/personnel') ? 'nav-item-active' : 'nav-item-inactive'
+              }`}
+              onClick={() => setSidebarOpen(false)}
+            >
+              <Users className="w-5 h-5 flex-shrink-0" />
+              Personnel
             </Link>
             <Link
               to="/admin/activity"

@@ -1,15 +1,19 @@
 services:
   backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     image: dts-backend:latest
     pull_policy: never
-    platform: linux/arm64
+    ports:
+      - "8000:8000"
     environment:
       - APP_NAME=DTS - Document Tracking System
       - APP_ENV=production
       - APP_KEY=base64:A1KIAODRUlD5Sm1EBrevDodwnqkVa+C32SBTb0CTc3E=
       - APP_DEBUG=false
       - APP_TIMEZONE=Asia/Manila
-      - APP_URL=https://api-dtms.devbry.online
+      - APP_URL=http://localhost:8000
       - DB_CONNECTION=pgsql
       - DB_HOST=postgres
       - DB_PORT=5432
@@ -18,8 +22,8 @@ services:
       - DB_PASSWORD=dts_password_2024
       - SESSION_DRIVER=redis
       - SESSION_LIFETIME=120
-      - SESSION_DOMAIN=dtms.devbry.online
-      - SANCTUM_STATEFUL_DOMAINS=dtms.devbry.online
+      - SESSION_DOMAIN=localhost
+      - SANCTUM_STATEFUL_DOMAINS=localhost:3000
       - CACHE_DRIVER=redis
       - QUEUE_CONNECTION=redis
       - REDIS_HOST=redis
@@ -46,16 +50,19 @@ services:
       - backend-storage:/var/www/html/storage/app/public
 
   frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     image: dts-frontend:latest
     pull_policy: never
-    platform: linux/arm64
+    ports:
+      - "3000:80"
     depends_on:
       - backend
     restart: unless-stopped
 
   postgres:
     image: postgres:16-alpine
-    platform: linux/arm64
     environment:
       POSTGRES_DB: dts_database
       POSTGRES_USER: dts_user
@@ -72,7 +79,6 @@ services:
 
   redis:
     image: redis:7-alpine
-    platform: linux/arm64
     command: redis-server --appendonly yes
     volumes:
       - redisdata:/data
@@ -86,7 +92,6 @@ services:
 
   meilisearch:
     image: getmeili/meilisearch:v1.10
-    platform: linux/arm64
     environment:
       MEILI_MASTER_KEY: dts_meili_key_2024
       MEILI_ENV: production

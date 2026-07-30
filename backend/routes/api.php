@@ -7,9 +7,11 @@ use App\Http\Controllers\Api\OfficeController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\PersonnelController;
 use App\Http\Controllers\Api\TwoFactorController;
+use App\Http\Controllers\Api\SuggestionController;
 
 // Public routes
 Route::post('/auth/login', [AuthController::class, 'login']);
+Route::post('/auth/login-pincode', [AuthController::class, 'loginViaPincode']);
 Route::post('/auth/2fa/verify', [AuthController::class, 'verify2fa']);
 Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
@@ -29,6 +31,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/avatar', [AuthController::class, 'uploadAvatar']);
     Route::delete('/auth/avatar', [AuthController::class, 'deleteAvatar']);
     Route::put('/auth/password', [AuthController::class, 'changePassword']);
+    Route::put('/auth/pincode', [AuthController::class, 'changePincode']);
     Route::put('/auth/notification-preferences', [AuthController::class, 'updateNotificationPreferences']);
 
     // Two-factor authentication (authenticated)
@@ -282,6 +285,17 @@ Route::middleware('auth:sanctum')->group(function () {
         return response()->json($results);
     });
 
+    // Suggestions
+    Route::get('/suggestions', [SuggestionController::class, 'index']);
+    Route::post('/suggestions', [SuggestionController::class, 'store']);
+    Route::get('/suggestions/{suggestion}', [SuggestionController::class, 'show']);
+
+    // Admin suggestions management
+    Route::middleware('admin')->group(function () {
+        Route::put('/suggestions/{suggestion}', [SuggestionController::class, 'update']);
+        Route::delete('/suggestions/{suggestion}', [SuggestionController::class, 'destroy']);
+    });
+
     // System settings (admin only)
     Route::middleware('admin')->prefix('admin')->group(function () {
         Route::get('/settings', function () {
@@ -386,13 +400,70 @@ Route::middleware('auth:sanctum')->group(function () {
                 'role' => 'sometimes|in:superadmin,officer,non_officer,fcos',
                 'status' => 'sometimes|in:active,inactive,suspended',
                 'office_id' => 'sometimes|exists:offices,id',
+                'rank' => 'sometimes|nullable|string|max:50',
+                'first_name' => 'sometimes|nullable|string|max:255',
+                'last_name' => 'sometimes|nullable|string|max:255',
+                'middle_name' => 'sometimes|nullable|string|max:255',
+                'suffix' => 'sometimes|nullable|string|max:20',
+                'item_no' => 'sometimes|nullable|string|max:50',
+                'accnt_no' => 'sometimes|nullable|string|max:50',
+                'email' => 'sometimes|nullable|email|max:255',
+                'designation' => 'sometimes|nullable|string|max:255',
+                'unit_assignment' => 'sometimes|nullable|string|max:255',
+                'password' => 'sometimes|string|min:6',
             ]);
 
-            $user->update($request->only(['name', 'role', 'status', 'office_id']));
+            $allowed = $request->only([
+                'name', 'role', 'status', 'office_id',
+                'rank', 'first_name', 'last_name', 'middle_name', 'suffix',
+                'item_no', 'accnt_no', 'email', 'designation', 'unit_assignment',
+                'password',
+            ]);
+
+            if ($request->has('password')) {
+                $allowed['password'] = \Illuminate\Support\Facades\Hash::make($request->password);
+            }
+
+            $user->update(array_filter($allowed, fn($v) => !is_null($v)));
 
             return response()->json([
                 'message' => 'User updated',
                 'user' => $user->refresh()->load('office'),
+            ]);
+        });
+
+        Route::delete('/users/{user}', function (\App\Models\User $user) {
+            if ($user->role === 'superadmin') {
+                return response()->json(['message' => 'Cannot delete a superadmin account'], 422);
+            }
+
+            $user->delete();
+
+            return response()->json(['message' => 'User deleted']);
+        });
+
+        Route::post('/personnel/transfer', function (\Illuminate\Http\Request $request) {
+            $request->validate([
+                'user_ids' => 'required|array|min:1',
+                'user_ids.*' => 'exists:users,id',
+                'office_id' => 'required|exists:offices,id',
+            ]);
+
+            $count = \App\Models\User::whereIn('id', $request->user_ids)
+                ->update(['office_id' => $request->office_id]);
+
+            return response()->json([
+                'message' => "{$count} personnel transferred successfully",
+                'count' => $count,
+            ]);
+        });
+
+        Route::delete('/personnel/clear', function () {
+            $deleted = \App\Models\User::where('role', '!=', 'superadmin')->delete();
+
+            return response()->json([
+                'message' => "{$deleted} personnel records deleted",
+                'count' => $deleted,
             ]);
         });
 

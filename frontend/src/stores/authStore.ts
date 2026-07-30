@@ -21,6 +21,7 @@ interface User {
   unit_assignment?: string
   designation?: string
   notification_preferences?: Record<string, boolean>
+  has_pincode?: boolean
   office?: {
     id: number
     name: string
@@ -36,6 +37,7 @@ interface AuthState {
   verify2fa: (code: string) => Promise<void>
   logout: () => Promise<void>
   setUser: (user: User) => void
+  setAuth: (user: User, token: string) => void
   isSuperadmin: () => boolean
 }
 
@@ -133,6 +135,16 @@ export const useAuthStore = create<AuthState>()(
       },
 
       setUser: (user: User) => set({ user: normalizeUser(user) }),
+
+      setAuth: (user: User, token: string) => {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+        set({
+          user: normalizeUser(user),
+          token,
+          isAuthenticated: true,
+          twoFaToken: null,
+        })
+      },
 
       isSuperadmin: () => get().user?.role === 'superadmin',
     }),

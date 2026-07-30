@@ -111,6 +111,10 @@ export function buildSelectStyles(isDark?: boolean) {
       color: textMuted,
       backgroundColor: bgMenu,
     }),
+    menuPortal: (base: any) => ({
+      ...base,
+      zIndex: 9999,
+    }),
     indicatorSeparator: (base: any) => ({
       ...base,
       backgroundColor: border,

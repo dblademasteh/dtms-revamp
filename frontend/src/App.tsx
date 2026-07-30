@@ -19,6 +19,7 @@ import Offices from '@/pages/Offices'
 import ActivityLog from '@/pages/ActivityLog'
 import Personnel from '@/pages/Personnel'
 import Announcements from '@/pages/Announcements'
+import Suggestions from '@/pages/Suggestions'
 import NotFound from '@/pages/NotFound'
 import Layout from '@/components/Layout'
 import ErrorBoundary from '@/components/ErrorBoundary'
@@ -102,7 +103,8 @@ function App() {
               <Route path="documents/:id/edit" element={<EditDocument />} />
               <Route path="announcements" element={<Announcements />} />
               <Route path="reports" element={<Reports />} />
-              <Route path="personnel" element={<Personnel />} />
+              <Route path="personnel" element={<AdminRoute><Personnel /></AdminRoute>} />
+              <Route path="suggestions" element={<Suggestions />} />
               <Route path="admin/users" element={<Users />} />
               <Route path="admin/templates" element={<RoutingTemplates />} />
               <Route path="admin/offices" element={<Offices />} />
