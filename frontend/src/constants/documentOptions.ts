@@ -32,12 +32,13 @@ export function documentTypeLabel(value?: string): string {
 }
 
 export const DOCUMENT_STATUSES = [
-  { value: 'pending', label: 'Pending' },
+  { value: 'received', label: 'Received' },
   { value: 'in_review', label: 'In Review' },
   { value: 'approved', label: 'Approved' },
   { value: 'rejected', label: 'Rejected' },
   { value: 'returned', label: 'Returned' },
   { value: 'released', label: 'Released' },
+  { value: 'filed', label: 'Filed' },
 ]
 
 export function statusLabel(value?: string): string {
@@ -103,6 +104,7 @@ export function dispositionBadgeClass(value?: string): string {
     case 'noted':
     case 'recommended':
     case 'forwarded':
+    case 'filed':
       return 'bg-emerald-100 text-emerald-700 border border-emerald-200'
     case 'rejected':
     case 'disapproved':
@@ -149,7 +151,7 @@ export function actionRequestedLabel(value?: string): string {
 
 // Government routing dispositions, grouped by the underlying transition
 export const ROUTING_DISPOSITIONS: Record<
-  'approve' | 'reject' | 'return',
+  'approve' | 'reject' | 'return' | 'file',
   { value: string; label: string }[]
 > = {
   approve: [
@@ -168,6 +170,9 @@ export const ROUTING_DISPOSITIONS: Record<
     { value: 'returned', label: 'Returned' },
     { value: 'referred', label: 'Referred' },
   ],
+  file: [
+    { value: 'filed', label: 'Filed' },
+  ],
 }
 
 export function dispositionLabel(value?: string): string {
@@ -175,6 +180,7 @@ export function dispositionLabel(value?: string): string {
     ...ROUTING_DISPOSITIONS.approve,
     ...ROUTING_DISPOSITIONS.reject,
     ...ROUTING_DISPOSITIONS.return,
+    ...ROUTING_DISPOSITIONS.file,
   ]
   return all.find((d) => d.value === value)?.label ?? value ?? '—'
 }

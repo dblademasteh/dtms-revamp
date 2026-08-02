@@ -19,20 +19,38 @@ export default function Documents() {
   const [docType, setDocType] = useState('')
   const [mineOnly, setMineOnly] = useState(false)
   const [forMeOnly, setForMeOnly] = useState(false)
+  const [officeFilter, setOfficeFilter] = useState('')
+  const [personnelFilter, setPersonnelFilter] = useState('')
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [showBulkModal, setShowBulkModal] = useState(false)
   const [bulkAction, setBulkAction] = useState<'approved' | 'rejected' | 'returned'>('approved')
   const [bulkRemarks, setBulkRemarks] = useState('')
 
+  const { data: offices } = useQuery({
+    queryKey: ['offices'],
+    queryFn: () => api.get('/offices').then((r) => r.data),
+  })
+
+  const { data: personnel } = useQuery({
+    queryKey: ['personnel'],
+    queryFn: () => api.get('/personnel').then((r) => r.data),
+  })
+
+  const personnelOptions = personnel?.filter(
+    (p: any) => !officeFilter || String(p.office_id) === officeFilter
+  ) || []
+
   const { data, isLoading } = useQuery({
-    queryKey: ['documents', search, status, priority, docType, page, mineOnly, forMeOnly],
+    queryKey: ['documents', search, status, priority, docType, page, mineOnly, forMeOnly, officeFilter, personnelFilter],
     queryFn: () => api.get('/documents', {
       params: { 
         search: search || undefined, 
         status: status || undefined, 
         priority: priority || undefined, 
         document_type: docType || undefined, 
+        office_id: officeFilter || undefined, 
+        personnel_id: personnelFilter || undefined, 
         page, 
         per_page: 10, 
         mine: mineOnly || undefined, 
@@ -100,19 +118,21 @@ export default function Documents() {
 
   const statusOptions = [
     { value: '', label: 'All Status' },
-    { value: 'pending', label: 'Pending' },
+    { value: 'received', label: 'Received' },
     { value: 'in_review', label: 'In Review' },
     { value: 'approved', label: 'Approved' },
     { value: 'rejected', label: 'Rejected' },
     { value: 'returned', label: 'Returned' },
     { value: 'released', label: 'Released' },
+    { value: 'filed', label: 'Filed' },
   ]
 
   const statusBadgeClass = (status: string) => {
     switch (status) {
       case 'released': return 'badge-success'
       case 'approved': return 'badge-success'
-      case 'pending': return 'badge-warning'
+      case 'filed': return 'badge-success'
+      case 'received': return 'badge-warning'
       case 'in_review': return 'badge-primary'
       case 'rejected': return 'badge-danger'
       case 'returned': return 'badge-warning'
@@ -154,6 +174,18 @@ export default function Documents() {
                 onChange={(e) => { setSearch(e.target.value); setPage(1) }}
               />
             </div>
+            <select className="input w-full sm:w-48" value={officeFilter} onChange={(e) => { setOfficeFilter(e.target.value); setPersonnelFilter(''); setPage(1) }}>
+              <option value="">All Offices</option>
+              {offices?.map((o: any) => <option key={o.id} value={o.id}>{o.name}</option>)}
+            </select>
+            <select className="input w-full sm:w-48" value={personnelFilter} onChange={(e) => { setPersonnelFilter(e.target.value); setPage(1) }}>
+              <option value="">All Personnel</option>
+              {personnelOptions.map((p: any) => (
+                <option key={p.id} value={p.id}>
+                  {p.rank ? `${p.rank} ` : ''}{p.full_name || p.name}
+                </option>
+              ))}
+            </select>
             <select className="input w-full sm:w-40" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1) }}>
               {statusOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>

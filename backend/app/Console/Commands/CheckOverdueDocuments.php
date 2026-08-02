@@ -15,7 +15,12 @@ class CheckOverdueDocuments extends Command
     public function handle()
     {
         $overdueDocs = Document::where('sla_deadline', '<', now())
-            ->whereNotIn('status', [DocumentStatus::APPROVED, DocumentStatus::RELEASED, DocumentStatus::REJECTED])
+            ->whereNotIn('status', [
+                DocumentStatus::APPROVED,
+                DocumentStatus::RELEASED,
+                DocumentStatus::FILED,
+                DocumentStatus::REJECTED,
+            ])
             ->with('currentOffice')
             ->get();
 

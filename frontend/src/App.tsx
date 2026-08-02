@@ -18,12 +18,16 @@ import RoutingTemplates from '@/pages/RoutingTemplates'
 import Offices from '@/pages/Offices'
 import ActivityLog from '@/pages/ActivityLog'
 import Personnel from '@/pages/Personnel'
+import Storage from '@/pages/Storage'
 import Announcements from '@/pages/Announcements'
 import Suggestions from '@/pages/Suggestions'
+import Mailbox from '@/pages/Mailbox'
+import OfficeProfile from '@/pages/OfficeProfile'
 import NotFound from '@/pages/NotFound'
 import Layout from '@/components/Layout'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import PrivacyNotice from '@/components/PrivacyNotice'
+import { useRealtime } from '@/hooks/useRealtime'
 
 import { useEffect } from 'react'
 
@@ -51,6 +55,11 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   }
 
   return <>{children}</>
+}
+
+function RealtimeBridge() {
+  useRealtime()
+  return null
 }
 
 function App() {
@@ -81,6 +90,7 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <RealtimeBridge />
       <ErrorBoundary>
         <BrowserRouter>
           <Routes>
@@ -105,9 +115,12 @@ function App() {
               <Route path="reports" element={<Reports />} />
               <Route path="personnel" element={<AdminRoute><Personnel /></AdminRoute>} />
               <Route path="suggestions" element={<Suggestions />} />
+              <Route path="mailbox" element={<Mailbox />} />
+              <Route path="office-profile" element={<OfficeProfile />} />
               <Route path="admin/users" element={<Users />} />
               <Route path="admin/templates" element={<RoutingTemplates />} />
               <Route path="admin/offices" element={<Offices />} />
+              <Route path="admin/storage" element={<AdminRoute><Storage /></AdminRoute>} />
               <Route path="admin/activity" element={<AdminRoute><ActivityLog /></AdminRoute>} />
               <Route path="settings" element={<Settings />} />
             </Route>

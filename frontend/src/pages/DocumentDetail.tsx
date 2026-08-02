@@ -34,6 +34,7 @@ import {
   FileOutput,
   User,
   EyeOff,
+  Archive,
 } from 'lucide-react'
 import { useState, useCallback } from 'react'
 import toast from 'react-hot-toast'
@@ -57,7 +58,7 @@ export default function DocumentDetail() {
   const queryClient = useQueryClient()
   const { user } = useAuthStore()
   const isSuperadmin = useAuthStore((s) => s.isSuperadmin)()
-  const [action, setAction] = useState<'approve' | 'reject' | 'return' | 'resubmit' | null>(null)
+  const [action, setAction] = useState<'approve' | 'reject' | 'return' | 'resubmit' | 'file' | null>(null)
   const [disposition, setDisposition] = useState('approved')
   const [remarks, setRemarks] = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -152,7 +153,7 @@ export default function DocumentDetail() {
   const personnelOptions = personnel
     .filter((p: any) => p.role !== 'superadmin' && p.office_id != null)
     .map((p: any) => {
-      const head = [p.rank, p.name].filter(Boolean).join(' ')
+      const head = [p.rank, p.full_name || p.name].filter(Boolean).join(' ')
       const tail = p.unit_assignment || p.designation
       return {
         value: String(p.id),
@@ -276,7 +277,7 @@ export default function DocumentDetail() {
     onError: (e: any) => toast.error(e.response?.data?.message || 'Comment failed'),
   })
 
-  const selectAction = (a: 'approve' | 'reject' | 'return' | 'resubmit') => {
+  const selectAction = (a: 'approve' | 'reject' | 'return' | 'resubmit' | 'file') => {
     setAction(a)
     setDisposition(a === 'resubmit' ? 'resubmitted' : ROUTING_DISPOSITIONS[a][0].value)
     if (a === 'return' || a === 'resubmit') {
@@ -395,7 +396,9 @@ export default function DocumentDetail() {
         return 'badge-success'
       case 'approved':
         return 'badge-success'
-      case 'pending':
+      case 'filed':
+        return 'badge-success'
+      case 'received':
         return 'badge-warning'
       case 'in_review':
         return 'badge-primary'
@@ -416,7 +419,7 @@ export default function DocumentDetail() {
   // Check if current user is the main recipient and can take action
   const isMainRecipient = (() => {
     if (!document || !user) return false
-    if (!['pending', 'in_review', 'returned'].includes(document.status)) return false
+    if (!['received', 'in_review', 'returned'].includes(document.status)) return false
     
     // If the document is returned for revision, it can be acted upon (resubmitted)
     // by anyone in the office it was returned to, or by its originator.
@@ -1082,18 +1085,28 @@ className="flex items-center justify-between w-full text-left"
                     </>
                   )}
                 </>
+              ) : document.status === 'released' ? (
+                <button
+                  onClick={() => selectAction('file')}
+                  className="w-full btn btn-primary"
+                >
+                  <Archive className="w-4 h-4" />
+                  File Document
+                </button>
               ) : (
                 <p className="text-sm text-slate-500 text-center py-4">
                   {document.status === 'approved' ? (
                     <span className="text-green-600 font-medium">This document has been approved</span>
                   ) : document.status === 'rejected' ? (
                     <span className="text-red-600 font-medium">This document has been rejected</span>
+                  ) : document.status === 'filed' ? (
+                    <span className="text-slate-600 font-medium">This document has been filed</span>
                   ) : (
                     'You are viewing this document as a CC recipient'
                   )}
                 </p>
               )}
-              {document.status === 'pending' && (user?.role === 'superadmin' || document.originator_id === user?.id) && (
+              {document.status === 'received' && (user?.role === 'superadmin' || document.originator_id === user?.id) && (
                 <button
                   onClick={() => setShowRecallModal(true)}
                   className="w-full btn btn-warning"
@@ -1169,6 +1182,17 @@ className="flex items-center justify-between w-full text-left"
                 btnClass: 'bg-indigo-600 hover:bg-indigo-700 text-white',
                 confirmLabel: 'Resubmit',
               },
+              file: {
+                gradient: 'from-slate-600 to-slate-800',
+                lightBg: 'bg-slate-100',
+                border: 'border-slate-300',
+                text: 'text-slate-700',
+                icon: Archive,
+                label: 'File Document',
+                subtitle: 'Mark this document as filed and close it out',
+                btnClass: 'bg-slate-700 hover:bg-slate-800 text-white',
+                confirmLabel: 'File',
+              },
             }[action]
             const ActionIcon = cfg.icon
 
@@ -1233,7 +1257,7 @@ className="flex items-center justify-between w-full text-left"
                             })}
                           </div>
                         </div>
-                      ) : action !== 'resubmit' ? (
+                      ) : action === 'reject' || action === 'return' ? (
                         <div>
                           <label className="block text-[11px] font-bold text-slate-500 mb-2 uppercase tracking-widest">
                             Disposition
@@ -1247,6 +1271,14 @@ className="flex items-center justify-between w-full text-left"
                               <option key={d.value} value={d.value}>{d.label}</option>
                             ))}
                           </select>
+                        </div>
+                      ) : action === 'file' ? (
+                        <div className={`flex items-center gap-3 p-3 rounded-xl ${cfg.lightBg} border ${cfg.border}`}>
+                          <Archive className={`w-5 h-5 ${cfg.text}`} />
+                          <div>
+                            <p className={`text-sm font-semibold ${cfg.text}`}>Filing document</p>
+                            <p className="text-xs text-slate-500 mt-0.5">Document will be marked as filed</p>
+                          </div>
                         </div>
                       ) : (
                         <div className={`flex items-center gap-3 p-3 rounded-xl ${cfg.lightBg} border ${cfg.border}`}>

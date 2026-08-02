@@ -8,15 +8,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->string('suffix')->nullable()->after('middle_name');
+        Schema::table('offices', function (Blueprint $table) {
+            $table->unsignedBigInteger('storage_quota_bytes')->nullable()->after('status');
         });
     }
 
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('suffix');
+        Schema::table('offices', function (Blueprint $table) {
+            $table->dropColumn('storage_quota_bytes');
         });
     }
 };

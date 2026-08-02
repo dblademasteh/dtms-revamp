@@ -61,7 +61,7 @@ export default function Dashboard() {
 
   const statCards = [
     { name: 'Total Documents', value: stats.total_documents || 0, icon: FileText, color: 'bg-primary-50 text-primary-600', border: 'border-l-primary-500', link: '/documents' },
-    { name: 'Pending Review', value: stats.pending_documents || 0, icon: Clock, color: 'bg-amber-50 text-amber-600', border: 'border-l-amber-500', link: '/documents?status=pending' },
+    { name: 'Received', value: stats.pending_documents || 0, icon: Clock, color: 'bg-amber-50 text-amber-600', border: 'border-l-amber-500', link: '/documents?status=received' },
     { name: 'Released Today', value: stats.released_today || 0, icon: CheckCircle, color: 'bg-green-50 text-green-600', border: 'border-l-green-500', link: '/documents?status=released' },
     { name: 'Overdue', value: stats.overdue_documents || 0, icon: AlertTriangle, color: 'bg-red-50 text-red-600', border: 'border-l-red-500', link: '/documents' },
   ]
@@ -89,7 +89,8 @@ export default function Dashboard() {
     switch (status) {
       case 'released': return 'badge-success'
       case 'approved': return 'badge-success'
-      case 'pending': return 'badge-warning'
+      case 'filed': return 'badge-success'
+      case 'received': return 'badge-warning'
       case 'in_review': return 'badge-primary'
       case 'rejected': return 'badge-danger'
       default: return 'badge-neutral'

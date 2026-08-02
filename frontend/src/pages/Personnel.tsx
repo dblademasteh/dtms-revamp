@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/services/api'
 import toast from 'react-hot-toast'
-import { Search, Users as UsersIcon, Building2, X, UserPlus, Shield, Trash2, AlertTriangle } from 'lucide-react'
+import { Search, Users as UsersIcon, Building2, X, UserPlus, Trash2, AlertTriangle, Grid3X3, UserX, Award } from 'lucide-react'
 import { useState } from 'react'
 import StatCard from '@/components/StatCard'
 import ModalPortal from '@/components/ModalPortal'
@@ -15,10 +15,11 @@ export default function Personnel() {
   const [selected, setSelected] = useState<any>(null)
   const [editForm, setEditForm] = useState<any>({})
   const [targetOfficeId, setTargetOfficeId] = useState<string>('')
-  const [showAddUser, setShowAddUser] = useState(false)
-  const [personnelSearch, setPersonnelSearch] = useState('')
-  const [showOfficeAccount, setShowOfficeAccount] = useState(false)
-  const [newAccount, setNewAccount] = useState({ name: '', email: '', role: 'officer', office_id: '', password: 'bfp12345' })
+  const [showCreatePersonnel, setShowCreatePersonnel] = useState(false)
+  const [newPersonnel, setNewPersonnel] = useState({
+    rank: '', first_name: '', last_name: '', middle_name: '', suffix: '',
+    item_no: '', accnt_no: '', unit_assignment: '', designation: '', email: '',
+  })
   const [showClearConfirm, setShowClearConfirm] = useState(false)
 
   const { data: personnel, isLoading } = useQuery({
@@ -29,25 +30,6 @@ export default function Personnel() {
   const { data: offices } = useQuery({
     queryKey: ['offices-min'],
     queryFn: () => api.get('/offices').then((res) => res.data),
-  })
-
-  const { data: personnelList } = useQuery({
-    queryKey: ['personnel-all'],
-    queryFn: () => api.get('/personnel').then(res => res.data),
-    enabled: showAddUser,
-  })
-
-  const fromPersonnelMutation = useMutation({
-    mutationFn: (data: any) => api.post('/admin/users/from-personnel', data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['personnel'] })
-      toast.success('User account created')
-      setShowAddUser(false)
-      setPersonnelSearch('')
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to create account')
-    },
   })
 
   const updateMutation = useMutation({
@@ -74,16 +56,19 @@ export default function Personnel() {
     },
   })
 
-  const createAccountMutation = useMutation({
-    mutationFn: (data: any) => api.post('/admin/users', data),
+  const createPersonnelMutation = useMutation({
+    mutationFn: (data: any) => api.post('/personnel', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['personnel'] })
-      toast.success('Office account created')
-      setShowOfficeAccount(false)
-      setNewAccount({ name: '', email: '', role: 'officer', office_id: '', password: 'bfp12345' })
+      toast.success('Personnel created')
+      setShowCreatePersonnel(false)
+      setNewPersonnel({
+        rank: '', first_name: '', last_name: '', middle_name: '', suffix: '',
+        item_no: '', accnt_no: '', unit_assignment: '', designation: '', email: '',
+      })
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to create account')
+      toast.error(error.response?.data?.message || 'Create failed')
     },
   })
 
@@ -139,18 +124,10 @@ export default function Personnel() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setShowAddUser(true)}
+            onClick={() => setShowCreatePersonnel(true)}
             className="btn btn-primary btn-sm"
           >
-            <UserPlus className="w-4 h-4" />
-            Add User
-          </button>
-          <button
-            onClick={() => setShowOfficeAccount(true)}
-            className="btn btn-secondary btn-sm"
-          >
-            <Shield className="w-4 h-4" />
-            Add Office Account
+            <UserPlus className="w-4 h-4" /> Create Personnel
           </button>
           <button
             onClick={() => setShowClearConfirm(true)}
@@ -173,13 +150,13 @@ export default function Personnel() {
         <StatCard
           label="Distinct Units"
           value={new Set((personnel ?? []).map((u: any) => u.unit_assignment).filter(Boolean)).size}
-          icon={<UsersIcon className="w-5 h-5" />}
+          icon={<Grid3X3 className="w-5 h-5" />}
           color="bg-cyan-50 text-cyan-600"
         />
         <StatCard
           label="Without Office"
           value={(personnel ?? []).filter((u: any) => !u.office_id).length}
-          icon={<UsersIcon className="w-5 h-5" />}
+          icon={<UserX className="w-5 h-5" />}
           color="bg-amber-50 text-amber-600"
         />
         <StatCard
@@ -188,7 +165,7 @@ export default function Personnel() {
             ['SUPT', 'INSP', 'CINSP', 'FO1', 'FO2', 'FO3', 'SFO1', 'SFO2', 'SFO3', 'SFO4']
               .includes((u.rank || '').toUpperCase())
           ).length}
-          icon={<UsersIcon className="w-5 h-5" />}
+          icon={<Award className="w-5 h-5" />}
           color="bg-green-50 text-green-600"
         />
       </div>
@@ -380,6 +357,7 @@ export default function Personnel() {
                       <option value="officer">Officer</option>
                       <option value="non_officer">Non-Officer</option>
                       <option value="fcos">FCOS</option>
+                      <option value="office_station">Office/Station</option>
                     </select>
                   </div>
                 </div>
@@ -403,160 +381,88 @@ export default function Personnel() {
         </ModalPortal>
       )}
 
-      {/* Add User from Personnel Modal */}
-      {showAddUser && (
+      {/* Create Personnel Modal */}
+      {showCreatePersonnel && (
         <ModalPortal>
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowAddUser(false)} />
-            <div className="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowCreatePersonnel(false)} />
+            <div className="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
               <div className="bg-gradient-to-br from-primary-600 to-primary-800 px-6 pt-6 pb-8 relative overflow-hidden">
                 <UserPlus className="absolute right-4 bottom-4 w-20 h-20 text-white/10" />
-                <button onClick={() => setShowAddUser(false)} className="absolute top-4 right-4 p-1 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors">
+                <button onClick={() => setShowCreatePersonnel(false)} className="absolute top-4 right-4 p-1 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors">
                   <X className="w-5 h-5" />
                 </button>
-                <h3 className="text-lg font-bold text-white">Add User from Personnel</h3>
-                <p className="text-sm text-primary-200 mt-1">Select a personnel record to provision their login account</p>
+                <h3 className="text-lg font-bold text-white">Create Personnel</h3>
+                <p className="text-sm text-primary-200 mt-1">Add a new personnel record to the directory</p>
               </div>
-              <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <input
-                    type="text"
-                    className="input pl-9"
-                    placeholder="Search by name, rank, unit..."
-                    value={personnelSearch}
-                    onChange={(e) => setPersonnelSearch(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="flex-1 overflow-y-auto px-6 py-4">
-                <div className="space-y-2">
-                  {(personnelList ?? [])
-                    .filter((p: any) => {
-                      const q = personnelSearch.toLowerCase()
-                      return !personnelSearch || `${p.name} ${p.rank} ${p.unit_assignment} ${p.designation}`.toLowerCase().includes(q)
-                    })
-                    .map((p: any) => (
-                      <div
-                        key={p.id}
-                        className="flex items-center justify-between gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700"
-                      >
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
-                            {p.rank ? `${p.rank} ` : ''}{p.name}
-                          </p>
-                          <p className="text-xs text-slate-400 truncate">
-                            {p.unit_assignment || '—'}{p.designation ? ` · ${p.designation}` : ''}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => fromPersonnelMutation.mutate({ user_id: p.id })}
-                          disabled={fromPersonnelMutation.isPending}
-                          className="btn btn-primary btn-sm flex-shrink-0"
-                        >
-                          <UserPlus className="w-3.5 h-3.5" /> Create
-                        </button>
-                      </div>
-                    ))}
-                </div>
-              </div>
-              <div className="px-6 py-3 border-t border-slate-200 text-xs text-slate-400">
-                Role is derived from rank; default password is <span className="font-mono">bfp12345</span>
-              </div>
-            </div>
-          </div>
-        </ModalPortal>
-      )}
-
-      {/* Add Office Account Modal */}
-      {showOfficeAccount && (
-        <ModalPortal>
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowOfficeAccount(false)} />
-            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-              <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 px-6 pt-6 pb-8 relative overflow-hidden">
-                <Shield className="absolute right-4 bottom-4 w-20 h-20 text-white/10" />
-                <button onClick={() => setShowOfficeAccount(false)} className="absolute top-4 right-4 p-1 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors">
-                  <X className="w-5 h-5" />
-                </button>
-                <h3 className="text-lg font-bold text-white">Add Office Account</h3>
-                <p className="text-sm text-indigo-200 mt-1">Create a new user account for an office</p>
-              </div>
-              <div className="p-6 space-y-4">
-                <div>
-                  <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Name</label>
-                  <input
-                    type="text"
-                    className="input"
-                    placeholder="Full name"
-                    value={newAccount.name}
-                    onChange={(e) => setNewAccount({ ...newAccount, name: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Email</label>
-                  <input
-                    type="email"
-                    className="input"
-                    placeholder="email@bfp-r2.gov.ph"
-                    value={newAccount.email}
-                    onChange={(e) => setNewAccount({ ...newAccount, email: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Role</label>
-                  <select
-                    className="input"
-                    value={newAccount.role}
-                    onChange={(e) => setNewAccount({ ...newAccount, role: e.target.value })}
-                  >
-                    <option value="superadmin">Super Admin</option>
-                    <option value="officer">Officer</option>
-                    <option value="non_officer">Non-Officer</option>
-                    <option value="fcos">FCOS</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Office</label>
-                  <Select
-                    styles={{
-                      ...selectStyles,
-                      menuPortal: (base: any) => ({ ...base, zIndex: 9999 }),
-                    }}
-                    placeholder="Select office..."
-                    isClearable
-                    options={officesArr.map((o: any) => ({ value: String(o.id), label: o.name }))}
-                    value={newAccount.office_id ? { value: newAccount.office_id, label: officesArr.find((o: any) => String(o.id) === newAccount.office_id)?.name } : null}
-                    onChange={(opt: any) => setNewAccount({ ...newAccount, office_id: opt ? opt.value : '' })}
-                    menuPortalTarget={document.body}
-                    menuPosition="fixed"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Password</label>
-                  <input
-                    type="text"
-                    className="input"
-                    value={newAccount.password}
-                    onChange={(e) => setNewAccount({ ...newAccount, password: e.target.value })}
-                  />
-                  <p className="text-[11px] text-slate-400 mt-1">Default: bfp12345</p>
+              <div className="p-6">
+                <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-1">Rank</label>
+                    <select className="input input-sm w-full text-sm" value={newPersonnel.rank} onChange={(e) => setNewPersonnel({ ...newPersonnel, rank: e.target.value })}>
+                      <option value="">—</option>
+                      {['SUPT', 'CSUPT', 'FCSUPT', 'SINSP', 'CINSP', 'FCINSP', 'INSP', 'FO1', 'FO2', 'FO3', 'SFO1', 'SFO2', 'SFO3', 'SFO4'].map((r) => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-1">Suffix</label>
+                    <select className="input input-sm w-full text-sm" value={newPersonnel.suffix} onChange={(e) => setNewPersonnel({ ...newPersonnel, suffix: e.target.value })}>
+                      <option value="">—</option>
+                      {['Jr.', 'Sr.', 'II', 'III', 'IV', 'V'].map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-1">First Name *</label>
+                    <input type="text" className="input input-sm text-sm w-full" value={newPersonnel.first_name} onChange={(e) => setNewPersonnel({ ...newPersonnel, first_name: e.target.value })} placeholder="Required" />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-1">Last Name *</label>
+                    <input type="text" className="input input-sm text-sm w-full" value={newPersonnel.last_name} onChange={(e) => setNewPersonnel({ ...newPersonnel, last_name: e.target.value })} placeholder="Required" />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-1">Middle Name</label>
+                    <input type="text" className="input input-sm text-sm w-full" value={newPersonnel.middle_name} onChange={(e) => setNewPersonnel({ ...newPersonnel, middle_name: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-1">Email</label>
+                    <input type="email" className="input input-sm text-sm w-full" value={newPersonnel.email} onChange={(e) => setNewPersonnel({ ...newPersonnel, email: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-1">Item No.</label>
+                    <input type="text" className="input input-sm text-sm w-full" value={newPersonnel.item_no} onChange={(e) => setNewPersonnel({ ...newPersonnel, item_no: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-1">Account No.</label>
+                    <input type="text" className="input input-sm text-sm w-full" value={newPersonnel.accnt_no} onChange={(e) => setNewPersonnel({ ...newPersonnel, accnt_no: e.target.value })} />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-1">Unit Assignment</label>
+                    <input type="text" className="input input-sm text-sm w-full" value={newPersonnel.unit_assignment} onChange={(e) => setNewPersonnel({ ...newPersonnel, unit_assignment: e.target.value })} />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-1">Designation</label>
+                    <input type="text" className="input input-sm text-sm w-full" value={newPersonnel.designation} onChange={(e) => setNewPersonnel({ ...newPersonnel, designation: e.target.value })} />
+                  </div>
                 </div>
               </div>
-              <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3 bg-slate-50">
-                <button onClick={() => setShowOfficeAccount(false)} className="btn btn-ghost btn-sm">Cancel</button>
+              <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3 bg-slate-50 dark:bg-slate-800/60">
+                <button onClick={() => setShowCreatePersonnel(false)} className="btn btn-ghost btn-sm">Cancel</button>
                 <button
                   onClick={() => {
-                    if (!newAccount.name || !newAccount.email || !newAccount.office_id) {
-                      toast.error('Name, email, and office are required')
+                    if (!newPersonnel.first_name || !newPersonnel.last_name) {
+                      toast.error('First name and last name are required')
                       return
                     }
-                    createAccountMutation.mutate(newAccount)
+                    createPersonnelMutation.mutate(newPersonnel)
                   }}
-                  disabled={createAccountMutation.isPending}
+                  disabled={createPersonnelMutation.isPending}
                   className="btn btn-primary btn-sm"
                 >
-                  {createAccountMutation.isPending ? 'Creating...' : 'Create Account'}
+                  {createPersonnelMutation.isPending ? 'Creating...' : 'Create Personnel'}
                 </button>
               </div>
             </div>

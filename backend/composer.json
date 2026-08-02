@@ -10,6 +10,7 @@
         "http-interop/http-factory-guzzle": "^1.2",
         "intervention/image": "^3.0",
         "laravel/framework": "^11.0",
+        "laravel/reverb": "*",
         "laravel/sanctum": "^4.0",
         "laravel/scout": "^11.3",
         "laravel/tinker": "^2.9",
@@ -17,7 +18,8 @@
         "predis/predis": "^3.5",
         "simplesoftwareio/simple-qrcode": "^4.0",
         "spatie/laravel-activitylog": "^4.0",
-        "spatie/laravel-permission": "^6.0"
+        "spatie/laravel-permission": "^6.0",
+        "zbateson/mail-mime-parser": "^3.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

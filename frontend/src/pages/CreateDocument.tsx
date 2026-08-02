@@ -65,7 +65,7 @@ export default function CreateDocument() {
       .replace(/^\s*\d+(?:\.\d+)?[a-z]?\s+/i, '')
       .replace(/\s+/g, ' ')
       .trim()
-    const chief = o.head?.name
+    const chief = o.head?.full_name || o.head?.name
     return {
       value: String(o.id),
       label: chief ? `${name} - ${chief}` : name,
@@ -74,7 +74,7 @@ export default function CreateDocument() {
   const personnelOptions: Option[] = personnel
     .filter((p: any) => p.role !== 'superadmin')
     .map((p: any) => {
-      const head = [p.rank, p.name].filter(Boolean).join(' ')
+      const head = [p.rank, p.full_name || p.name].filter(Boolean).join(' ')
       const tail = p.unit_assignment || p.designation
       return {
         value: String(p.id),

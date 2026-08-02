@@ -16,13 +16,14 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->enum('priority', ['low', 'normal', 'high', 'urgent'])->default('normal');
             $table->enum('status', [
-                'pending',
+                'received',
                 'in_review',
                 'approved',
                 'rejected',
                 'returned',
-                'released'
-            ])->default('pending');
+                'released',
+                'filed'
+            ])->default('received');
             $table->foreignId('originator_id')->constrained('users');
             $table->foreignId('current_office_id')->constrained('offices');
             $table->foreignId('routing_template_id')->nullable()->constrained();

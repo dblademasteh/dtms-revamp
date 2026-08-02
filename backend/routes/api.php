@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\PersonnelController;
 use App\Http\Controllers\Api\TwoFactorController;
 use App\Http\Controllers\Api\SuggestionController;
+use App\Http\Controllers\Api\StorageController;
 
 // Public routes
 Route::post('/auth/login', [AuthController::class, 'login']);
@@ -98,6 +99,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('offices', OfficeController::class);
     Route::get('/offices-hierarchy', [OfficeController::class, 'hierarchy']);
 
+    // Self-service office management for office accounts
+    Route::get('/my-office', [OfficeController::class, 'myOffice']);
+    Route::put('/my-office', [OfficeController::class, 'updateMyOffice']);
+    Route::post('/my-office/logo', [OfficeController::class, 'uploadMyOfficeLogo']);
+    Route::delete('/my-office/logo', [OfficeController::class, 'deleteMyOfficeLogo']);
+
     // Personnel directory (all authenticated users)
     Route::get('/personnel', function () {
         return \App\Models\User::with(['office', 'headedOffice'])
@@ -115,6 +122,7 @@ Route::middleware('auth:sanctum')->group(function () {
                 return $user;
             });
     });
+    Route::post('/personnel', [PersonnelController::class, 'store']);
     Route::post('/personnel/import', [PersonnelController::class, 'import']);
     Route::get('/personnel/export', [PersonnelController::class, 'export']);
 
@@ -155,6 +163,21 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/notifications/clear-all', function (\Illuminate\Http\Request $request) {
         $request->user()->notifications()->delete();
         return response()->json(['message' => 'All notifications cleared']);
+    });
+
+    // Personal Mailbox
+    Route::prefix('mailbox')->group(function () {
+        Route::get('/config', [\App\Http\Controllers\Api\MailboxController::class, 'show']);
+        Route::put('/config', [\App\Http\Controllers\Api\MailboxController::class, 'saveConfig']);
+        Route::post('/test', [\App\Http\Controllers\Api\MailboxController::class, 'test']);
+        Route::post('/sync', [\App\Http\Controllers\Api\MailboxController::class, 'sync']);
+        Route::get('/folders', [\App\Http\Controllers\Api\MailboxController::class, 'folders']);
+        Route::get('/messages', [\App\Http\Controllers\Api\MailboxController::class, 'messages']);
+        Route::get('/messages/{message}', [\App\Http\Controllers\Api\MailboxController::class, 'message']);
+        Route::patch('/messages/{message}/seen', [\App\Http\Controllers\Api\MailboxController::class, 'setSeen']);
+        Route::delete('/messages/{message}', [\App\Http\Controllers\Api\MailboxController::class, 'destroy']);
+        Route::get('/attachments/{attachment}', [\App\Http\Controllers\Api\MailboxController::class, 'downloadAttachment']);
+        Route::post('/send', [\App\Http\Controllers\Api\MailboxController::class, 'send']);
     });
 
     // Routing Templates
@@ -198,44 +221,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/routing-templates/{template}', function (\App\Models\RoutingTemplate $template) {
         $template->delete();
         return response()->json(['message' => 'Template deleted']);
-    });
-
-    // Offices Management
-    Route::post('/offices', function (\Illuminate\Http\Request $request) {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'code' => 'required|string|max:10|unique:offices,code',
-            'description' => 'nullable|string',
-            'parent_office_id' => 'nullable|exists:offices,id',
-        ]);
-
-        $office = \App\Models\Office::create($request->only(['name', 'code', 'description', 'parent_office_id']));
-        return response()->json(['message' => 'Office created', 'office' => $office], 201);
-    });
-
-    Route::put('/offices/{office}', function (\Illuminate\Http\Request $request, \App\Models\Office $office) {
-        $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'code' => 'sometimes|string|max:10|unique:offices,code,' . $office->id,
-            'description' => 'nullable|string',
-            'parent_office_id' => 'nullable|exists:offices,id',
-            'head_user_id' => 'nullable|exists:users,id',
-            'status' => 'sometimes|in:active,inactive',
-        ]);
-
-        $office->update($request->only(['name', 'code', 'description', 'parent_office_id', 'head_user_id', 'status']));
-        return response()->json(['message' => 'Office updated', 'office' => $office->refresh()->load('parent', 'head')]);
-    });
-
-    Route::delete('/offices/{office}', function (\App\Models\Office $office) {
-        if ($office->children()->exists()) {
-            return response()->json(['message' => 'Cannot delete office with sub-offices'], 422);
-        }
-        if ($office->documents()->exists() || $office->documents()->where('current_office_id', $office->id)->exists()) {
-            return response()->json(['message' => 'Cannot delete office with associated documents'], 422);
-        }
-        $office->delete();
-        return response()->json(['message' => 'Office deleted']);
     });
 
     // Bulk operations
@@ -302,6 +287,7 @@ Route::middleware('auth:sanctum')->group(function () {
             return response()->json([
                 'settings' => [
                     'default_sla_hours' => \App\Models\SystemSetting::getDefaultSlaHours(),
+                    'retention_months' => (int) \App\Models\SystemSetting::get('retention_months', 12),
                 ],
             ]);
         });
@@ -309,14 +295,20 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/settings', function (\Illuminate\Http\Request $request) {
             $request->validate([
                 'default_sla_hours' => 'required|integer|min:1|max:8760',
+                'retention_months' => 'sometimes|integer|min:1|max:240',
             ]);
 
             \App\Models\SystemSetting::set('default_sla_hours', $request->default_sla_hours);
+
+            if ($request->has('retention_months')) {
+                \App\Models\SystemSetting::set('retention_months', $request->retention_months);
+            }
 
             return response()->json([
                 'message' => 'Settings updated',
                 'settings' => [
                     'default_sla_hours' => \App\Models\SystemSetting::getDefaultSlaHours(),
+                    'retention_months' => (int) \App\Models\SystemSetting::get('retention_months', 12),
                 ],
             ]);
         });
@@ -339,9 +331,10 @@ Route::middleware('auth:sanctum')->group(function () {
                 'email' => 'nullable|email|unique:users,email',
                 'accnt_no' => 'required|string|unique:users,accnt_no',
                 'password' => 'required|min:6',
-                'role' => 'required|in:superadmin,officer,non_officer,fcos',
+                'role' => 'required|in:superadmin,officer,non_officer,fcos,office_station',
                 'office_id' => 'required|exists:offices,id',
                 'phone' => 'nullable|string|max:20',
+                'is_chief' => 'nullable|boolean',
             ]);
 
             $user = \App\Models\User::create([
@@ -355,6 +348,12 @@ Route::middleware('auth:sanctum')->group(function () {
                 'status' => 'active',
             ]);
 
+            if ($request->boolean('is_chief')) {
+                $office = \App\Models\Office::find($request->office_id);
+                $office->head_user_id = $user->id;
+                $office->save();
+            }
+
             return response()->json([
                 'message' => 'User created successfully',
                 'user' => $user->load('office'),
@@ -366,8 +365,10 @@ Route::middleware('auth:sanctum')->group(function () {
             $request->validate([
                 'user_id' => 'required|exists:users,id',
                 'password' => 'nullable|min:6',
-                'role' => 'nullable|in:superadmin,officer,non_officer,fcos',
+                'role' => 'nullable|in:superadmin,officer,non_officer,fcos,office_station',
                 'office_id' => 'nullable|exists:offices,id',
+                'email' => 'nullable|email|unique:users,email',
+                'is_chief' => 'nullable|boolean',
             ]);
 
             $person = \App\Models\User::findOrFail($request->user_id);
@@ -385,8 +386,15 @@ Route::middleware('auth:sanctum')->group(function () {
                 'password' => \Illuminate\Support\Facades\Hash::make($password),
                 'role' => $role,
                 'office_id' => $request->office_id,
+                'email' => $request->filled('email') ? $request->email : null,
                 'status' => 'active',
             ]);
+
+            if ($request->boolean('is_chief') && $request->office_id) {
+                $office = \App\Models\Office::find($request->office_id);
+                $office->head_user_id = $person->id;
+                $office->save();
+            }
 
             return response()->json([
                 'message' => 'Account created from personnel',
@@ -394,10 +402,57 @@ Route::middleware('auth:sanctum')->group(function () {
             ], 201);
         });
 
+        // Create a dedicated office account (a brand-new user, not the chief's
+        // personnel record). The login username is the office's unit code.
+        Route::post('/office-accounts', function (\Illuminate\Http\Request $request) {
+            $request->validate([
+                'office_id' => 'required|exists:offices,id',
+                'name' => 'nullable|string|max:255',
+                'role' => 'nullable|in:office_station,officer,non_officer,fcos',
+                'password' => 'nullable|min:6',
+                'email' => 'nullable|email|unique:users,email',
+                'is_chief' => 'nullable|boolean',
+            ]);
+
+            $office = \App\Models\Office::findOrFail($request->office_id);
+
+            if (!$office->unit_code) {
+                return response()->json([
+                    'message' => 'This office has no unit code yet. Set a unit code in Offices first.',
+                ], 422);
+            }
+
+            if (\App\Models\User::where('accnt_no', $office->unit_code)->exists()) {
+                return response()->json([
+                    'message' => 'An account for this office already exists (username: ' . $office->unit_code . ').',
+                ], 422);
+            }
+
+            $user = \App\Models\User::create([
+                'name' => $request->name ?: $office->name,
+                'email' => $request->email,
+                'accnt_no' => $office->unit_code,
+                'password' => \Illuminate\Support\Facades\Hash::make($request->password ?: 'bfp12345'),
+                'role' => $request->role ?: 'office_station',
+                'office_id' => $office->id,
+                'status' => 'active',
+            ]);
+
+            if ($request->boolean('is_chief', true)) {
+                $office->head_user_id = $user->id;
+                $office->save();
+            }
+
+            return response()->json([
+                'message' => 'Office account created (username: ' . $office->unit_code . ')',
+                'user' => $user->load('office'),
+            ], 201);
+        });
+
         Route::put('/users/{user}', function (\Illuminate\Http\Request $request, \App\Models\User $user) {
             $request->validate([
                 'name' => 'sometimes|string|max:255',
-                'role' => 'sometimes|in:superadmin,officer,non_officer,fcos',
+                'role' => 'sometimes|in:superadmin,officer,non_officer,fcos,office_station',
                 'status' => 'sometimes|in:active,inactive,suspended',
                 'office_id' => 'sometimes|exists:offices,id',
                 'rank' => 'sometimes|nullable|string|max:50',
@@ -600,6 +655,17 @@ Route::middleware('auth:sanctum')->group(function () {
                 }
                 return response()->download($path);
             });
+        });
+
+        // Storage management (admin only)
+        Route::prefix('storage')->group(function () {
+            Route::get('/summary', [StorageController::class, 'summary']);
+            Route::post('/cleanup/versions', [StorageController::class, 'cleanupVersions']);
+            Route::post('/cleanup/duplicates', [StorageController::class, 'cleanupDuplicates']);
+            Route::post('/archive/expired', [StorageController::class, 'archiveExpired']);
+            Route::post('/archive/purge', [StorageController::class, 'purgeArchived']);
+            Route::get('/archive', [StorageController::class, 'listArchive']);
+            Route::post('/archive/{attachment}/restore', [StorageController::class, 'restoreArchived']);
         });
 
         // System-wide audit trail (admin only)

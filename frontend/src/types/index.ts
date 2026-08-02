@@ -32,7 +32,7 @@ export interface Document {
   subject: string
   description?: string
   priority: 'low' | 'normal' | 'high' | 'urgent'
-  status: 'pending' | 'in_review' | 'approved' | 'rejected' | 'returned' | 'released'
+  status: 'received' | 'in_review' | 'approved' | 'rejected' | 'returned' | 'released' | 'filed'
   originator_id: number
   current_office_id: number
   routing_template_id?: number

@@ -15,5 +15,6 @@ fi
 php artisan config:clear || true
 php artisan route:clear || true
 php artisan migrate --force || true
+php artisan storage:link || true
 
 exec supervisord -c /etc/supervisor/conf.d/supervisord.conf

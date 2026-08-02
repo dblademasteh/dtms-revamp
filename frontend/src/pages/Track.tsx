@@ -22,21 +22,23 @@ export default function Track() {
   }
 
   const statusColors: Record<string, string> = {
-    pending: 'bg-amber-100 text-amber-800 border-amber-200',
+    received: 'bg-amber-100 text-amber-800 border-amber-200',
     in_review: 'bg-blue-100 text-blue-800 border-blue-200',
     approved: 'bg-green-100 text-green-800 border-green-200',
     rejected: 'bg-red-100 text-red-800 border-red-200',
     returned: 'bg-slate-100 text-slate-800 border-slate-200',
     released: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    filed: 'bg-slate-200 text-slate-800 border-slate-300',
   }
 
   const statusLabels: Record<string, string> = {
-    pending: 'Pending',
+    received: 'Received',
     in_review: 'In Review',
     approved: 'Approved',
     rejected: 'Rejected',
     returned: 'Returned',
     released: 'Released',
+    filed: 'Filed',
   }
 
   return (

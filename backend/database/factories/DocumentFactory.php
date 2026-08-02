@@ -23,7 +23,7 @@ class DocumentFactory extends Factory
             'subject' => fake()->sentence(4),
             'description' => fake()->paragraph(),
             'priority' => DocumentPriority::NORMAL->value,
-            'status' => DocumentStatus::PENDING->value,
+            'status' => DocumentStatus::RECEIVED->value,
             'classification' => 'official',
             'mode_of_transmittal' => 'internal',
             'originator_id' => $user->id,

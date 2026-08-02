@@ -45,6 +45,15 @@ const cleanOfficeName = (name?: string) =>
     .replace(/\s+/g, ' ')
     .trim()
 
+const formatBytes = (bytes?: number | null): string => {
+  if (!bytes) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  let value = bytes
+  let i = 0
+  for (; value >= 1024 && i < units.length - 1; i++) value /= 1024
+  return `${value.toFixed(value >= 100 || i === 0 ? 0 : 1)} ${units[i]}`
+}
+
 const filterOffices = (nodes: any[], type: string, query: string): any[] => {
   const matchesType = (n: any) => !type || n.office_type === type
   const matchesQuery = (n: any) => {
@@ -52,9 +61,11 @@ const filterOffices = (nodes: any[], type: string, query: string): any[] => {
     const q = query.toLowerCase()
     const nameMatch = n.name?.toLowerCase().includes(q)
     const codeMatch = n.code?.toLowerCase().includes(q)
-    const headMatch = n.head?.name?.toLowerCase().includes(q)
+    const unitCodeMatch = n.unit_code?.toLowerCase().includes(q)
+    const headMatch = n.head?.full_name?.toLowerCase().includes(q)
+      || n.head?.name?.toLowerCase().includes(q)
       || n.head?.rank?.toLowerCase().includes(q)
-    return nameMatch || codeMatch || headMatch
+    return nameMatch || codeMatch || unitCodeMatch || headMatch
   }
   return nodes
     .map((n) => {
@@ -71,10 +82,12 @@ export default function Offices() {
   const [editingOffice, setEditingOffice] = useState<any>(null)
   const [name, setName] = useState('')
   const [code, setCode] = useState('')
+  const [unitCode, setUnitCode] = useState('')
   const [description, setDescription] = useState('')
   const [parentId, setParentId] = useState<number | ''>('')
   const [headUserId, setHeadUserId] = useState<number | ''>('')
   const [officeType, setOfficeType] = useState('')
+  const [storageQuota, setStorageQuota] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [expanded, setExpanded] = useState<Record<number, boolean>>({})
@@ -128,20 +141,24 @@ export default function Offices() {
     setEditingOffice(null)
     setName('')
     setCode('')
+    setUnitCode('')
     setDescription('')
     setParentId('')
     setHeadUserId('')
     setOfficeType('')
+    setStorageQuota('')
   }
 
   const startEdit = (o: any) => {
     setEditingOffice(o)
     setName(o.name)
     setCode(o.code)
+    setUnitCode(o.unit_code || '')
     setDescription(o.description || '')
     setParentId(o.parent_office_id || '')
     setHeadUserId(o.head_user_id || '')
     setOfficeType(o.office_type || '')
+    setStorageQuota(o.storage_quota_bytes ? String(o.storage_quota_bytes) : '')
     setShowForm(true)
   }
 
@@ -150,9 +167,11 @@ export default function Offices() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const data: any = { name, code, description }
+    if (unitCode) data.unit_code = unitCode
     if (parentId) data.parent_office_id = parentId
     if (headUserId) data.head_user_id = headUserId
     if (officeType) data.office_type = officeType
+    if (storageQuota !== '') data.storage_quota_bytes = Number(storageQuota)
     if (editingOffice) {
       updateMutation.mutate({ id: editingOffice.id, data })
     } else {
@@ -165,56 +184,88 @@ export default function Offices() {
     const isExpanded = searchQuery ? true : expanded[office.id] !== false
 
     return (
-      <div key={office.id}>
-        <div className={`flex items-center gap-2 px-4 py-2.5 hover:bg-slate-50 border-l-2 ${
-          level === 0 ? 'border-primary-400' : level === 1 ? 'border-slate-300' : 'border-slate-200'
-        }`} style={{ marginLeft: level * 24 }}>
-          {hasChildren && (
-            <button onClick={() => toggleExpand(office.id)} className="text-slate-400 hover:text-slate-600">
-              {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-            </button>
-          )}
-          {!hasChildren && <div className="w-4" />}
-          <Building2 className="w-4 h-4 text-slate-400 flex-shrink-0" />
-          <div className="flex-1 min-w-0">
+      <>
+        <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+          <td className="py-3" style={{ paddingLeft: level * 28 + 12 }}>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-slate-900">{cleanOfficeName(office.name)}</span>
-              <span className="text-xs text-slate-400">({office.code})</span>
+              {hasChildren ? (
+                <button onClick={() => toggleExpand(office.id)} className="text-slate-400 hover:text-slate-600 p-0.5">
+                  {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                </button>
+              ) : <div className="w-5" />}
+              <Building2 className="w-4 h-4 text-slate-400 flex-shrink-0" />
+              <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{cleanOfficeName(office.name)}</span>
             </div>
-            {office.head && (() => {
-              const badge = getRankBadge(office.head.rank)
-              return (
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <div className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 flex items-center justify-center flex-shrink-0">
-                    <UserCheck className="w-3 h-3" />
-                  </div>
-                  <span className="text-xs font-medium text-primary-700 dark:text-primary-300">
-                    {[office.head.rank, office.head.name].filter(Boolean).join(' ')}
-                  </span>
-                  {badge && (
+          </td>
+          <td className="text-sm text-slate-500 dark:text-slate-400 font-mono">{office.code}</td>
+          <td>
+            {office.unit_code ? (
+              <span className="px-2 py-0.5 text-xs font-semibold rounded-md bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 font-mono">
+                {office.unit_code}
+              </span>
+            ) : <span className="text-xs text-slate-400">—</span>}
+          </td>
+          <td>
+            {office.office_type && (
+              <span className={`badge text-xs ${OFFICE_TYPE_BADGE[office.office_type] || OFFICE_TYPE_BADGE.others}`}>
+                {officeTypeLabel(office.office_type)}
+              </span>
+            )}
+          </td>
+          <td>
+            {office.head ? (
+              <div className="flex items-center gap-1.5">
+                <UserCheck className="w-3.5 h-3.5 text-primary-500 flex-shrink-0" />
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  {[office.head.rank, office.head.full_name || office.head.name].filter(Boolean).join(' ')}
+                </span>
+                {(() => {
+                  const badge = getRankBadge(office.head.rank)
+                  return badge && (
                     <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded-full ${badge.className}`}>
                       {badge.label}
                     </span>
-                  )}
-                </div>
-              )
-            })()}
-          </div>
-          <span className={`badge text-xs ${office.status === 'active' ? 'badge-success' : 'badge-neutral'}`}>
-            {office.status}
-          </span>
-          {office.office_type && (
-            <span className={`badge text-xs ${OFFICE_TYPE_BADGE[office.office_type] || OFFICE_TYPE_BADGE.others}`}>
-              {officeTypeLabel(office.office_type)}
+                  )
+                })()}
+              </div>
+            ) : <span className="text-xs text-slate-400">—</span>}
+          </td>
+          <td>
+            <span className={`badge text-xs ${office.status === 'active' ? 'badge-success' : 'badge-neutral'}`}>
+              {office.status}
             </span>
-          )}
-          <div className="flex items-center gap-1">
-            <button onClick={() => startEdit(office)} className="btn btn-ghost btn-sm p-1"><Edit className="w-3.5 h-3.5" /></button>
-            <button onClick={() => setDeleteTarget(office)} className="btn btn-ghost btn-sm p-1 text-red-500 hover:text-red-700"><Trash2 className="w-3.5 h-3.5" /></button>
-          </div>
-        </div>
+          </td>
+          <td>
+            <div className="min-w-28">
+              <p className="text-xs text-slate-600 dark:text-slate-300">
+                {formatBytes(office.storage_usage_bytes || 0)}
+                {office.storage_quota_bytes ? ` / ${formatBytes(office.storage_quota_bytes)}` : ''}
+              </p>
+              {office.storage_quota_bytes ? (
+                <div className="mt-1 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${(office.storage_usage_bytes || 0) / office.storage_quota_bytes >= 0.9
+                      ? 'bg-red-500'
+                      : (office.storage_usage_bytes || 0) / office.storage_quota_bytes >= 0.7
+                        ? 'bg-amber-500'
+                        : 'bg-emerald-500'}`}
+                    style={{ width: `${Math.min(100, ((office.storage_usage_bytes || 0) / office.storage_quota_bytes) * 100)}%` }}
+                  />
+                </div>
+              ) : (
+                <span className="text-[10px] text-slate-400">Unlimited</span>
+              )}
+            </div>
+          </td>
+          <td>
+            <div className="flex items-center justify-end gap-1">
+              <button onClick={() => startEdit(office)} className="btn btn-ghost btn-sm p-1"><Edit className="w-3.5 h-3.5" /></button>
+              <button onClick={() => setDeleteTarget(office)} className="btn btn-ghost btn-sm p-1 text-red-500 hover:text-red-700"><Trash2 className="w-3.5 h-3.5" /></button>
+            </div>
+          </td>
+        </tr>
         {hasChildren && isExpanded && office.children.map((child: any) => renderOffice(child, level + 1))}
-      </div>
+      </>
     )
   }
 
@@ -238,7 +289,7 @@ export default function Offices() {
             placeholder="Search offices, codes, chiefs..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400"
+            className="w-full pl-9 pr-3 py-1.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 dark:placeholder:text-slate-500"
           />
         </div>
         <button
@@ -295,7 +346,7 @@ export default function Offices() {
                 {/* Details */}
                 <section>
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">Details</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                         Office Name <span className="text-danger-500">*</span>
@@ -307,6 +358,12 @@ export default function Offices() {
                         Code <span className="text-danger-500">*</span>
                       </label>
                       <input className="input" value={code} onChange={e => setCode(e.target.value)} required maxLength={10} />
+                    </div>
+                    <div>
+                      <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                        Unit Code
+                      </label>
+                      <input className="input" value={unitCode} onChange={e => setUnitCode(e.target.value)} placeholder="e.g. 5.1a" maxLength={20} />
                     </div>
                   </div>
                   <div className="mt-4">
@@ -361,14 +418,14 @@ export default function Offices() {
                         menuPosition="fixed"
                         options={(users || []).map((u: any) => ({
                           value: u.id,
-                          label: [u.rank, u.name].filter(Boolean).join(' '),
+                          label: [u.rank, u.full_name || u.name].filter(Boolean).join(' '),
                           designation: u.designation || '',
                           rank: u.rank || '',
                         }))}
                         value={(users || [])
                           .map((u: any) => ({
                             value: u.id,
-                            label: [u.rank, u.name].filter(Boolean).join(' '),
+                            label: [u.rank, u.full_name || u.name].filter(Boolean).join(' '),
                             designation: u.designation || '',
                             rank: u.rank || '',
                           }))
@@ -394,6 +451,29 @@ export default function Offices() {
                         }}
                       />
                     </div>
+                  </div>
+                </section>
+
+                {/* Storage quota */}
+                <section>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Storage Quota</h3>
+                  <div>
+                    <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
+                      Max Attachment Storage (bytes)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      className="input"
+                      value={storageQuota}
+                      onChange={e => setStorageQuota(e.target.value)}
+                      placeholder="Leave empty for unlimited. e.g. 536870912 = 512 MB"
+                    />
+                    <p className="text-[12px] text-slate-500 mt-1.5">
+                      {storageQuota
+                        ? `Quota of ${formatBytes(Number(storageQuota))} applies to non-archived attachments of documents originated by this office.`
+                        : 'No quota set — office can store unlimited attachments.'}
+                    </p>
                   </div>
                 </section>
               </div>
@@ -433,8 +513,24 @@ export default function Offices() {
             {[...Array(5)].map((_, i) => <div key={i} className="h-10 bg-slate-100 rounded-lg animate-pulse" />)}
           </div>
         ) : (
-          <div className="divide-y divide-slate-100">
-            {filterOffices(offices || [], typeFilter, searchQuery).map((office: any) => renderOffice(office))}
+          <div className="overflow-x-auto">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th className="w-[38%]">Office</th>
+                  <th>Code</th>
+                  <th>Unit Code</th>
+                  <th>Type</th>
+                  <th>Head</th>
+                  <th>Status</th>
+                  <th>Storage</th>
+                  <th className="w-24 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filterOffices(offices || [], typeFilter, searchQuery).map((office: any) => renderOffice(office))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

@@ -84,7 +84,7 @@ class DocumentTest extends TestCase
         $user = $this->authenticate();
         $template = $this->createTemplate($user, $user->office, 3);
         $doc = Document::factory()->create([
-            'status' => DocumentStatus::PENDING,
+            'status' => DocumentStatus::RECEIVED,
             'current_step' => 0,
             'routing_template_id' => $template->id,
             'originator_id' => $user->id,
@@ -108,7 +108,7 @@ class DocumentTest extends TestCase
         $user = $this->authenticate();
         $template = $this->createTemplate($user, $user->office, 3);
         $doc = Document::factory()->create([
-            'status' => DocumentStatus::PENDING,
+            'status' => DocumentStatus::RECEIVED,
             'current_step' => 0,
             'routing_template_id' => $template->id,
             'originator_id' => $user->id,
@@ -137,7 +137,7 @@ class DocumentTest extends TestCase
         $user = $this->authenticate();
         $template = $this->createTemplate($user, $user->office, 3);
         $doc = Document::factory()->create([
-            'status' => DocumentStatus::PENDING,
+            'status' => DocumentStatus::RECEIVED,
             'current_step' => 0,
             'routing_template_id' => $template->id,
             'originator_id' => $user->id,
@@ -181,6 +181,53 @@ class DocumentTest extends TestCase
 
         $response = $this->deleteJson("/api/documents/{$doc->id}");
         $response->assertStatus(422);
+    }
+
+    public function test_can_file_released_document(): void
+    {
+        $user = $this->authenticate();
+        $doc = Document::factory()->create([
+            'status' => DocumentStatus::RELEASED,
+            'originator_id' => $user->id,
+            'current_office_id' => $user->office_id,
+        ]);
+
+        $response = $this->postJson("/api/documents/{$doc->id}/route", [
+            'action' => 'filed',
+            'remarks' => 'Filed for archival',
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('documents', [
+            'id' => $doc->id,
+            'status' => DocumentStatus::FILED->value,
+        ]);
+        $this->assertDatabaseHas('routing_history', [
+            'document_id' => $doc->id,
+            'action' => 'filed',
+            'disposition' => 'filed',
+        ]);
+    }
+
+    public function test_cannot_file_non_released_document(): void
+    {
+        $user = $this->authenticate();
+        $doc = Document::factory()->create([
+            'status' => DocumentStatus::RECEIVED,
+            'originator_id' => $user->id,
+            'current_office_id' => $user->office_id,
+        ]);
+
+        $response = $this->postJson("/api/documents/{$doc->id}/route", [
+            'action' => 'filed',
+            'remarks' => 'Should fail',
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertDatabaseHas('documents', [
+            'id' => $doc->id,
+            'status' => DocumentStatus::RECEIVED->value,
+        ]);
     }
 
     public function test_can_create_comment(): void

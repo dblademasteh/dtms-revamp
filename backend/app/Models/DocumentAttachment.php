@@ -18,6 +18,8 @@ class DocumentAttachment extends Model
         'file_hash',
         'version',
         'is_latest',
+        'is_compressed',
+        'archived_at',
         'uploaded_by',
         'description',
     ];
@@ -26,6 +28,8 @@ class DocumentAttachment extends Model
         'file_size' => 'integer',
         'version' => 'integer',
         'is_latest' => 'boolean',
+        'is_compressed' => 'boolean',
+        'archived_at' => 'datetime',
     ];
 
     // Scopes

@@ -122,6 +122,7 @@ class Document extends Model
         'returned' => 'return',
         'referred' => 'return',
         'resubmitted' => 'resubmit',
+        'filed' => 'file',
     ];
 
     public static function transitionFor(string $action): ?string
@@ -132,10 +133,12 @@ class Document extends Model
     public static function canonicalAction(string $transition): string
     {
         return match ($transition) {
+            'approve' => 'approved',
             'reject' => 'rejected',
             'return' => 'returned',
             'resubmit' => 'resubmitted',
-            default => 'approved',
+            'file' => 'filed',
+            default => $transition,
         };
     }
 
@@ -223,7 +226,7 @@ class Document extends Model
     // Scopes
     public function scopePending($query)
     {
-        return $query->where('status', DocumentStatus::PENDING);
+        return $query->where('status', DocumentStatus::RECEIVED);
     }
 
     public function scopeInReview($query)
@@ -242,6 +245,8 @@ class Document extends Model
                     ->whereNotIn('status', [
                         DocumentStatus::APPROVED,
                         DocumentStatus::RELEASED,
+                        DocumentStatus::FILED,
+                        DocumentStatus::REJECTED,
                     ]);
     }
 
@@ -249,7 +254,7 @@ class Document extends Model
     public static function generateTrackingNumber(?string $officeCode = null): string
     {
         $year = date('Y');
-        $prefix = 'BFP';
+        $prefix = $officeCode ? strtoupper(trim($officeCode)) : 'BFP';
         $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
         $code = '';
         for ($i = 0; $i < 6; $i++) {
@@ -266,6 +271,8 @@ class Document extends Model
                !in_array($this->status, [
                    DocumentStatus::APPROVED,
                    DocumentStatus::RELEASED,
+                   DocumentStatus::FILED,
+                   DocumentStatus::REJECTED,
                ]);
     }
 

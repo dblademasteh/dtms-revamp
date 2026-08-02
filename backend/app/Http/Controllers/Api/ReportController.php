@@ -58,7 +58,7 @@ class ReportController extends Controller
             COUNT(*) as pending_count,
             AVG(EXTRACT(EPOCH FROM (NOW() - created_at))/3600) as avg_wait_hours
         ')
-        ->whereIn('status', ['pending', 'in_review'])
+        ->whereIn('status', ['received', 'in_review'])
         ->whereBetween('created_at', [$fromDate, $toDate])
         ->groupBy('current_office_id')
         ->orderByDesc('pending_count')
@@ -90,7 +90,7 @@ class ReportController extends Controller
             DATE_TRUNC('{$period}', created_at) as period,
             COUNT(*) as total,
             COUNT(CASE WHEN status = 'released' THEN 1 END) as released,
-            COUNT(CASE WHEN status IN ('pending', 'in_review') THEN 1 END) as pending
+            COUNT(CASE WHEN status IN ('received', 'in_review') THEN 1 END) as pending
         ")
         ->whereBetween('created_at', [$fromDate, $toDate])
         ->groupBy('period')
@@ -103,7 +103,7 @@ class ReportController extends Controller
     public function overdue(Request $request)
     {
         $query = Document::where('sla_deadline', '<', now())
-            ->whereNotIn('status', ['approved', 'released'])
+            ->whereNotIn('status', ['approved', 'released', 'filed', 'rejected'])
             ->with(['originator', 'currentOffice'])
             ->orderBy('sla_deadline');
 
@@ -173,7 +173,7 @@ class ReportController extends Controller
 
                 case 'volume':
                     fputcsv($handle, ['Period', 'Total', 'Released', 'Pending']);
-                    Document::selectRaw("DATE_TRUNC('day', created_at) as period, COUNT(*) as total, COUNT(CASE WHEN status = 'released' THEN 1 END) as released, COUNT(CASE WHEN status IN ('pending', 'in_review') THEN 1 END) as pending")
+                    Document::selectRaw("DATE_TRUNC('day', created_at) as period, COUNT(*) as total, COUNT(CASE WHEN status = 'released' THEN 1 END) as released, COUNT(CASE WHEN status IN ('received', 'in_review') THEN 1 END) as pending")
                         ->whereBetween('created_at', [$fromDate, $toDate])
                         ->groupBy('period')
                         ->orderBy('period')
@@ -190,7 +190,7 @@ class ReportController extends Controller
                 case 'bottlenecks':
                     fputcsv($handle, ['Office', 'Pending Count', 'Avg Wait (hrs)']);
                     Document::selectRaw('current_office_id, COUNT(*) as pending_count, AVG(EXTRACT(EPOCH FROM (NOW() - created_at))/3600) as avg_wait_hours')
-                        ->whereIn('status', ['pending', 'in_review'])
+                        ->whereIn('status', ['received', 'in_review'])
                         ->whereBetween('created_at', [$fromDate, $toDate])
                         ->groupBy('current_office_id')
                         ->with('currentOffice')
@@ -233,20 +233,20 @@ class ReportController extends Controller
 
         $stats = [
             'total_documents' => Document::count(),
-            'pending_documents' => Document::whereIn('status', ['pending', 'in_review', 'returned'])->count(),
+            'pending_documents' => Document::whereIn('status', ['received', 'in_review', 'returned'])->count(),
             'returned_documents' => Document::where('status', 'returned')->count(),
             'released_today' => Document::where('status', 'released')
                 ->whereDate('released_at', today())
                 ->count(),
             'overdue_documents' => Document::where('sla_deadline', '<', now())
-                ->whereNotIn('status', ['approved', 'released'])
+                ->whereNotIn('status', ['approved', 'released', 'filed', 'rejected'])
                 ->count(),
         ];
 
         // Office-specific stats if not admin
         if (!$user->isAdmin()) {
             $stats['my_office_pending'] = Document::where('current_office_id', $user->office_id)
-                ->whereIn('status', ['pending', 'in_review', 'returned'])
+                ->whereIn('status', ['received', 'in_review', 'returned'])
                 ->count();
         }
 

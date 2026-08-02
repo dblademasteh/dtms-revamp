@@ -138,7 +138,7 @@ export default function Reports() {
       {activeTab !== 'overdue' && (
         <div className="card">
           <div className="card-body">
-            <div className="flex flex-col sm:flex-row gap-3 items-end">
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
               <div className="flex-1">
                 <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
                   <Calendar className="inline w-3.5 h-3.5 mr-1" />

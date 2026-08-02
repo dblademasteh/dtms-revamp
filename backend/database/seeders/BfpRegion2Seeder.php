@@ -28,14 +28,17 @@ class BfpRegion2Seeder extends Seeder
     {
         $parentId = $parentCode ? $this->offices[$parentCode]->id : null;
 
-        // Strip the leading organizational code prefix (e.g. "5.1a ", "17.0 ")
-        // so office names stay clean of numeric identifiers.
-        $cleanName = preg_replace('/^[\d.]+(?:[a-z])?\s+/', '', $name);
+        // Extract the leading organizational unit code (e.g. "5.1a ", "17.0 ")
+        // and keep the office name clean of numeric identifiers.
+        preg_match('/^[\d.]+(?:[a-z])?\s+/i', $name, $matches);
+        $unitCode = $matches ? trim($matches[0]) : null;
+        $cleanName = preg_replace('/^[\d.]+(?:[a-z])?\s+/i', '', $name);
 
         $office = Office::firstOrCreate(
             ['code' => $code],
             [
                 'name' => $cleanName,
+                'unit_code' => $unitCode,
                 'parent_office_id' => $parentId,
                 'description' => $description,
                 'office_type' => $type,
@@ -49,6 +52,9 @@ class BfpRegion2Seeder extends Seeder
         }
         if ($office->office_type !== $type) {
             $office->update(['office_type' => $type]);
+        }
+        if ($office->unit_code !== $unitCode) {
+            $office->update(['unit_code' => $unitCode]);
         }
 
         $this->offices[$code] = $office;

@@ -4,13 +4,21 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Document;
+use App\Models\Office;
 use App\Models\RoutingHistory;
 use App\Models\AuditTrail;
+use App\Models\DocumentAttachment;
 use App\Models\DocumentComment;
 use App\Enums\DocumentStatus;
+use App\Events\DocumentStatusChanged;
+use App\Events\NotificationCreated;
+use App\Support\ImageProcessor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use App\Mail\DocumentNotification;
 
 class DocumentController extends Controller
@@ -33,6 +41,10 @@ class DocumentController extends Controller
 
         if ($request->has('office_id')) {
             $query->where('current_office_id', $request->office_id);
+        }
+
+        if ($request->has('personnel_id')) {
+            $query->where('originator_id', $request->personnel_id);
         }
 
         if ($request->boolean('mine')) {
@@ -137,7 +149,7 @@ class DocumentController extends Controller
                 'classification' => $request->classification ?? 'official',
                 'mode_of_transmittal' => $request->mode_of_transmittal,
                 'action_requested' => $request->action_requested,
-                'status' => DocumentStatus::PENDING,
+                'status' => DocumentStatus::RECEIVED,
                 'originator_id' => $request->user()->id,
                 'current_office_id' => $recipientOfficeId ?? $request->user()->office_id,
                 'routing_template_id' => $request->routing_template_id,
@@ -190,7 +202,7 @@ class DocumentController extends Controller
                 $recipientUserId = $document->currentOffice->head_user_id;
             }
             if ($recipientUserId && $recipientUserId !== $request->user()->id) {
-                \App\Models\Notification::create([
+                $notification = \App\Models\Notification::create([
                     'user_id' => $recipientUserId,
                     'type' => 'document_created',
                     'title' => 'New Document Received',
@@ -199,7 +211,26 @@ class DocumentController extends Controller
                     'sent_at' => now(),
                     'data' => ['document_id' => $document->id, 'tracking_number' => $document->tracking_number, 'subject' => $document->subject],
                 ]);
+
+                NotificationCreated::dispatch(
+                    $notification->id,
+                    $notification->user_id,
+                    $notification->type,
+                    $notification->title,
+                    $notification->message,
+                    $notification->data,
+                );
             }
+
+            DocumentStatusChanged::dispatch(
+                $document->id,
+                $document->tracking_number,
+                $document->subject,
+                $document->status->value,
+                'created',
+                $request->user()->id,
+                $request->user()->name,
+            );
 
             $message = 'Document created successfully';
             if (!empty($skippedDuplicates)) {
@@ -298,12 +329,17 @@ class DocumentController extends Controller
             'attachment' => 'nullable|file|max:10240',
         ]);
 
+        $action = $request->input('action');
+        $transition = \App\Models\Document::transitionFor($action);
+
+        if ($transition === 'file' && $document->status !== DocumentStatus::RELEASED) {
+            return response()->json(['message' => 'Only released documents can be filed'], 422);
+        }
+
         DB::beginTransaction();
 
         try {
             $oldStatus = $document->status;
-            $action = $request->input('action');
-            $transition = \App\Models\Document::transitionFor($action);
             $canonicalAction = \App\Models\Document::canonicalAction($transition);
 
             if ($transition === 'approve') {
@@ -313,7 +349,7 @@ class DocumentController extends Controller
 
                 $document->update([
                     'current_step' => $nextStep,
-                    'status' => $isLastStep ? DocumentStatus::APPROVED : DocumentStatus::IN_PROGRESS,
+                    'status' => $isLastStep ? DocumentStatus::APPROVED : DocumentStatus::IN_REVIEW,
                 ]);
 
                 RoutingHistory::create([
@@ -330,7 +366,7 @@ class DocumentController extends Controller
 
                 // Notify originator
                 if ($document->originator_id && $document->originator_id !== $request->user()->id) {
-                    \App\Models\Notification::create([
+                    $notification = \App\Models\Notification::create([
                         'user_id' => $document->originator_id,
                         'type' => 'document_approved',
                         'title' => 'Document Approved',
@@ -339,6 +375,15 @@ class DocumentController extends Controller
                         'sent_at' => now(),
                         'data' => ['document_id' => $document->id, 'tracking_number' => $document->tracking_number, 'subject' => $document->subject],
                     ]);
+
+                    NotificationCreated::dispatch(
+                        $notification->id,
+                        $notification->user_id,
+                        $notification->type,
+                        $notification->title,
+                        $notification->message,
+                        $notification->data,
+                    );
                 }
 
                 // Notify CC users
@@ -354,7 +399,7 @@ class DocumentController extends Controller
                     }
                     foreach ($ccUserIds as $ccUserId) {
                         if ($ccUserId !== $request->user()->id) {
-                            \App\Models\Notification::create([
+                            $ccNotification = \App\Models\Notification::create([
                                 'user_id' => $ccUserId,
                                 'type' => 'document_approved',
                                 'title' => 'Document Approved',
@@ -363,6 +408,15 @@ class DocumentController extends Controller
                                 'sent_at' => now(),
                                 'data' => ['document_id' => $document->id, 'tracking_number' => $document->tracking_number, 'subject' => $document->subject],
                             ]);
+
+                            NotificationCreated::dispatch(
+                                $ccNotification->id,
+                                $ccNotification->user_id,
+                                $ccNotification->type,
+                                $ccNotification->title,
+                                $ccNotification->message,
+                                $ccNotification->data,
+                            );
                         }
                     }
                 }
@@ -402,7 +456,7 @@ class DocumentController extends Controller
 
                 $returnOffice = \App\Models\Office::find($request->to_office_id);
                 if ($returnOffice && $returnOffice->head_user_id && $returnOffice->head_user_id !== $request->user()->id) {
-                    \App\Models\Notification::create([
+                    $notification = \App\Models\Notification::create([
                         'user_id' => $returnOffice->head_user_id,
                         'type' => 'document_returned',
                         'title' => 'Document Returned',
@@ -411,10 +465,19 @@ class DocumentController extends Controller
                         'sent_at' => now(),
                         'data' => ['document_id' => $document->id, 'tracking_number' => $document->tracking_number, 'subject' => $document->subject],
                     ]);
+
+                    NotificationCreated::dispatch(
+                        $notification->id,
+                        $notification->user_id,
+                        $notification->type,
+                        $notification->title,
+                        $notification->message,
+                        $notification->data,
+                    );
                 }
             } elseif ($transition === 'resubmit') {
                 $document->update([
-                    'status' => DocumentStatus::PENDING,
+'status' => DocumentStatus::RECEIVED,
                     'current_office_id' => $request->to_office_id,
                 ]);
 
@@ -432,7 +495,7 @@ class DocumentController extends Controller
 
                 $resubmitOffice = \App\Models\Office::find($request->to_office_id);
                 if ($resubmitOffice && $resubmitOffice->head_user_id && $resubmitOffice->head_user_id !== $request->user()->id) {
-                    \App\Models\Notification::create([
+                    $notification = \App\Models\Notification::create([
                         'user_id' => $resubmitOffice->head_user_id,
                         'type' => 'document_resubmitted',
                         'title' => 'Document Resubmitted',
@@ -441,10 +504,32 @@ class DocumentController extends Controller
                         'sent_at' => now(),
                         'data' => ['document_id' => $document->id, 'tracking_number' => $document->tracking_number, 'subject' => $document->subject],
                     ]);
-                }
-            }
 
-            $newStatus = $document->status;
+                    NotificationCreated::dispatch(
+                        $notification->id,
+                        $notification->user_id,
+                        $notification->type,
+                        $notification->title,
+                        $notification->message,
+                        $notification->data,
+                    );
+                }
+} elseif ($transition === 'file') {
+                 $document->update(['status' => DocumentStatus::FILED]);
+                 RoutingHistory::create([
+                     'document_id' => $document->id,
+                     'from_office_id' => $document->current_office_id,
+                     'to_office_id' => $document->current_office_id,
+                     'action' => $canonicalAction,
+                     'disposition' => $action,
+                     'remarks' => $request->remarks,
+                     'actor_id' => $request->user()->id,
+                     'step_number' => $document->routingHistory()->max('step_number') + 1,
+                     'timestamp' => now(),
+                 ]);
+             }
+ 
+             $newStatus = $document->status;
 
             AuditTrail::create([
                 'document_id' => $document->id,
@@ -458,6 +543,16 @@ class DocumentController extends Controller
             ]);
 
             DB::commit();
+
+            DocumentStatusChanged::dispatch(
+                $document->id,
+                $document->tracking_number,
+                $document->subject,
+                $document->status->value,
+                $canonicalAction,
+                $request->user()->id,
+                $request->user()->name,
+            );
 
             if ($document->originator_id && $document->originator_id !== $request->user()->id) {
                 try {
@@ -653,6 +748,16 @@ class DocumentController extends Controller
 
             DB::commit();
 
+            DocumentStatusChanged::dispatch(
+                $document->id,
+                $document->tracking_number,
+                $document->subject,
+                $document->status->value,
+                'recalled',
+                $request->user()->id,
+                $request->user()->name,
+            );
+
             return response()->json([
                 'message' => 'Document recalled successfully',
                 'document' => $document->refresh(),
@@ -723,20 +828,68 @@ class DocumentController extends Controller
                 ->update(['is_latest' => false]);
         }
 
-        $path = $file->store('documents/' . $document->id, 'public');
+        // Compress supported images (re-encode to JPEG, strips EXIF).
+        $compressed = ImageProcessor::compressImage($file->getRealPath());
+        $isCompressed = $compressed !== null && $compressed['size'] < $file->getSize();
+
+        if ($isCompressed) {
+            $path = 'documents/' . $document->id . '/' . Str::random(40) . '.jpg';
+            $fileType = $compressed['mime'];
+            $fileSize = $compressed['size'];
+        } else {
+            $path = $file->store('documents/' . $document->id, 'public');
+            $fileType = $file->getMimeType();
+            $fileSize = $file->getSize();
+        }
+
+        $this->enforceOfficeQuota($document, $fileSize);
+
+        if ($isCompressed) {
+            Storage::disk('public')->put($path, $compressed['content']);
+        }
 
         $attachment = $document->attachments()->create([
             'file_name' => $originalName,
             'file_path' => $path,
-            'file_type' => $file->getMimeType(),
-            'file_size' => $file->getSize(),
+            'file_type' => $fileType,
+            'file_size' => $fileSize,
             'file_hash' => $hash,
             'version' => $version,
             'is_latest' => true,
+            'is_compressed' => $isCompressed,
             'uploaded_by' => $userId,
         ]);
 
         return ['attachment' => $attachment, 'duplicate' => null, 'version' => $version];
+    }
+
+    /**
+     * Block the upload when the document's originating office is over its storage quota.
+     */
+    private function enforceOfficeQuota(Document $document, int $incomingBytes): void
+    {
+        $officeId = $document->originator?->office_id;
+        if (!$officeId) {
+            return;
+        }
+
+        $office = Office::find($officeId);
+        if (!$office || !$office->storage_quota_bytes) {
+            return;
+        }
+
+        $used = DocumentAttachment::query()
+            ->join('documents', 'documents.id', '=', 'document_attachments.document_id')
+            ->join('users', 'users.id', '=', 'documents.originator_id')
+            ->where('users.office_id', $officeId)
+            ->whereNull('document_attachments.archived_at')
+            ->sum('document_attachments.file_size');
+
+        if (($used + $incomingBytes) > $office->storage_quota_bytes) {
+            throw ValidationException::withMessages([
+                'file' => "Storage quota exceeded for {$office->name}. Free up space or increase the office quota.",
+            ]);
+        }
     }
 
     /**
@@ -785,25 +938,40 @@ class DocumentController extends Controller
             // Notify all active users (except the actor)
             $allUsers = \App\Models\User::where('status', 'active')
                 ->where('id', '!=', $user->id)
-                ->pluck('id');
+                ->get(['id', 'name']);
 
-            $notifications = $allUsers->map(fn($uid) => [
-                'user_id'    => $uid,
-                'type'       => 'document_disseminated',
-                'title'      => 'New Announcement Posted',
-                'message'    => "\"{$document->subject}\" ({$document->tracking_number}) has been posted for all staff. Please read and acknowledge.",
-                'channel'    => 'in_app',
-                'sent_at'    => now(),
-                'data'       => json_encode(['document_id' => $document->id, 'tracking_number' => $document->tracking_number, 'subject' => $document->subject]),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ])->toArray();
+            foreach ($allUsers as $recipient) {
+                $notification = \App\Models\Notification::create([
+                    'user_id'    => $recipient->id,
+                    'type'       => 'document_disseminated',
+                    'title'      => 'New Announcement Posted',
+                    'message'    => "\"{$document->subject}\" ({$document->tracking_number}) has been posted for all staff. Please read and acknowledge.",
+                    'channel'    => 'in_app',
+                    'sent_at'    => now(),
+                    'data'       => ['document_id' => $document->id, 'tracking_number' => $document->tracking_number, 'subject' => $document->subject],
+                ]);
 
-            if (!empty($notifications)) {
-                \App\Models\Notification::insert($notifications);
+                NotificationCreated::dispatch(
+                    $notification->id,
+                    $notification->user_id,
+                    $notification->type,
+                    $notification->title,
+                    $notification->message,
+                    $notification->data,
+                );
             }
 
             DB::commit();
+
+            DocumentStatusChanged::dispatch(
+                $document->id,
+                $document->tracking_number,
+                $document->subject,
+                $document->status->value,
+                'disseminated',
+                $user->id,
+                $user->name,
+            );
 
             return response()->json([
                 'message'  => 'Document disseminated to all staff.',
@@ -885,25 +1053,40 @@ class DocumentController extends Controller
             // Notify all active users (except the actor)
             $allUsers = \App\Models\User::where('status', 'active')
                 ->where('id', '!=', $user->id)
-                ->pluck('id');
+                ->get(['id', 'name']);
 
-            $notifications = $allUsers->map(fn($uid) => [
-                'user_id'    => $uid,
-                'type'       => 'document_disseminated',
-                'title'      => 'New Announcement Posted',
-                'message'    => "\"{$document->subject}\" ({$document->tracking_number}) has been posted for all staff.",
-                'channel'    => 'in_app',
-                'sent_at'    => now(),
-                'data'       => json_encode(['document_id' => $document->id, 'tracking_number' => $document->tracking_number, 'subject' => $document->subject]),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ])->toArray();
+            foreach ($allUsers as $recipient) {
+                $notification = \App\Models\Notification::create([
+                    'user_id'    => $recipient->id,
+                    'type'       => 'document_disseminated',
+                    'title'      => 'New Announcement Posted',
+                    'message'    => "\"{$document->subject}\" ({$document->tracking_number}) has been posted for all staff.",
+                    'channel'    => 'in_app',
+                    'sent_at'    => now(),
+                    'data'       => ['document_id' => $document->id, 'tracking_number' => $document->tracking_number, 'subject' => $document->subject],
+                ]);
 
-            if (!empty($notifications)) {
-                \App\Models\Notification::insert($notifications);
+                NotificationCreated::dispatch(
+                    $notification->id,
+                    $notification->user_id,
+                    $notification->type,
+                    $notification->title,
+                    $notification->message,
+                    $notification->data,
+                );
             }
 
             DB::commit();
+
+            DocumentStatusChanged::dispatch(
+                $document->id,
+                $document->tracking_number,
+                $document->subject,
+                $document->status->value,
+                'announced',
+                $user->id,
+                $user->name,
+            );
 
             return response()->json([
                 'message'  => 'Announcement posted successfully.',

@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -174,8 +175,60 @@ class AuthController extends Controller
     public function uploadAvatar(Request $request)
     {
         $request->validate([
-            'avatar' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'avatar' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120',
         ]);
+
+        $file = $request->file('avatar');
+
+        $size = @getimagesize($file->getRealPath());
+        if (!$size || $size[0] > 6000 || $size[1] > 6000) {
+            return response()->json(['message' => 'Image dimensions are too large (max 6000x6000 px)'], 422);
+        }
+
+        @ini_set('memory_limit', '512M');
+
+        $image = match ($file->getMimeType()) {
+            'image/png' => @imagecreatefrompng($file->getRealPath()),
+            'image/gif' => @imagecreatefromgif($file->getRealPath()),
+            default => @imagecreatefromjpeg($file->getRealPath()),
+        };
+
+        if (!$image) {
+            return response()->json(['message' => 'Could not read the uploaded image'], 422);
+        }
+
+        $maxDim = 512;
+        $srcW = imagesx($image);
+        $srcH = imagesy($image);
+
+        if ($srcW > $maxDim || $srcH > $maxDim) {
+            $ratio = min($maxDim / $srcW, $maxDim / $srcH);
+            $dstW = (int) round($srcW * $ratio);
+            $dstH = (int) round($srcH * $ratio);
+
+            $resized = imagecreatetruecolor($dstW, $dstH);
+            $alpha = imagecolorallocatealpha($resized, 0, 0, 0, 127);
+            imagefill($resized, 0, 0, $alpha);
+            imagesavealpha($resized, true);
+            imagealphablending($resized, true);
+            imagecopyresampled($resized, $image, 0, 0, 0, 0, $dstW, $dstH, $srcW, $srcH);
+            imagedestroy($image);
+            $image = $resized;
+        }
+
+        $flat = imagecreatetruecolor(imagesx($image), imagesy($image));
+        $white = imagecolorallocate($flat, 255, 255, 255);
+        imagefill($flat, 0, 0, $white);
+        imagecopy($flat, $image, 0, 0, 0, 0, imagesx($image), imagesy($image));
+
+        ob_start();
+        imagejpeg($flat, null, 85);
+        $data = ob_get_clean();
+
+        imagedestroy($image);
+        imagedestroy($flat);
+
+        $path = 'avatars/' . Str::uuid() . '.jpg';
 
         $user = $request->user();
 
@@ -183,7 +236,7 @@ class AuthController extends Controller
             Storage::disk('public')->delete($user->avatar);
         }
 
-        $path = $request->file('avatar')->store('avatars', 'public');
+        Storage::disk('public')->put($path, $data);
 
         $user->update(['avatar' => $path]);
 

@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('document_id')->constrained()->cascadeOnDelete();
             $table->foreignId('from_office_id')->constrained('offices');
             $table->foreignId('to_office_id')->constrained('offices');
-            $table->enum('action', ['routed', 'approved', 'rejected', 'returned', 'received']);
+            $table->enum('action', ['routed', 'approved', 'rejected', 'returned', 'received', 'resubmitted', 'referred', 'filed']);
             $table->text('remarks')->nullable();
             $table->foreignId('actor_id')->constrained('users');
             $table->integer('step_number')->default(1);

@@ -8,6 +8,7 @@ enum UserRole: string
     case OFFICER = 'officer';
     case NON_OFFICER = 'non_officer';
     case FCOS = 'fcos';
+    case OFFICE_STATION = 'office_station';
 
     public function label(): string
     {
@@ -16,6 +17,7 @@ enum UserRole: string
             self::OFFICER => 'Officer',
             self::NON_OFFICER => 'Non-Officer',
             self::FCOS => 'FCOS',
+            self::OFFICE_STATION => 'Office/Station',
         };
     }
 }

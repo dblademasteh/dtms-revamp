@@ -15,7 +15,9 @@ import {
   Building2,
   History,
   Megaphone,
-  Lightbulb
+  Lightbulb,
+  HardDrive,
+  Mail
 } from 'lucide-react'
 import { useState } from 'react'
 import NotificationBell from '@/components/NotificationBell'
@@ -26,6 +28,7 @@ const navigation = [
   { name: 'Announcements', href: '/announcements', icon: Megaphone },
   { name: 'Reports', href: '/reports', icon: BarChart3 },
   { name: 'Suggestions', href: '/suggestions', icon: Lightbulb },
+  { name: 'Mailbox', href: '/mailbox', icon: Mail },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]
 
@@ -83,6 +86,18 @@ export default function Layout() {
             {item.name}
           </Link>
         ))}
+        {user?.role === 'office_station' && (
+          <Link
+            to="/office-profile"
+            className={`nav-item ${
+              isActive('/office-profile') ? 'nav-item-active' : 'nav-item-inactive'
+            }`}
+            onClick={() => setSidebarOpen(false)}
+          >
+            <Building2 className="w-5 h-5 flex-shrink-0" />
+            Office Profile
+          </Link>
+        )}
         {user?.role === 'superadmin' && (
           <>
             <div className="sidebar-section pt-4 mt-4 border-t border-white/10">
@@ -127,6 +142,16 @@ export default function Layout() {
             >
               <Users className="w-5 h-5 flex-shrink-0" />
               Personnel
+            </Link>
+            <Link
+              to="/admin/storage"
+              className={`nav-item ${
+                isActive('/admin/storage') ? 'nav-item-active' : 'nav-item-inactive'
+              }`}
+              onClick={() => setSidebarOpen(false)}
+            >
+              <HardDrive className="w-5 h-5 flex-shrink-0" />
+              Storage
             </Link>
             <Link
               to="/admin/activity"

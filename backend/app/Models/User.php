@@ -79,6 +79,20 @@ class User extends Authenticatable
         return $this->name ?? 'Unknown';
     }
 
+    protected static function booted(): void
+    {
+        // Keep the display name in sync with the name parts whenever the parts
+        // change and no explicit display name was provided in the same update.
+        static::saving(function (User $user) {
+            $partsChanged = $user->isDirty('first_name') || $user->isDirty('last_name') || $user->isDirty('middle_name');
+            if ($user->exists && $partsChanged && !$user->isDirty('name')) {
+                if ($user->first_name || $user->last_name) {
+                    $user->name = $user->getFullNameAttribute();
+                }
+            }
+        });
+    }
+
     public function getHasPincodeAttribute(): bool
     {
         return !is_null($this->pincode);

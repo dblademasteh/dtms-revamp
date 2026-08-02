@@ -1,9 +1,12 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
 import { useState } from 'react'
+import Select from 'react-select'
+import { buildSelectStyles } from '@/utils/selectStyles'
 import {
   User,
   Lock,
@@ -18,6 +21,7 @@ import {
   ShieldCheck,
   ChevronDown,
   KeyRound,
+  Building2,
 } from 'lucide-react'
 
 function formatBytes(bytes: number): string {
@@ -65,6 +69,7 @@ export default function Settings() {
   const [scale, setScale] = useState(localStorage.getItem('dtms-scale') || 'md')
 
   const [slaHours, setSlaHours] = useState<number>(24)
+  const [retentionMonths, setRetentionMonths] = useState<number>(12)
 
   const slaQuery = useQuery({
     queryKey: ['admin-settings'],
@@ -75,6 +80,7 @@ export default function Settings() {
   useEffect(() => {
     if (slaQuery.data) {
       setSlaHours(slaQuery.data.default_sla_hours)
+      setRetentionMonths(slaQuery.data.retention_months ?? 12)
     }
   }, [slaQuery.data])
 
@@ -82,7 +88,8 @@ export default function Settings() {
     mutationFn: (data: any) => api.put('/admin/settings', data),
     onSuccess: (res) => {
       setSlaHours(res.data.settings.default_sla_hours)
-      toast.success('Default SLA updated')
+      setRetentionMonths(res.data.settings.retention_months)
+      toast.success('Settings updated')
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Save failed')
@@ -209,6 +216,9 @@ export default function Settings() {
     { id: 'security', label: 'Security', icon: Lock, admin: false },
     { id: 'notifications', label: 'Notifications', icon: Bell, admin: false },
     { id: 'appearance', label: 'Appearance', icon: Palette, admin: false },
+    ...(user?.office_id
+      ? [{ id: 'office', label: 'Office', icon: Building2, admin: false }]
+      : []),
     ...(isSuperadmin
       ? [
           { id: 'system', label: 'System', icon: SettingsIcon, admin: true },
@@ -283,6 +293,25 @@ export default function Settings() {
 
       {/* Profile */}
       {activeTab === 'profile' && (
+        user?.role === 'office_station' ? (
+          <div className="card">
+            <div className="card-header flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-slate-500" />
+              <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
+                Office Account
+              </h2>
+            </div>
+            <div className="card-body">
+              <p className="text-sm text-slate-500">
+                This account belongs to an office. Manage your office's logo, name, unit code,
+                description, and members from the dedicated office profile page.
+              </p>
+              <Link to="/office-profile" className="btn btn-primary btn-sm mt-4">
+                View Office Profile
+              </Link>
+            </div>
+          </div>
+        ) : (
         <div className="space-y-6">
           {/* Identity card with avatar upload */}
           <div className="card">
@@ -325,8 +354,8 @@ export default function Settings() {
                       onChange={(e) => {
                         const file = e.target.files?.[0]
                         if (!file) return
-                        if (file.size > 2 * 1024 * 1024) {
-                          toast.error('Image must be under 2 MB')
+                        if (file.size > 5 * 1024 * 1024) {
+                          toast.error('Image must be under 5 MB')
                           return
                         }
                         setAvatarPreview(URL.createObjectURL(file))
@@ -487,6 +516,7 @@ export default function Settings() {
             )}
           </div>
         </div>
+        )
       )}
 
       {/* Security */}
@@ -746,6 +776,9 @@ export default function Settings() {
         </div>
       )}
 
+      {/* Office (own office management for office accounts) */}
+      {activeTab === 'office' && user?.office_id && <MyOfficeSection />}
+
       {/* System (Admin only) */}
       {activeTab === 'system' && isSuperadmin && (
         <div className="space-y-6">
@@ -789,6 +822,43 @@ export default function Settings() {
             <div className="card-header flex items-center gap-2">
               <SettingsIcon className="w-4 h-4 text-slate-500" />
               <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
+                Document Retention
+              </h2>
+            </div>
+            <div className="card-body space-y-4">
+              <p className="text-xs text-slate-500">
+                Attachments of completed (approved/released) documents are moved to the archive once they exceed this retention
+                window. Archived files can be restored from the Storage admin page and are purged permanently after a 30-day grace period.
+              </p>
+              <div className="flex items-end gap-3">
+                <div className="flex-1">
+                  <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
+                    Retention period (months)
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={240}
+                    className="input"
+                    value={retentionMonths}
+                    onChange={(e) => setRetentionMonths(Number(e.target.value))}
+                  />
+                </div>
+                <button
+                  onClick={() => slaMutation.mutate({ default_sla_hours: slaHours, retention_months: retentionMonths })}
+                  disabled={slaMutation.isPending}
+                  className="btn btn-primary btn-sm"
+                >
+                  {slaMutation.isPending ? 'Saving...' : 'Save Retention'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-header flex items-center gap-2">
+              <SettingsIcon className="w-4 h-4 text-slate-500" />
+              <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
                 System Information
               </h2>
             </div>
@@ -821,6 +891,185 @@ export default function Settings() {
 
       {/* Database Management (Superadmin only) */}
       {activeTab === 'database' && isSuperadmin && <DatabaseManagement />}
+    </div>
+  )
+}
+
+const OFFICE_TYPES = [
+  { value: 'regional_office', label: 'Regional Office' },
+  { value: 'provincial_office', label: 'Provincial Office' },
+  { value: 'fire_station', label: 'Fire Station' },
+  { value: 'division', label: 'Division' },
+  { value: 'unit', label: 'Unit' },
+  { value: 'others', label: 'Others' },
+]
+
+function MyOfficeSection() {
+  const { user } = useAuthStore()
+  const queryClient = useQueryClient()
+  const [name, setName] = useState('')
+  const [unitCode, setUnitCode] = useState('')
+  const [description, setDescription] = useState('')
+  const [officeType, setOfficeType] = useState('')
+  const [headUserId, setHeadUserId] = useState<number | ''>('')
+  const selectStyles = useMemo(() => buildSelectStyles(), [])
+
+  const officeQuery = useQuery({
+    queryKey: ['my-office'],
+    queryFn: () => api.get('/my-office').then((r) => r.data.office),
+  })
+
+  const personnelQuery = useQuery({
+    queryKey: ['my-office-personnel'],
+    queryFn: () => api.get('/personnel').then((r) => r.data),
+  })
+
+  const office = officeQuery.data
+  const personnel = personnelQuery.data || []
+
+  useEffect(() => {
+    if (office) {
+      setName(office.name || '')
+      setUnitCode(office.unit_code || '')
+      setDescription(office.description || '')
+      setOfficeType(office.office_type || '')
+      setHeadUserId(office.head_user_id || '')
+    }
+  }, [office])
+
+  const saveMutation = useMutation({
+    mutationFn: (data: any) => api.put('/my-office', data),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['my-office'] })
+      queryClient.invalidateQueries({ queryKey: ['offices-hierarchy'] })
+      queryClient.invalidateQueries({ queryKey: ['offices'] })
+      toast.success(res.data.message || 'Office updated')
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Save failed')
+    },
+  })
+
+  const canManageChief =
+    user?.role === 'superadmin' ||
+    user?.role === 'office_station' ||
+    (office?.head_user_id && office.head_user_id === user?.id) ||
+    !office?.head_user_id
+
+  const chiefOptions = personnel.map((p: any) => ({
+    value: p.id,
+    label: [p.rank, p.full_name || p.name].filter(Boolean).join(' '),
+    designation: p.designation || '',
+    rank: p.rank || '',
+    isMember: p.office_id ? String(p.office_id) === String(office?.id) : false,
+  }))
+
+  const handleSave = () => {
+    const data: any = { name, unit_code: unitCode, description, office_type: officeType }
+    if (canManageChief && headUserId) data.head_user_id = headUserId
+    saveMutation.mutate(data)
+  }
+
+  if (officeQuery.isLoading) {
+    return (
+      <div className="card">
+        <div className="card-body text-sm text-slate-500">Loading office information...</div>
+      </div>
+    )
+  }
+
+  if (officeQuery.isError || !office) {
+    return (
+      <div className="card">
+        <div className="card-body text-sm text-slate-500">
+          No office is assigned to your account.
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="card">
+        <div className="card-header flex items-center gap-2">
+          <Building2 className="w-4 h-4 text-slate-500" />
+          <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
+            Office Information
+          </h2>
+        </div>
+        <div className="card-body space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Office Name</label>
+              <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Code</label>
+              <input className="input" value={office.code || ''} disabled />
+            </div>
+            <div>
+              <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Unit Code</label>
+              <input className="input" value={unitCode} onChange={(e) => setUnitCode(e.target.value)} placeholder="e.g. 5.1a" maxLength={20} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Office Type</label>
+              <select className="input" value={officeType} onChange={(e) => setOfficeType(e.target.value)}>
+                <option value="">Select type...</option>
+                {OFFICE_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Assigned Chief</label>
+              {canManageChief ? (
+                <Select
+                  styles={selectStyles}
+                  placeholder="Search and select a chief..."
+                  isClearable
+                  menuPortalTarget={document.body}
+                  menuPosition="fixed"
+                  options={chiefOptions}
+                  value={chiefOptions.find((o: any) => o.value === headUserId) || null}
+                  onChange={(opt: any) => setHeadUserId(opt ? opt.value : '')}
+                  formatOptionLabel={(option: any) => (
+                    <div className="flex flex-col">
+                      <span className="font-medium text-sm">
+                        {option.label}
+                        {!option.isMember && (
+                          <span className="ml-2 text-[10px] font-semibold text-primary-600 dark:text-primary-300 bg-primary-50 dark:bg-primary-900/40 px-1.5 py-0.5 rounded border border-primary-200 dark:border-primary-700/60">
+                            Not a member
+                          </span>
+                        )}
+                      </span>
+                      {option.designation && (
+                        <span className="text-[11px] text-slate-400">{option.designation}</span>
+                      )}
+                    </div>
+                  )}
+                />
+              ) : (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-sm text-slate-600">
+                  {office.head ? [office.head.rank, office.head.full_name || office.head.name].filter(Boolean).join(' ') : '—'}
+                  <span className="text-[11px] text-slate-400 ml-auto">Only the current chief can change this</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Description</label>
+            <textarea className="input" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
+          </div>
+
+          <div className="flex justify-end pt-1">
+            <button onClick={handleSave} disabled={saveMutation.isPending} className="btn btn-primary btn-sm">
+              {saveMutation.isPending ? 'Saving...' : 'Save Office'}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
