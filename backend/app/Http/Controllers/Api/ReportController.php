@@ -234,6 +234,7 @@ class ReportController extends Controller
         $stats = [
             'total_documents' => Document::count(),
             'pending_documents' => Document::whereIn('status', ['received', 'in_review', 'returned'])->count(),
+            'approved_documents' => Document::where('status', 'approved')->count(),
             'returned_documents' => Document::where('status', 'returned')->count(),
             'released_today' => Document::where('status', 'released')
                 ->whereDate('released_at', today())
