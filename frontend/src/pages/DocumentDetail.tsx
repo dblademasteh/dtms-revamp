@@ -49,6 +49,9 @@ import {
   ROUTING_DISPOSITIONS,
 } from '@/constants/documentOptions'
 import { BFP_ORG, BFP_ACTION_LEGEND, legendForDisposition } from '@/constants/bfp'
+
+const personLabel = (p: any) =>
+  p ? [p.rank, p.full_name || p.name].filter(Boolean).join(' ') : '—'
 import EditDocumentModal from '@/components/EditDocumentModal'
 import MultiSelect from '@/components/MultiSelect'
 
@@ -58,7 +61,7 @@ export default function DocumentDetail() {
   const queryClient = useQueryClient()
   const { user } = useAuthStore()
   const isSuperadmin = useAuthStore((s) => s.isSuperadmin)()
-  const [action, setAction] = useState<'approve' | 'reject' | 'return' | 'resubmit' | 'file' | null>(null)
+  const [action, setAction] = useState<'approve' | 'reject' | 'return' | 'resubmit' | 'file' | 'send' | null>(null)
   const [disposition, setDisposition] = useState('approved')
   const [remarks, setRemarks] = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -277,9 +280,9 @@ export default function DocumentDetail() {
     onError: (e: any) => toast.error(e.response?.data?.message || 'Comment failed'),
   })
 
-  const selectAction = (a: 'approve' | 'reject' | 'return' | 'resubmit' | 'file') => {
+  const selectAction = (a: 'approve' | 'reject' | 'return' | 'resubmit' | 'file' | 'send') => {
     setAction(a)
-    setDisposition(a === 'resubmit' ? 'resubmitted' : ROUTING_DISPOSITIONS[a][0].value)
+    setDisposition(a === 'resubmit' ? 'resubmitted' : a === 'send' ? 'routed' : ROUTING_DISPOSITIONS[a][0].value)
     if (a === 'return' || a === 'resubmit') {
       setRecipientMode('personnel')
       
@@ -301,6 +304,18 @@ export default function DocumentDetail() {
       } else {
         setRecipientSelection([]);
       }
+    } else if (a === 'send') {
+      // Prepopulate with the document's stored recipient (if any)
+      setRecipientSelection([])
+      if (document?.recipient_type === 'office') {
+        setRecipientMode('office')
+        const opt = officeOptions.find((o: any) => o.value === String(document.recipient_id))
+        if (opt) setRecipientSelection([opt])
+      } else if (document?.recipient_type === 'personnel') {
+        setRecipientMode('personnel')
+        const opt = personnelOptions.find((p: any) => p.value === String(document.recipient_id))
+        if (opt) setRecipientSelection([opt])
+      }
     }
   }
 
@@ -308,7 +323,7 @@ export default function DocumentDetail() {
     if (!action || !remarks || !disposition) return
     
     let targetOffice = document?.current_office_id
-    if (action === 'return' || action === 'resubmit') {
+    if (action === 'return' || action === 'resubmit' || action === 'send') {
       if (recipientSelection.length === 0) {
         toast.error('Please select a recipient')
         return
@@ -324,11 +339,18 @@ export default function DocumentDetail() {
       }
     }
 
+    const extra: Record<string, any> = {}
+    if (action === 'send') {
+      extra.recipient_type = recipientMode
+      extra.recipient_id = recipientSelection[0].value
+    }
+
     if (actionAttachment) {
       const fd = new FormData()
       fd.append('action', disposition)
       fd.append('remarks', remarks)
       if (targetOffice) fd.append('to_office_id', targetOffice)
+      Object.entries(extra).forEach(([k, v]) => fd.append(k, v))
       fd.append('attachment', actionAttachment)
       routeMutation.mutate(fd)
     } else {
@@ -336,6 +358,7 @@ export default function DocumentDetail() {
         action: disposition,
         remarks,
         to_office_id: targetOffice,
+        ...extra,
       })
     }
   }
@@ -406,6 +429,8 @@ export default function DocumentDetail() {
         return 'badge-danger'
       case 'returned':
         return 'badge-warning'
+      case 'created':
+        return 'badge-neutral'
       default:
         return 'badge-neutral'
     }
@@ -477,7 +502,7 @@ export default function DocumentDetail() {
        <div class="field"><span class="label">Classification:</span> ${classificationLabel(document.classification)}</div>
        <div class="field"><span class="label">Mode of Transmittal:</span> ${transmittalLabel(document.mode_of_transmittal)}</div>
        <div class="field"><span class="label">Priority:</span> ${document.priority}</div>
-      <div class="field"><span class="label">Originator:</span> ${document.originator?.full_name || document.originator?.name}</div>
+      <div class="field"><span class="label">Originator:</span> ${personLabel(document.originator)}</div>
       <div class="field"><span class="label">Current Office:</span> ${document.current_office?.name}</div>
       ${document.sla_deadline ? `<div class="field"><span class="label">SLA Deadline:</span> ${new Date(document.sla_deadline).toLocaleString()}</div>` : ''}
       ${document.description ? `<div class="field"><span class="label">Description:</span> ${document.description}</div>` : ''}
@@ -521,7 +546,7 @@ export default function DocumentDetail() {
     const blankRowsNeeded = minRows - history.length
 
     const dataRows = history.map((h) => {
-      const sig = h.actor?.full_name || h.actor?.name || ''
+      const sig = h.actor ? personLabel(h.actor) : ''
       const desig = h.actor?.role || h.fromOffice?.name || ''
       const forTo = h.toOffice?.name || ''
       const date = h.timestamp ? new Date(h.timestamp).toLocaleDateString('en-PH') : ''
@@ -767,7 +792,7 @@ export default function DocumentDetail() {
                         <div>
                           <dt className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Originator</dt>
                           <dd className="text-sm font-semibold text-slate-800">
-                            {document.originator?.full_name || document.originator?.name || '—'}
+                            {personLabel(document.originator)}
                           </dd>
                         </div>
                       </div>
@@ -837,7 +862,7 @@ export default function DocumentDetail() {
                               Recipient ({document.recipient_type})
                             </dt>
                             <dd className="text-sm font-semibold text-slate-800">
-                              {document.recipient?.full_name || document.recipient?.name || '—'}
+                              {personLabel(document.recipient)}
                             </dd>
                           </div>
                         </div>
@@ -852,7 +877,7 @@ export default function DocumentDetail() {
                               CC (Carbon Copy)
                             </dt>
                             <dd className="text-sm font-semibold text-slate-800">
-                              {document.cc_users.map((u: any) => u.full_name || u.name).join(', ')}
+                              {document.cc_users.map((u: any) => personLabel(u)).join(', ')}
                             </dd>
                           </div>
                         </div>
@@ -868,7 +893,7 @@ export default function DocumentDetail() {
                             </dt>
                             <dd className="text-sm font-semibold text-slate-800">
                               {user?.role === 'superadmin' || document.originator_id === user?.id
-                                ? document.bcc_users.map((u: any) => u.full_name || u.name).join(', ')
+                                ? document.bcc_users.map((u: any) => personLabel(u)).join(', ')
                                 : '***'}
                             </dd>
                           </div>
@@ -962,7 +987,7 @@ export default function DocumentDetail() {
                                   </span>
                                 </div>
                                 <h3 className="text-[15px] font-semibold text-slate-900">
-                                  {history.actor?.full_name || history.actor?.name || 'System'}
+                                  {history.actor?.id ? personLabel(history.actor) : 'System'}
                                 </h3>
                                 <p className="text-xs text-slate-500 font-medium mt-0.5">
                                   {[history.actor?.role?.replace('_', ' '), history.fromOffice?.name].filter(Boolean).map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' • ')}
@@ -1033,7 +1058,20 @@ className="flex items-center justify-between w-full text-left"
 </div>
 {collapsedSections['actions'] ? null : (
 <div className="card-body space-y-2.5">
-              {isMainRecipient ? (
+              {document.status === 'created' && (user?.role === 'superadmin' || document.originator_id === user?.id) ? (
+                <>
+                  <button
+                    onClick={() => selectAction('send')}
+                    className="w-full btn btn-primary"
+                  >
+                    <Send className="w-4 h-4" />
+                    Send Document
+                  </button>
+                  <p className="text-[11px] text-slate-400 text-center leading-relaxed">
+                    This document is still with your office. Send it to route it to its recipient.
+                  </p>
+                </>
+              ) : isMainRecipient ? (
                 <>
                   {document.status === 'returned' ? (
                     <>
@@ -1046,7 +1084,7 @@ className="flex items-center justify-between w-full text-left"
                             {lastReturn.remarks || 'No reason provided.'}
                           </p>
                           <p className="text-[11px] text-amber-500 mt-1">
-                            Returned by {lastReturn.actor?.full_name || lastReturn.actor?.name || '—'}
+                            Returned by {lastReturn.actor?.id ? personLabel(lastReturn.actor) : '—'}
                             {lastReturn.fromOffice?.name && <> • {lastReturn.fromOffice.name}</>}
                           </p>
                         </div>
@@ -1193,6 +1231,17 @@ className="flex items-center justify-between w-full text-left"
                 btnClass: 'bg-slate-700 hover:bg-slate-800 text-white',
                 confirmLabel: 'File',
               },
+              send: {
+                gradient: 'from-blue-500 to-indigo-600',
+                lightBg: 'bg-blue-50',
+                border: 'border-blue-200',
+                text: 'text-blue-700',
+                icon: Send,
+                label: 'Send Document',
+                subtitle: 'Route this document to its recipient',
+                btnClass: 'bg-blue-600 hover:bg-blue-700 text-white',
+                confirmLabel: 'Send',
+              },
             }[action]
             const ActionIcon = cfg.icon
 
@@ -1291,11 +1340,11 @@ className="flex items-center justify-between w-full text-left"
                       )}
 
                       {/* Return/Resubmit recipient */}
-                      {(action === 'return' || action === 'resubmit') && (
+                      {(action === 'return' || action === 'resubmit' || action === 'send') && (
                         <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
                           <div className="flex items-center justify-between mb-3">
                             <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
-                              {action === 'return' ? 'Return To' : 'Resubmit To'}
+                              {action === 'return' ? 'Return To' : action === 'resubmit' ? 'Resubmit To' : 'Send To'}
                             </label>
                             <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
                               <button
@@ -1433,7 +1482,7 @@ className="flex items-center justify-between w-full text-left"
                         </button>
                         <button
                           onClick={handleAction}
-                          disabled={!remarks || routeMutation.isPending}
+                          disabled={!remarks || routeMutation.isPending || (['return', 'resubmit', 'send'].includes(action) && recipientSelection.length === 0)}
                           className={`inline-flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ${cfg.btnClass}`}
                         >
                           {routeMutation.isPending ? (
@@ -1564,7 +1613,7 @@ className="flex items-center gap-2 text-left"
                                   {new Date(v.created_at).toLocaleString()}
                                 </span>
                                 <span className="text-slate-400 truncate">
-                                  by {v.uploader?.full_name || v.uploader?.name || 'Unknown'}
+                                  by {v.uploader?.id ? personLabel(v.uploader) : 'Unknown'}
                                 </span>
                                 <div className="flex items-center gap-1 ml-auto">
                                   {!v.is_latest && (
@@ -1618,7 +1667,7 @@ className="flex items-center gap-2 text-left"
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-slate-900">{comment.user?.full_name || comment.user?.name || 'Unknown'}</p>
+                          <p className="text-sm font-medium text-slate-900">{comment.user?.id ? personLabel(comment.user) : 'Unknown'}</p>
                           <span className="text-xs text-slate-400">
                             {new Date(comment.created_at).toLocaleString()}
                           </span>
@@ -1692,7 +1741,7 @@ className="flex items-center gap-2 text-left"
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-slate-900">{trail.user?.full_name || trail.user?.name || 'System'}</p>
+                          <p className="text-sm font-medium text-slate-900">{trail.user?.id ? personLabel(trail.user) : 'System'}</p>
                           <span className="badge badge-neutral text-xs">{trail.action}</span>
                         </div>
                         <p className="text-sm text-slate-500 mt-0.5">{trail.description}</p>

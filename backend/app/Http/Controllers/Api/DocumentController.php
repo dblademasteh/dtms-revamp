@@ -117,17 +117,8 @@ class DocumentController extends Controller
         $skippedDuplicates = [];
 
         try {
-            // Determine the recipient office
-            $recipientOfficeId = null;
-            if ($request->recipient_type === 'office') {
-                $recipientOfficeId = $request->recipient_id;
-            } elseif ($request->recipient_type === 'personnel') {
-                $recipient = \App\Models\User::find($request->recipient_id);
-                $recipientOfficeId = $recipient?->office_id;
-            }
-            // Fallback chain: recipient office → originator office → first office in system
-            $recipientOfficeId = $recipientOfficeId
-                ?? $request->user()->office_id
+            // Determine the originator's office (the document stays here until sent)
+            $fromOfficeId = $request->user()->office_id
                 ?? \App\Models\Office::query()->value('id');
 
             // Parse cc_list and bcc_list from "type:id" format to structured data
@@ -149,9 +140,9 @@ class DocumentController extends Controller
                 'classification' => $request->classification ?? 'official',
                 'mode_of_transmittal' => $request->mode_of_transmittal,
                 'action_requested' => $request->action_requested,
-                'status' => DocumentStatus::RECEIVED,
+                'status' => DocumentStatus::CREATED,
                 'originator_id' => $request->user()->id,
-                'current_office_id' => $recipientOfficeId ?? $request->user()->office_id,
+                'current_office_id' => $fromOfficeId,
                 'routing_template_id' => $request->routing_template_id,
                 'current_step' => 0,
                 'recipient_type' => $request->recipient_type,
@@ -170,14 +161,12 @@ class DocumentController extends Controller
                 }
             }
 
-            $fromOfficeId = $request->user()->office_id ?? $document->current_office_id;
-
             RoutingHistory::create([
                 'document_id' => $document->id,
                 'from_office_id' => $fromOfficeId,
-                'to_office_id' => $document->current_office_id,
-                'action' => 'routed',
-                'remarks' => 'Document created and routed to recipient',
+                'to_office_id' => $fromOfficeId,
+                'action' => 'created',
+                'remarks' => 'Document created and awaiting routing',
                 'actor_id' => $request->user()->id,
                 'step_number' => 1,
                 'timestamp' => now(),
@@ -193,34 +182,6 @@ class DocumentController extends Controller
             ]);
 
             DB::commit();
-
-            // Notify the actual recipient
-            $recipientUserId = null;
-            if ($document->recipient_type === 'personnel') {
-                $recipientUserId = $document->recipient_id;
-            } elseif ($document->recipient_type === 'office' && $document->currentOffice) {
-                $recipientUserId = $document->currentOffice->head_user_id;
-            }
-            if ($recipientUserId && $recipientUserId !== $request->user()->id) {
-                $notification = \App\Models\Notification::create([
-                    'user_id' => $recipientUserId,
-                    'type' => 'document_created',
-                    'title' => 'New Document Received',
-                    'message' => "A new document \"{$document->subject}\" ({$document->tracking_number}) was routed to you. Please open it to view details and take action.",
-                    'channel' => 'in_app',
-                    'sent_at' => now(),
-                    'data' => ['document_id' => $document->id, 'tracking_number' => $document->tracking_number, 'subject' => $document->subject],
-                ]);
-
-                NotificationCreated::dispatch(
-                    $notification->id,
-                    $notification->user_id,
-                    $notification->type,
-                    $notification->title,
-                    $notification->message,
-                    $notification->data,
-                );
-            }
 
             DocumentStatusChanged::dispatch(
                 $document->id,
@@ -514,7 +475,83 @@ class DocumentController extends Controller
                         $notification->data,
                     );
                 }
-} elseif ($transition === 'file') {
+            } elseif ($transition === 'send') {
+                if ($document->status !== DocumentStatus::CREATED) {
+                    DB::rollBack();
+                    return response()->json(['message' => 'Only created documents can be sent'], 422);
+                }
+
+                // Resolve recipient: request overrides the stored draft values
+                $recipientType = $request->input('recipient_type', $document->recipient_type);
+                $recipientId = $request->input('recipient_id', $document->recipient_id);
+
+                if (!$recipientType || !$recipientId) {
+                    DB::rollBack();
+                    return response()->json(['message' => 'Please select a recipient to send the document to'], 422);
+                }
+
+                $targetOfficeId = null;
+                if ($recipientType === 'personnel') {
+                    $targetUser = \App\Models\User::find($recipientId);
+                    if (!$targetUser || !$targetUser->office_id) {
+                        DB::rollBack();
+                        return response()->json(['message' => 'Selected personnel has no assigned office'], 422);
+                    }
+                    $targetOfficeId = $targetUser->office_id;
+                } else {
+                    $targetOfficeId = $recipientId;
+                }
+
+                $fromOfficeId = $document->current_office_id;
+
+                $document->update([
+                    'status' => DocumentStatus::RECEIVED,
+                    'current_office_id' => $targetOfficeId,
+                    'recipient_type' => $recipientType,
+                    'recipient_id' => $recipientId,
+                ]);
+
+                RoutingHistory::create([
+                    'document_id' => $document->id,
+                    'from_office_id' => $fromOfficeId,
+                    'to_office_id' => $targetOfficeId,
+                    'action' => $canonicalAction,
+                    'disposition' => $action,
+                    'remarks' => $request->remarks,
+                    'actor_id' => $request->user()->id,
+                    'step_number' => $document->routingHistory()->max('step_number') + 1,
+                    'timestamp' => now(),
+                ]);
+
+                // Notify the recipient
+                $recipientUserId = null;
+                if ($recipientType === 'personnel') {
+                    $recipientUserId = $recipientId;
+                } elseif ($recipientType === 'office') {
+                    $office = \App\Models\Office::find($recipientId);
+                    $recipientUserId = $office?->head_user_id;
+                }
+                if ($recipientUserId && $recipientUserId !== $request->user()->id) {
+                    $notification = \App\Models\Notification::create([
+                        'user_id' => $recipientUserId,
+                        'type' => 'document_created',
+                        'title' => 'New Document Received',
+                        'message' => "A new document \"{$document->subject}\" ({$document->tracking_number}) was routed to you. Please open it to view details and take action.",
+                        'channel' => 'in_app',
+                        'sent_at' => now(),
+                        'data' => ['document_id' => $document->id, 'tracking_number' => $document->tracking_number, 'subject' => $document->subject],
+                    ]);
+
+                    NotificationCreated::dispatch(
+                        $notification->id,
+                        $notification->user_id,
+                        $notification->type,
+                        $notification->title,
+                        $notification->message,
+                        $notification->data,
+                    );
+                }
+            } elseif ($transition === 'file') {
                  $document->update(['status' => DocumentStatus::FILED]);
                  RoutingHistory::create([
                      'document_id' => $document->id,

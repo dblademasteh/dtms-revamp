@@ -32,6 +32,7 @@ export function documentTypeLabel(value?: string): string {
 }
 
 export const DOCUMENT_STATUSES = [
+  { value: 'created', label: 'Created' },
   { value: 'received', label: 'Received' },
   { value: 'in_review', label: 'In Review' },
   { value: 'approved', label: 'Approved' },

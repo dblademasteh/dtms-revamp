@@ -6,9 +6,9 @@ import toast from 'react-hot-toast'
 import {
   ArrowLeft,
   FileText,
+  FilePlus2,
   Upload,
   X,
-  Send,
   UserCheck,
   Paperclip,
   Plus,
@@ -87,7 +87,7 @@ export default function CreateDocument() {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
     onSuccess: (res) => {
-      toast.success('Document created successfully')
+      toast.success('Document created. Send it to its recipient from the document page.')
       navigate(`/documents/${res.data.document.id}`)
     },
     onError: (error: any) => {
@@ -595,7 +595,7 @@ export default function CreateDocument() {
               </span>
             ) : (
               <>
-                <Send className="w-4 h-4" />
+                <FilePlus2 className="w-4 h-4" />
                 Create Document
               </>
             )}

@@ -123,6 +123,7 @@ class Document extends Model
         'referred' => 'return',
         'resubmitted' => 'resubmit',
         'filed' => 'file',
+        'routed' => 'send',
     ];
 
     public static function transitionFor(string $action): ?string
@@ -138,6 +139,7 @@ class Document extends Model
             'return' => 'returned',
             'resubmit' => 'resubmitted',
             'file' => 'filed',
+            'send' => 'routed',
             default => $transition,
         };
     }

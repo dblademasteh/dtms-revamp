@@ -99,7 +99,7 @@ export default function ActivityLog() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-medium text-slate-900">{trail.user?.full_name || trail.user?.name || 'System'}</p>
+                      <p className="text-sm font-medium text-slate-900">{trail.user?.id ? [trail.user.rank, trail.user.full_name || trail.user.name].filter(Boolean).join(' ') : 'System'}</p>
                       <span className="badge badge-neutral text-xs">{trail.action}</span>
                       {trail.document && (
                         <>

@@ -230,6 +230,82 @@ class DocumentTest extends TestCase
         ]);
     }
 
+    public function test_created_document_starts_as_created_with_originator(): void
+    {
+        $user = $this->authenticate();
+        $template = $this->createTemplate($user, $user->office);
+
+        $response = $this->postJson('/api/documents', [
+            'document_type' => 'memorandum',
+            'subject' => 'Draft Document',
+            'priority' => 'normal',
+            'classification' => 'official',
+            'recipient_type' => 'office',
+            'recipient_id' => $user->office_id,
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('document.status', DocumentStatus::CREATED->value)
+            ->assertJsonPath('document.current_office_id', $user->office_id);
+
+        $this->assertDatabaseHas('routing_history', [
+            'document_id' => $response->json('document.id'),
+            'action' => 'created',
+            'to_office_id' => $user->office_id,
+        ]);
+    }
+
+    public function test_can_send_created_document_to_recipient(): void
+    {
+        $user = $this->authenticate();
+        $targetOffice = Office::factory()->create();
+        $doc = Document::factory()->create([
+            'status' => DocumentStatus::CREATED,
+            'originator_id' => $user->id,
+            'current_office_id' => $user->office_id,
+            'recipient_type' => 'office',
+            'recipient_id' => $targetOffice->id,
+        ]);
+
+        $response = $this->postJson("/api/documents/{$doc->id}/route", [
+            'action' => 'routed',
+            'remarks' => 'Sending for action',
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('documents', [
+            'id' => $doc->id,
+            'status' => DocumentStatus::RECEIVED->value,
+            'current_office_id' => $targetOffice->id,
+        ]);
+        $this->assertDatabaseHas('routing_history', [
+            'document_id' => $doc->id,
+            'action' => 'routed',
+            'to_office_id' => $targetOffice->id,
+        ]);
+    }
+
+    public function test_cannot_send_received_document(): void
+    {
+        $user = $this->authenticate();
+        $doc = Document::factory()->create([
+            'status' => DocumentStatus::RECEIVED,
+            'originator_id' => $user->id,
+            'current_office_id' => $user->office_id,
+        ]);
+
+        $response = $this->postJson("/api/documents/{$doc->id}/route", [
+            'action' => 'routed',
+            'remarks' => 'Should fail',
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertDatabaseHas('documents', [
+            'id' => $doc->id,
+            'status' => DocumentStatus::RECEIVED->value,
+        ]);
+    }
+
     public function test_can_create_comment(): void
     {
         $this->authenticate();

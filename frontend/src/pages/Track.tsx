@@ -22,6 +22,7 @@ export default function Track() {
   }
 
   const statusColors: Record<string, string> = {
+    created: 'bg-slate-200 text-slate-800 border-slate-300',
     received: 'bg-amber-100 text-amber-800 border-amber-200',
     in_review: 'bg-blue-100 text-blue-800 border-blue-200',
     approved: 'bg-green-100 text-green-800 border-green-200',
@@ -32,6 +33,7 @@ export default function Track() {
   }
 
   const statusLabels: Record<string, string> = {
+    created: 'Created',
     received: 'Received',
     in_review: 'In Review',
     approved: 'Approved',

@@ -167,6 +167,8 @@ export default function OfficeProfile() {
     mutationFn: (data: any) => api.put('/my-office', data),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['my-office'] })
+      queryClient.invalidateQueries({ queryKey: ['my-office-personnel'] })
+      queryClient.invalidateQueries({ queryKey: ['personnel'] })
       queryClient.invalidateQueries({ queryKey: ['offices'] })
       queryClient.invalidateQueries({ queryKey: ['offices-hierarchy'] })
       setName(res.data.office.name || '')

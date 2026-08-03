@@ -4,6 +4,7 @@ namespace App\Enums;
 
 enum DocumentStatus: string
 {
+    case CREATED = 'created';
     case RECEIVED = 'received';
     case IN_REVIEW = 'in_review';
     case APPROVED = 'approved';
@@ -15,6 +16,7 @@ enum DocumentStatus: string
     public function label(): string
     {
         return match($this) {
+            self::CREATED => 'Created',
             self::RECEIVED => 'Received',
             self::IN_REVIEW => 'In Review',
             self::APPROVED => 'Approved',
@@ -28,6 +30,7 @@ enum DocumentStatus: string
     public function color(): string
     {
         return match($this) {
+            self::CREATED => 'neutral',
             self::RECEIVED => 'warning',
             self::IN_REVIEW => 'info',
             self::APPROVED => 'success',

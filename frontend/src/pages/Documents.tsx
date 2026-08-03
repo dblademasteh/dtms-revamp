@@ -118,6 +118,7 @@ export default function Documents() {
 
   const statusOptions = [
     { value: '', label: 'All Status' },
+    { value: 'created', label: 'Created' },
     { value: 'received', label: 'Received' },
     { value: 'in_review', label: 'In Review' },
     { value: 'approved', label: 'Approved' },
@@ -136,6 +137,7 @@ export default function Documents() {
       case 'in_review': return 'badge-primary'
       case 'rejected': return 'badge-danger'
       case 'returned': return 'badge-warning'
+      case 'created': return 'badge-neutral'
       default: return 'badge-neutral'
     }
   }
