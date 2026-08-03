@@ -130,14 +130,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/personnel/export', [PersonnelController::class, 'export']);
 
     // Reports
-    Route::prefix('reports')->group(function () {
-        Route::get('/dashboard', [ReportController::class, 'dashboard']);
-        Route::get('/turnaround', [ReportController::class, 'turnaround']);
-        Route::get('/bottlenecks', [ReportController::class, 'bottlenecks']);
-        Route::get('/volume', [ReportController::class, 'volume']);
-        Route::get('/overdue', [ReportController::class, 'overdue']);
-        Route::get('/export', [ReportController::class, 'export']);
-    });
+     Route::prefix('reports')->group(function () {
+         Route::get('/dashboard', [ReportController::class, 'dashboard']);
+         Route::get('/turnaround', [ReportController::class, 'turnaround']);
+         Route::get('/bottlenecks', [ReportController::class, 'bottlenecks']);
+         Route::get('/volume', [ReportController::class, 'volume']);
+         Route::get('/export', [ReportController::class, 'export']);
+     });
 
     // Notifications
     Route::get('/notifications', function (\Illuminate\Http\Request $request) {

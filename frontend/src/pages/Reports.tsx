@@ -19,10 +19,9 @@ import {
   BarChart3,
   Calendar,
   Download,
-  AlertOctagon,
 } from 'lucide-react'
 
-type ReportTab = 'turnaround' | 'bottlenecks' | 'volume' | 'overdue'
+type ReportTab = 'turnaround' | 'bottlenecks' | 'volume'
 
 export default function Reports() {
   const [activeTab, setActiveTab] = useState<ReportTab>('turnaround')
@@ -52,12 +51,6 @@ export default function Reports() {
     enabled: activeTab === 'volume',
   })
 
-  const { data: overdueData, isLoading: overdueLoading } = useQuery({
-    queryKey: ['report-overdue'],
-    queryFn: () => api.get('/reports/overdue').then(res => res.data),
-    enabled: activeTab === 'overdue',
-  })
-
   const handleExport = (type: string) => {
     const params = new URLSearchParams({ type, from_date: fromDate, to_date: toDate })
     window.open(`/api/reports/export?${params}`, '_blank')
@@ -67,7 +60,6 @@ export default function Reports() {
     { key: 'turnaround' as ReportTab, label: 'Turnaround Time', icon: Clock },
     { key: 'bottlenecks' as ReportTab, label: 'Bottlenecks', icon: AlertTriangle },
     { key: 'volume' as ReportTab, label: 'Document Volume', icon: BarChart3 },
-    { key: 'overdue' as ReportTab, label: 'Overdue', icon: AlertOctagon },
   ]
 
   const turnaroundData = turnaround?.data?.map((item: any) => ({
@@ -87,10 +79,7 @@ export default function Reports() {
     total: Number(item.total),
     released: Number(item.released),
     pending: Number(item.pending),
-  })) || []
-
-  const overdueDocs = overdueData?.data || []
-  const overdueSummary = overdueData?.summary || {}
+  }  )) || []
 
   return (
     <div className="space-y-6">
@@ -126,63 +115,58 @@ export default function Reports() {
             >
               <tab.icon className="w-4 h-4" />
               {tab.label}
-              {tab.key === 'overdue' && overdueSummary.total_overdue > 0 && (
-                <span className="badge badge-danger text-[10px]">{overdueSummary.total_overdue}</span>
-              )}
             </button>
           ))}
         </nav>
       </div>
 
-      {/* Filters */}
-      {activeTab !== 'overdue' && (
-        <div className="card">
-          <div className="card-body">
-            <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
-              <div className="flex-1">
-                <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
-                  <Calendar className="inline w-3.5 h-3.5 mr-1" />
-                  From
-                </label>
-                <input
-                  type="date"
-                  className="input"
-                  value={fromDate}
-                  onChange={(e) => setFromDate(e.target.value)}
-                />
-              </div>
-              <div className="flex-1">
-                <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
-                  <Calendar className="inline w-3.5 h-3.5 mr-1" />
-                  To
-                </label>
-                <input
-                  type="date"
-                  className="input"
-                  value={toDate}
-                  onChange={(e) => setToDate(e.target.value)}
-                />
-              </div>
-              {activeTab === 'volume' && (
-                <div>
-                  <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
-                    Period
-                  </label>
-                  <select
-                    className="input"
-                    value={volumePeriod}
-                    onChange={(e) => setVolumePeriod(e.target.value as any)}
-                  >
-                    <option value="day">Daily</option>
-                    <option value="week">Weekly</option>
-                    <option value="month">Monthly</option>
-                  </select>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+       {/* Filters */}
+       <div className="card">
+         <div className="card-body">
+           <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+             <div className="flex-1">
+               <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
+                 <Calendar className="inline w-3.5 h-3.5 mr-1" />
+                 From
+               </label>
+               <input
+                 type="date"
+                 className="input"
+                 value={fromDate}
+                 onChange={(e) => setFromDate(e.target.value)}
+               />
+             </div>
+             <div className="flex-1">
+               <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
+                 <Calendar className="inline w-3.5 h-3.5 mr-1" />
+                 To
+               </label>
+               <input
+                 type="date"
+                 className="input"
+                 value={toDate}
+                 onChange={(e) => setToDate(e.target.value)}
+               />
+             </div>
+             {activeTab === 'volume' && (
+               <div>
+                 <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
+                   Period
+                 </label>
+                 <select
+                   className="input"
+                   value={volumePeriod}
+                   onChange={(e) => setVolumePeriod(e.target.value as any)}
+                 >
+                   <option value="day">Daily</option>
+                   <option value="week">Weekly</option>
+                   <option value="month">Monthly</option>
+                 </select>
+               </div>
+             )}
+           </div>
+         </div>
+       </div>
 
       {/* Charts */}
       <div className="card">
@@ -328,85 +312,8 @@ export default function Reports() {
             </div>
           )}
 
-          {/* Overdue */}
-          {activeTab === 'overdue' && (
-            <div className="space-y-6">
-              {overdueLoading ? (
-                <div className="h-80 bg-slate-100 rounded-lg animate-pulse" />
-              ) : (
-                <>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="p-4 bg-danger-50 rounded-lg text-center">
-                      <p className="text-sm text-danger-600 font-medium">Total Overdue</p>
-                      <p className="text-2xl font-bold text-danger-700">
-                        {overdueSummary.total_overdue || 0}
-                      </p>
-                    </div>
-                    <div className="p-4 bg-danger-50 rounded-lg text-center">
-                      <p className="text-sm text-danger-600 font-medium">Urgent Priority</p>
-                      <p className="text-2xl font-bold text-danger-700">
-                        {overdueSummary.urgent || 0}
-                      </p>
-                    </div>
-                    <div className="p-4 bg-warning-50 rounded-lg text-center">
-                      <p className="text-sm text-warning-600 font-medium">High Priority</p>
-                      <p className="text-2xl font-bold text-warning-700">
-                        {overdueSummary.high || 0}
-                      </p>
-                    </div>
-                  </div>
-                  {overdueDocs.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="table">
-                        <thead>
-                          <tr>
-                            <th>Tracking #</th>
-                            <th>Subject</th>
-                            <th>Priority</th>
-                            <th>Office</th>
-                            <th>SLA Deadline</th>
-                            <th>Days Overdue</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {overdueDocs.map((doc: any) => {
-                            const daysOverdue = Math.ceil(
-                              (Date.now() - new Date(doc.sla_deadline).getTime()) / (1000 * 60 * 60 * 24)
-                            )
-                            return (
-                              <tr key={doc.id}>
-                                <td className="font-medium text-primary-600">{doc.tracking_number}</td>
-                                <td className="max-w-xs truncate">{doc.subject}</td>
-                                <td>
-                                  <span className={`badge ${
-                                    doc.priority === 'urgent' ? 'badge-danger' :
-                                    doc.priority === 'high' ? 'badge-warning' : 'badge-neutral'
-                                  }`}>{doc.priority}</span>
-                                </td>
-                                <td className="text-slate-500">{doc.current_office?.name}</td>
-                                <td className="text-slate-500">
-                                  {new Date(doc.sla_deadline).toLocaleDateString()}
-                                </td>
-                                <td>
-                                  <span className="badge badge-danger">{daysOverdue}d</span>
-                                </td>
-                              </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="h-80 flex items-center justify-center text-slate-400 text-sm">
-                      No overdue documents - all on track!
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
+         </div>
+       </div>
+     </div>
+   )
 }

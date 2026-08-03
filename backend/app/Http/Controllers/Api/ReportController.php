@@ -100,31 +100,10 @@ class ReportController extends Controller
         return response()->json($volume);
     }
 
-    public function overdue(Request $request)
-    {
-        $query = Document::where('sla_deadline', '<', now())
-            ->whereNotIn('status', ['approved', 'released', 'filed', 'rejected'])
-            ->with(['originator', 'currentOffice'])
-            ->orderBy('sla_deadline');
-
-        $documents = $query->get();
-
-        $summary = [
-            'total_overdue' => $documents->count(),
-            'urgent' => $documents->where('priority', 'urgent')->count(),
-            'high' => $documents->where('priority', 'high')->count(),
-        ];
-
-        return response()->json([
-            'data' => $documents,
-            'summary' => $summary,
-        ]);
-    }
-
     public function export(Request $request)
     {
         $request->validate([
-            'type' => 'required|in:turnaround,bottlenecks,volume,overdue,activity',
+            'type' => 'required|in:turnaround,bottlenecks,volume,activity',
             'from_date' => 'nullable|date',
             'to_date' => 'nullable|date|after_or_equal:from_date',
         ]);
@@ -136,27 +115,8 @@ class ReportController extends Controller
         $callback = function () use ($request, $fromDate, $toDate) {
             $handle = fopen('php://output', 'w');
 
-            switch ($request->type) {
-                case 'overdue':
-                    fputcsv($handle, ['Tracking Number', 'Subject', 'Status', 'Priority', 'Office', 'SLA Deadline', 'Days Overdue']);
-                    Document::where('sla_deadline', '<', now())
-                        ->whereNotIn('status', ['approved', 'released'])
-                        ->with(['currentOffice'])
-                        ->orderBy('sla_deadline')
-                        ->each(function ($doc) use ($handle) {
-                            fputcsv($handle, [
-                                $doc->tracking_number,
-                                $doc->subject,
-                                $doc->status->value,
-                                $doc->priority->value,
-                                $doc->currentOffice->name ?? 'N/A',
-                                $doc->sla_deadline?->format('Y-m-d H:i'),
-                                $doc->sla_deadline ? now()->diffInDays($doc->sla_deadline) : '',
-                            ]);
-                        });
-                    break;
-
-                case 'turnaround':
+             switch ($request->type) {
+                 case 'turnaround':
                     fputcsv($handle, ['Office', 'Avg Turnaround (hrs)', 'Documents']);
                     Document::selectRaw('current_office_id, AVG(EXTRACT(EPOCH FROM (updated_at - created_at))/3600) as avg_hours, COUNT(*) as total_documents')
                         ->whereBetween('created_at', [$fromDate, $toDate])
