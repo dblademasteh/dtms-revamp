@@ -415,10 +415,6 @@ export default function Settings() {
                       <p className="text-slate-500 text-xs uppercase tracking-wider">Office</p>
                       <p className="font-medium text-slate-900 truncate">{(user as any)?.office?.name || 'N/A'}</p>
                     </div>
-                    <div>
-                      <p className="text-slate-500 text-xs uppercase tracking-wider">Unit Assignment</p>
-                      <p className="font-medium text-slate-900 truncate">{user?.unit_assignment || '—'}</p>
-                    </div>
                   </div>
                 </div>
               </div>
