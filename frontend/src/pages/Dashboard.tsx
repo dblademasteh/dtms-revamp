@@ -6,7 +6,6 @@ import { statusLabel } from '@/constants/documentOptions'
 import {
   FileText,
   Clock,
-  CheckCircle,
   AlertTriangle,
   ArrowRight,
   TrendingUp,
@@ -43,8 +42,8 @@ export default function Dashboard() {
           <div className="h-8 w-48 bg-slate-200 rounded animate-pulse" />
           <div className="h-4 w-72 bg-slate-200 rounded mt-2 animate-pulse" />
         </div>
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
-          {[...Array(5)].map((_, i) => (
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
             <div key={i} className="card p-5">
               <div className="flex items-center gap-4">
                 <div className="w-11 h-11 bg-slate-200 rounded-lg animate-pulse" />
@@ -67,7 +66,6 @@ export default function Dashboard() {
     { name: 'Total Documents', value: stats.total_documents || 0, icon: FileText, color: 'bg-primary-50 text-primary-600', border: 'border-l-primary-500', link: '/documents' },
     { name: 'Received', value: stats.pending_documents || 0, icon: Clock, color: 'bg-amber-50 text-amber-600', border: 'border-l-amber-500', link: '/documents?status=received' },
     { name: 'Approved', value: stats.approved_documents || 0, icon: BadgeCheck, color: 'bg-violet-50 text-violet-600', border: 'border-l-violet-500', link: '/documents?status=approved' },
-    { name: 'Released Today', value: stats.released_today || 0, icon: CheckCircle, color: 'bg-green-50 text-green-600', border: 'border-l-green-500', link: '/documents?status=released' },
     { name: 'Overdue', value: stats.overdue_documents || 0, icon: AlertTriangle, color: 'bg-red-50 text-red-600', border: 'border-l-red-500', link: '/documents' },
   ]
 
@@ -127,7 +125,7 @@ export default function Dashboard() {
       )}
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {statCards.map((stat) => (
           <Link key={stat.name} to={stat.link} className={`stat-card border-l-4 ${stat.border} hover:shadow-md transition-shadow`}>
             <div className={`stat-icon ${stat.color}`}>
