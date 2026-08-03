@@ -11,7 +11,7 @@ import {
   Plus,
   X,
   Paperclip,
-  Upload
+  Upload,
 } from 'lucide-react'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
@@ -21,6 +21,8 @@ import { DOCUMENT_TYPES, documentTypeLabel } from '@/constants/documentOptions'
 export default function Announcements() {
   const queryClient = useQueryClient()
   const [searchTerm, setSearchTerm] = useState('')
+  const [filter, setFilter] = useState<'all' | 'today' | 'urgent' | 'compliance'>('all')
+  const [docTypeFilter, setDocTypeFilter] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [subject, setSubject] = useState('')
   const [description, setDescription] = useState('')
@@ -81,10 +83,25 @@ export default function Announcements() {
     setFiles(prev => prev.filter((_, i) => i !== index))
   }
 
-  const filteredAnnouncements = (data || []).filter((doc: any) =>
-    doc.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    doc.tracking_number.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredAnnouncements = (data || []).filter((doc: any) => {
+    const matchesSearch = doc.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      doc.tracking_number.toLowerCase().includes(searchTerm.toLowerCase())
+    if (!matchesSearch) return false
+
+    if (filter === 'today') {
+      const created = new Date(doc.created_at)
+      const today = new Date()
+      if (created.getFullYear() !== today.getFullYear() ||
+          created.getMonth() !== today.getMonth() ||
+          created.getDate() !== today.getDate()) return false
+    }
+    if (filter === 'urgent' && doc.priority !== 'urgent') return false
+    if (filter === 'compliance' && !doc.subject.toLowerCase().includes('compliance')) return false
+
+    if (docTypeFilter && doc.document_type !== docTypeFilter) return false
+
+    return true
+  })
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -101,6 +118,40 @@ export default function Announcements() {
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
+          {/* Filter Buttons */}
+          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
+            {[
+              { key: 'all' as const, label: 'All' },
+              { key: 'today' as const, label: 'Today' },
+              { key: 'urgent' as const, label: 'Urgent Memo' },
+              { key: 'compliance' as const, label: 'Compliance' },
+            ].map(f => (
+              <button
+                key={f.key}
+                onClick={() => setFilter(f.key)}
+                className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+                  filter === f.key
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Document Type Filter */}
+          <select
+            className="input text-sm bg-white border-slate-200"
+            value={docTypeFilter}
+            onChange={(e) => setDocTypeFilter(e.target.value)}
+          >
+            <option value="">All Types</option>
+            {DOCUMENT_TYPES.map(t => (
+              <option key={t.value} value={t.value}>{t.label}</option>
+            ))}
+          </select>
+
           {/* Search */}
           <div className="relative w-full sm:w-60">
             <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
