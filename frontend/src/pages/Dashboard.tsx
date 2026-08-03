@@ -13,6 +13,7 @@ import {
   Megaphone,
   ChevronRight,
   BadgeCheck,
+  RotateCcw,
 } from 'lucide-react'
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
@@ -66,7 +67,7 @@ export default function Dashboard() {
     { name: 'Total Documents', value: stats.total_documents || 0, icon: FileText, color: 'bg-primary-50 text-primary-600', border: 'border-l-primary-500', link: '/documents' },
     { name: 'Received', value: stats.pending_documents || 0, icon: Clock, color: 'bg-amber-50 text-amber-600', border: 'border-l-amber-500', link: '/documents?status=received' },
     { name: 'Approved', value: stats.approved_documents || 0, icon: BadgeCheck, color: 'bg-violet-50 text-violet-600', border: 'border-l-violet-500', link: '/documents?status=approved' },
-    { name: 'Overdue', value: stats.overdue_documents || 0, icon: AlertTriangle, color: 'bg-red-50 text-red-600', border: 'border-l-red-500', link: '/documents' },
+    { name: 'Returned', value: stats.returned_documents || 0, icon: RotateCcw, color: 'bg-amber-50 text-amber-600', border: 'border-l-amber-500', link: '/documents?status=returned' },
   ]
 
   // Pie chart data from recent docs statuses

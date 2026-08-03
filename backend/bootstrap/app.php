@@ -14,7 +14,6 @@ return Application::configure(basePath: dirname(__DIR__))
         ['middleware' => ['api', 'auth:api']],
     )
     ->withSchedule(function ($schedule) {
-        $schedule->command('dts:check-overdue')->hourly()->withoutOverlapping();
         $schedule->command('mailbox:sync-all')->everyFiveMinutes()->withoutOverlapping();
     })
     ->withMiddleware(function (Middleware $middleware) {

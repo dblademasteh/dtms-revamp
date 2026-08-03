@@ -149,7 +149,6 @@ class DocumentController extends Controller
                 'recipient_id' => $request->recipient_id,
                 'cc_list' => $ccList,
                 'bcc_list' => $bccList,
-                'sla_deadline' => now()->addHours(\App\Models\SystemSetting::getDefaultSlaHours()),
             ]);
 
             if ($request->hasFile('attachments')) {
@@ -1183,7 +1182,6 @@ class DocumentController extends Controller
                 'recipient_id'        => $defaultOfficeId,
                 'cc_list'             => [],
                 'bcc_list'            => [],
-                'sla_deadline'        => now()->addHours(\App\Models\SystemSetting::getDefaultSlaHours()),
             ]);
 
             if ($request->hasFile('attachments')) {
