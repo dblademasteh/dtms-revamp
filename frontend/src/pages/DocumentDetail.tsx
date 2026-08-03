@@ -1165,7 +1165,7 @@ className="flex items-center justify-between w-full text-left"
                         className="w-full btn btn-danger"
                       >
                         <XCircle className="w-4 h-4" />
-                        Reject
+                        Decline
                       </button>
                       <button
                         onClick={() => selectAction('return')}
@@ -1190,7 +1190,7 @@ className="flex items-center justify-between w-full text-left"
                   {document.status === 'approved' ? (
                     <span className="text-green-600 font-medium">This document has been approved</span>
                   ) : document.status === 'rejected' ? (
-                    <span className="text-red-600 font-medium">This document has been rejected</span>
+                    <span className="text-red-600 font-medium">This document has been declined</span>
                   ) : document.status === 'filed' ? (
                     <span className="text-slate-600 font-medium">This document has been filed</span>
                   ) : (
@@ -1247,10 +1247,10 @@ className="flex items-center justify-between w-full text-left"
                 border: 'border-red-200',
                 text: 'text-red-700',
                 icon: XCircle,
-                label: 'Reject Document',
-                subtitle: 'This action will reject the document',
+                label: 'Decline Document',
+                subtitle: 'This action will decline the document',
                 btnClass: 'bg-red-600 hover:bg-red-700 text-white',
-                confirmLabel: 'Reject',
+                confirmLabel: 'Decline',
               },
               return: {
                 gradient: 'from-amber-500 to-orange-500',

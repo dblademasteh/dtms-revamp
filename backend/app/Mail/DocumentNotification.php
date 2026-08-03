@@ -24,7 +24,7 @@ class DocumentNotification extends Mailable
         $subject = match($this->action) {
             'created' => "New Document: {$this->document->subject}",
             'approved' => "Document Approved: {$this->document->subject}",
-            'rejected' => "Document Rejected: {$this->document->subject}",
+            'rejected' => "Document Declined: {$this->document->subject}",
             'returned' => "Document Returned: {$this->document->subject}",
             default => "Document Update: {$this->document->subject}",
         };

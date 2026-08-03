@@ -122,7 +122,7 @@ export default function Documents() {
     { value: 'received', label: 'Received' },
     { value: 'in_review', label: 'In Review' },
     { value: 'approved', label: 'Approved' },
-    { value: 'rejected', label: 'Rejected' },
+    { value: 'rejected', label: 'Declined' },
     { value: 'returned', label: 'Returned' },
     { value: 'released', label: 'Released' },
     { value: 'filed', label: 'Filed' },
@@ -238,7 +238,7 @@ export default function Documents() {
                 <CheckCircle className="w-3.5 h-3.5" /> Approve
               </button>
               <button onClick={() => { setBulkAction('rejected'); setShowBulkModal(true) }} className="btn btn-danger btn-sm">
-                <XCircle className="w-3.5 h-3.5" /> Reject
+                <XCircle className="w-3.5 h-3.5" /> Decline
               </button>
               <button onClick={() => { setBulkAction('returned'); setShowBulkModal(true) }} className="btn btn-secondary btn-sm">
                 <RotateCcw className="w-3.5 h-3.5" /> Return

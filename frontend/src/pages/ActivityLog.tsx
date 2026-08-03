@@ -34,7 +34,7 @@ export default function ActivityLog() {
     { value: '', label: 'All Actions' },
     { value: 'created', label: 'Created' },
     { value: 'approved', label: 'Approved' },
-    { value: 'rejected', label: 'Rejected' },
+    { value: 'rejected', label: 'Declined' },
     { value: 'returned', label: 'Returned' },
     { value: 'attachment_uploaded', label: 'Attachment' },
     { value: 'commented', label: 'Commented' },

@@ -20,7 +20,7 @@ enum DocumentStatus: string
             self::RECEIVED => 'Received',
             self::IN_REVIEW => 'In Review',
             self::APPROVED => 'Approved',
-            self::REJECTED => 'Rejected',
+            self::REJECTED => 'Declined',
             self::RETURNED => 'Returned for Revision',
             self::RELEASED => 'Released',
             self::FILED => 'Filed',

@@ -37,7 +37,7 @@ export default function Track() {
     received: 'Received',
     in_review: 'In Review',
     approved: 'Approved',
-    rejected: 'Rejected',
+    rejected: 'Declined',
     returned: 'Returned',
     released: 'Released',
     filed: 'Filed',

@@ -68,8 +68,8 @@ export default function NotificationBell() {
         }
       case 'document_rejected':
         return {
-          title: 'Document Rejected',
-          message: `The document "${n.data?.subject ?? n.message}"${tracking} you sent was rejected. Open it to see the reason.`,
+          title: 'Document Declined',
+          message: `The document "${n.data?.subject ?? n.message}"${tracking} you sent was declined. Open it to see the reason.`,
         }
       case 'document_overdue':
         return {

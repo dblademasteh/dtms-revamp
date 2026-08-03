@@ -36,7 +36,7 @@ export const DOCUMENT_STATUSES = [
   { value: 'received', label: 'Received' },
   { value: 'in_review', label: 'In Review' },
   { value: 'approved', label: 'Approved' },
-  { value: 'rejected', label: 'Rejected' },
+  { value: 'rejected', label: 'Declined' },
   { value: 'returned', label: 'Returned' },
   { value: 'released', label: 'Released' },
   { value: 'filed', label: 'Filed' },
@@ -157,14 +157,10 @@ export const ROUTING_DISPOSITIONS: Record<
 > = {
   approve: [
     { value: 'approved', label: 'Approved' },
-    { value: 'signed', label: 'Signed' },
-    { value: 'endorsed', label: 'Endorsed' },
-    { value: 'noted', label: 'Noted' },
-    { value: 'recommended', label: 'Recommended' },
     { value: 'forwarded', label: 'Forwarded' },
   ],
   reject: [
-    { value: 'rejected', label: 'Rejected' },
+    { value: 'rejected', label: 'Declined' },
     { value: 'disapproved', label: 'Disapproved' },
   ],
   return: [

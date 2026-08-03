@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
+import { statusLabel } from '@/constants/documentOptions'
 import {
   FileText,
   Clock,
@@ -75,7 +76,7 @@ export default function Dashboard() {
     statusCounts[s] = (statusCounts[s] || 0) + 1
   })
   const pieData = Object.entries(statusCounts).map(([name, value]) => ({
-    name: name.replace('_', ' '),
+    name: statusLabel(name),
     value,
   }))
 
@@ -191,7 +192,7 @@ export default function Dashboard() {
               {pieData.map((entry, i) => (
                 <div key={entry.name} className="flex items-center gap-1.5 text-xs">
                   <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                  <span className="text-slate-600 capitalize">{entry.name}</span>
+                  <span className="text-slate-600">{entry.name}</span>
                   <span className="font-medium text-slate-900">{entry.value}</span>
                 </div>
               ))}
@@ -312,7 +313,7 @@ export default function Dashboard() {
                   </td>
                   <td className="max-w-xs truncate">{doc.subject}</td>
                   <td>
-                    <span className={`badge ${statusBadgeClass(doc.status)}`}>{doc.status?.replace('_', ' ')}</span>
+                    <span className={`badge ${statusBadgeClass(doc.status)}`}>{statusLabel(doc.status)}</span>
                   </td>
                   <td className="text-slate-500">{doc.current_office?.name}</td>
                 </tr>
