@@ -154,7 +154,7 @@ export default function DocumentDetail() {
 
   const personnel = Array.isArray(personnelRaw) ? personnelRaw : (personnelRaw?.data ?? [])
   const personnelOptions = personnel
-    .filter((p: any) => p.role !== 'superadmin' && p.office_id != null)
+    .filter((p: any) => p.role !== 'superadmin')
     .map((p: any) => {
       const head = [p.rank, p.full_name || p.name].filter(Boolean).join(' ')
       const tail = p.unit_assignment || p.designation
@@ -330,12 +330,16 @@ export default function DocumentDetail() {
       }
       if (recipientMode === 'office') {
         targetOffice = recipientSelection[0].value
-      } else {
+      } else if (action === 'return' || action === 'resubmit') {
         targetOffice = recipientSelection[0].office_id
         if (!targetOffice) {
           toast.error('Selected personnel has no assigned office.')
           return
         }
+      } else {
+        // Send: a personnel without an office still receives the document;
+        // it simply stays at its current office for tracking.
+        targetOffice = recipientSelection[0].office_id || targetOffice
       }
     }
 

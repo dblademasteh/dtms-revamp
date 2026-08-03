@@ -62,7 +62,7 @@ class DocumentController extends Controller
                     $q2->where('recipient_type', 'office')
                         ->where('recipient_id', $officeId);
                 });
-            });
+            })->where('status', '!=', DocumentStatus::CREATED->value);
         }
 
         if ($request->has('search')) {
@@ -493,9 +493,9 @@ class DocumentController extends Controller
                 $targetOfficeId = null;
                 if ($recipientType === 'personnel') {
                     $targetUser = \App\Models\User::find($recipientId);
-                    if (!$targetUser || !$targetUser->office_id) {
+                    if (!$targetUser) {
                         DB::rollBack();
-                        return response()->json(['message' => 'Selected personnel has no assigned office'], 422);
+                        return response()->json(['message' => 'Recipient not found'], 422);
                     }
                     $targetOfficeId = $targetUser->office_id;
                 } else {
@@ -503,6 +503,10 @@ class DocumentController extends Controller
                 }
 
                 $fromOfficeId = $document->current_office_id;
+
+                // Personnel without an assigned office still receives the document;
+                // it simply stays at its current office for tracking.
+                $targetOfficeId = $targetOfficeId ?? $fromOfficeId;
 
                 $document->update([
                     'status' => DocumentStatus::RECEIVED,

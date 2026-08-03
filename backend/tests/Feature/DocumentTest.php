@@ -306,6 +306,59 @@ class DocumentTest extends TestCase
         ]);
     }
 
+    public function test_can_send_created_document_to_personnel_without_office(): void
+    {
+        $user = $this->authenticate();
+        $targetUser = User::factory()->create(['office_id' => null]);
+        $doc = Document::factory()->create([
+            'status' => DocumentStatus::CREATED,
+            'originator_id' => $user->id,
+            'current_office_id' => $user->office_id,
+            'recipient_type' => 'personnel',
+            'recipient_id' => $targetUser->id,
+        ]);
+
+        $response = $this->postJson("/api/documents/{$doc->id}/route", [
+            'action' => 'routed',
+            'remarks' => 'Sending to office-less personnel',
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('documents', [
+            'id' => $doc->id,
+            'status' => DocumentStatus::RECEIVED->value,
+            'current_office_id' => $user->office_id,
+            'recipient_type' => 'personnel',
+            'recipient_id' => $targetUser->id,
+        ]);
+        $this->assertDatabaseHas('routing_history', [
+            'document_id' => $doc->id,
+            'action' => 'routed',
+            'to_office_id' => $user->office_id,
+        ]);
+    }
+
+    public function test_created_documents_do_not_appear_in_for_me_inbox(): void
+    {
+        $user = $this->authenticate();
+        Document::factory()->create([
+            'status' => DocumentStatus::CREATED,
+            'recipient_type' => 'personnel',
+            'recipient_id' => $user->id,
+            'current_office_id' => $user->office_id,
+        ]);
+        Document::factory()->create([
+            'status' => DocumentStatus::RECEIVED,
+            'recipient_type' => 'personnel',
+            'recipient_id' => $user->id,
+            'current_office_id' => $user->office_id,
+        ]);
+
+        $response = $this->getJson('/api/documents?for_me=true');
+        $response->assertStatus(200);
+        $this->assertEquals(1, $response->json('total'));
+    }
+
     public function test_can_create_comment(): void
     {
         $this->authenticate();
