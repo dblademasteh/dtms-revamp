@@ -402,4 +402,76 @@ class DocumentTest extends TestCase
         $response = $this->putJson('/api/admin/settings', ['default_sla_hours' => 72]);
         $response->assertStatus(403);
     }
+
+    public function test_can_forward_document_on_approval(): void
+    {
+        $user = $this->authenticate();
+        $targetOffice = Office::factory()->create();
+        $targetUser = User::factory()->create(['office_id' => $targetOffice->id]);
+        $template = $this->createTemplate($user, $user->office, 3);
+        $doc = Document::factory()->create([
+            'status' => DocumentStatus::RECEIVED,
+            'current_step' => 0,
+            'routing_template_id' => $template->id,
+            'originator_id' => $user->id,
+            'current_office_id' => $user->office_id,
+        ]);
+
+        $response = $this->postJson("/api/documents/{$doc->id}/route", [
+            'action' => 'forwarded',
+            'remarks' => 'Approved and forwarded',
+            'recipient_type' => 'personnel',
+            'recipient_id' => $targetUser->id,
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('documents', [
+            'id' => $doc->id,
+            'current_step' => 1,
+            'status' => DocumentStatus::IN_REVIEW->value,
+            'current_office_id' => $targetOffice->id,
+            'recipient_type' => 'personnel',
+            'recipient_id' => $targetUser->id,
+        ]);
+        $this->assertDatabaseHas('routing_history', [
+            'document_id' => $doc->id,
+            'action' => 'approved',
+            'disposition' => 'forwarded',
+            'to_office_id' => $targetOffice->id,
+        ]);
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $targetUser->id,
+            'type' => 'document_forwarded',
+        ]);
+    }
+
+    public function test_can_forward_document_on_approval_to_personnel_without_office(): void
+    {
+        $user = $this->authenticate();
+        $targetUser = User::factory()->create(['office_id' => null]);
+        $doc = Document::factory()->create([
+            'status' => DocumentStatus::RECEIVED,
+            'originator_id' => $user->id,
+            'current_office_id' => $user->office_id,
+        ]);
+
+        $response = $this->postJson("/api/documents/{$doc->id}/route", [
+            'action' => 'approved',
+            'remarks' => 'Approved',
+            'recipient_type' => 'personnel',
+            'recipient_id' => $targetUser->id,
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('documents', [
+            'id' => $doc->id,
+            'current_office_id' => $user->office_id,
+            'recipient_type' => 'personnel',
+            'recipient_id' => $targetUser->id,
+        ]);
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $targetUser->id,
+            'type' => 'document_forwarded',
+        ]);
+    }
 }

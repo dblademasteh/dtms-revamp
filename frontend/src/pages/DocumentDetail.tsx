@@ -283,7 +283,10 @@ export default function DocumentDetail() {
   const selectAction = (a: 'approve' | 'reject' | 'return' | 'resubmit' | 'file' | 'send') => {
     setAction(a)
     setDisposition(a === 'resubmit' ? 'resubmitted' : a === 'send' ? 'routed' : ROUTING_DISPOSITIONS[a][0].value)
-    if (a === 'return' || a === 'resubmit') {
+    if (a === 'approve') {
+      // Forward target is optional on approval
+      setRecipientSelection([])
+    } else if (a === 'return' || a === 'resubmit') {
       setRecipientMode('personnel')
       
       // Attempt to prepopulate with the previous actor
@@ -330,21 +333,25 @@ export default function DocumentDetail() {
       }
       if (recipientMode === 'office') {
         targetOffice = recipientSelection[0].value
-      } else if (action === 'return' || action === 'resubmit') {
-        targetOffice = recipientSelection[0].office_id
-        if (!targetOffice) {
-          toast.error('Selected personnel has no assigned office.')
-          return
-        }
       } else {
-        // Send: a personnel without an office still receives the document;
+        // Personnel without an assigned office still receives the document;
         // it simply stays at its current office for tracking.
+        targetOffice = recipientSelection[0].office_id || targetOffice
+      }
+    } else if (action === 'approve' && recipientSelection.length > 0) {
+      // Optional forward target on approval
+      if (recipientMode === 'office') {
+        targetOffice = recipientSelection[0].value
+      } else {
         targetOffice = recipientSelection[0].office_id || targetOffice
       }
     }
 
     const extra: Record<string, any> = {}
-    if (action === 'send') {
+    if (action === 'return' || action === 'resubmit' || action === 'send') {
+      extra.recipient_type = recipientMode
+      extra.recipient_id = recipientSelection[0].value
+    } else if (action === 'approve' && recipientSelection.length > 0) {
       extra.recipient_type = recipientMode
       extra.recipient_id = recipientSelection[0].value
     }
@@ -1343,12 +1350,12 @@ className="flex items-center justify-between w-full text-left"
                         </div>
                       )}
 
-                      {/* Return/Resubmit recipient */}
-                      {(action === 'return' || action === 'resubmit' || action === 'send') && (
+                      {/* Return/Resubmit/Send/Approve recipient */}
+                      {(action === 'approve' || action === 'return' || action === 'resubmit' || action === 'send') && (
                         <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
                           <div className="flex items-center justify-between mb-3">
                             <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
-                              {action === 'return' ? 'Return To' : action === 'resubmit' ? 'Resubmit To' : 'Send To'}
+                              {action === 'approve' ? 'Forward To (optional)' : action === 'return' ? 'Return To' : action === 'resubmit' ? 'Resubmit To' : 'Send To'}
                             </label>
                             <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
                               <button
@@ -1394,6 +1401,11 @@ className="flex items-center justify-between w-full text-left"
                               />
                             </div>
                           </div>
+                          {action === 'approve' && (
+                            <p className="text-[11px] font-medium text-slate-500 mt-2">
+                              Leave empty to approve in place; select a recipient to route the document onward.
+                            </p>
+                          )}
                         </div>
                       )}
 

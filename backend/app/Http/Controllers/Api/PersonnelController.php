@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\PersonnelOfficeResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -21,6 +22,10 @@ class PersonnelController extends Controller
         'designation',
         'email',
     ];
+
+    public function __construct(private readonly PersonnelOfficeResolver $officeResolver)
+    {
+    }
 
     private function rankToRole(string $rank): string
     {
@@ -94,9 +99,10 @@ class PersonnelController extends Controller
             $accntNo = trim($rec['accnt_no'] ?? '') ?: null;
             $email = strtolower(trim($rec['email'] ?? '')) ?: null;
             $itemNo = trim($rec['item_no'] ?? '') ?: null;
+            $unitAssignment = trim($rec['unit_assignment'] ?? '') ?: null;
             $key = $accntNo ?? $email ?? "$firstName|$lastName|$itemNo";
 
-            $records[$key] = [
+            $record = [
                 'name' => trim("$firstName $middle $lastName"),
                 'role' => $this->rankToRole($rec['rank'] ?? ''),
                 'rank' => $rank,
@@ -105,10 +111,19 @@ class PersonnelController extends Controller
                 'middle_name' => $middle ?: null,
                 'item_no' => $itemNo,
                 'accnt_no' => $accntNo,
-                'unit_assignment' => trim($rec['unit_assignment'] ?? '') ?: null,
+                'unit_assignment' => $unitAssignment,
                 'designation' => trim($rec['designation'] ?? '') ?: null,
                 'email' => $email,
             ];
+
+            // Map the roster's unit assignment to an office so personnel belong
+            // to an assignable unit for routing purposes.
+            $officeId = $this->officeResolver->resolveForUnitId($unitAssignment);
+            if ($officeId) {
+                $record['office_id'] = $officeId;
+            }
+
+            $records[$key] = $record;
         }
 
         fclose($handle);
@@ -213,6 +228,7 @@ class PersonnelController extends Controller
             'accnt_no' => $request->accnt_no,
             'unit_assignment' => $request->unit_assignment,
             'designation' => $request->designation,
+            'office_id' => $this->officeResolver->resolveForUnitId($request->unit_assignment),
             'status' => 'active',
         ]);
 

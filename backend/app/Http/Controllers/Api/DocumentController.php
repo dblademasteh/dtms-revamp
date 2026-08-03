@@ -285,7 +285,9 @@ class DocumentController extends Controller
     {
         $request->validate([
             'action' => 'required|in:' . implode(',', \App\Models\Document::routingActionVerbs()),
-            'to_office_id' => 'required_if:action,returned,referred,resubmitted|exists:offices,id',
+            'to_office_id' => 'nullable|exists:offices,id',
+            'recipient_type' => 'nullable|in:office,personnel',
+            'recipient_id' => 'nullable|integer',
             'remarks' => 'required|string|max:500',
             'attachment' => 'nullable|file|max:10240',
         ]);
@@ -308,15 +310,38 @@ class DocumentController extends Controller
                 $templateSteps = $document->routingTemplate?->steps ?? [];
                 $isLastStep = empty($templateSteps) || $nextStep >= count($templateSteps);
 
+                $fromOfficeId = $document->current_office_id;
+                $recipientType = $request->input('recipient_type');
+                $recipientId = $request->input('recipient_id');
+                $targetOfficeId = $request->input('to_office_id');
+
+                // Optional forward target: approving may route the document on to
+                // a specific office or personnel.
+                if ($recipientType === 'personnel' && $recipientId) {
+                    $targetUser = \App\Models\User::find($recipientId);
+                    if (!$targetUser) {
+                        DB::rollBack();
+                        return response()->json(['message' => 'Recipient not found'], 422);
+                    }
+                    $targetOfficeId = $targetUser->office_id;
+                } elseif ($recipientType === 'office' && $recipientId) {
+                    $targetOfficeId = $recipientId;
+                }
+                $targetOfficeId = $targetOfficeId ?? $fromOfficeId;
+                $forwarding = $targetOfficeId !== $fromOfficeId || ($recipientType && $recipientId);
+
                 $document->update([
                     'current_step' => $nextStep,
                     'status' => $isLastStep ? DocumentStatus::APPROVED : DocumentStatus::IN_REVIEW,
+                    'current_office_id' => $targetOfficeId,
+                    'recipient_type' => $forwarding ? $recipientType : $document->recipient_type,
+                    'recipient_id' => $forwarding ? $recipientId : $document->recipient_id,
                 ]);
 
                 RoutingHistory::create([
                     'document_id' => $document->id,
-                    'from_office_id' => $document->current_office_id,
-                    'to_office_id' => $document->current_office_id,
+                    'from_office_id' => $fromOfficeId,
+                    'to_office_id' => $targetOfficeId,
                     'action' => $canonicalAction,
                     'disposition' => $action,
                     'remarks' => $request->remarks,
@@ -324,6 +349,37 @@ class DocumentController extends Controller
                     'step_number' => $document->routingHistory()->max('step_number') + 1,
                     'timestamp' => now(),
                 ]);
+
+                // Notify the forward recipient (if the document was routed onward)
+                if ($forwarding) {
+                    $recipientUserId = null;
+                    if ($recipientType === 'personnel') {
+                        $recipientUserId = $recipientId;
+                    } elseif ($recipientType === 'office') {
+                        $office = \App\Models\Office::find($recipientId);
+                        $recipientUserId = $office?->head_user_id;
+                    }
+                    if ($recipientUserId && $recipientUserId !== $request->user()->id) {
+                        $notification = \App\Models\Notification::create([
+                            'user_id' => $recipientUserId,
+                            'type' => 'document_forwarded',
+                            'title' => 'Document Forwarded',
+                            'message' => "The document \"{$document->subject}\" ({$document->tracking_number}) was forwarded to you for review. Please open it to view details and take action.",
+                            'channel' => 'in_app',
+                            'sent_at' => now(),
+                            'data' => ['document_id' => $document->id, 'tracking_number' => $document->tracking_number, 'subject' => $document->subject],
+                        ]);
+
+                        NotificationCreated::dispatch(
+                            $notification->id,
+                            $notification->user_id,
+                            $notification->type,
+                            $notification->title,
+                            $notification->message,
+                            $notification->data,
+                        );
+                    }
+                }
 
                 // Notify originator
                 if ($document->originator_id && $document->originator_id !== $request->user()->id) {
@@ -398,15 +454,37 @@ class DocumentController extends Controller
                 ]);
 
             } elseif ($transition === 'return') {
+                $fromOfficeId = $document->current_office_id;
+                $recipientType = $request->input('recipient_type', $document->recipient_type);
+                $recipientId = $request->input('recipient_id', $document->recipient_id);
+
+                $targetOfficeId = $request->to_office_id;
+                if ($recipientType === 'personnel' && $recipientId) {
+                    $targetUser = \App\Models\User::find($recipientId);
+                    if (!$targetUser) {
+                        DB::rollBack();
+                        return response()->json(['message' => 'Recipient not found'], 422);
+                    }
+                    $targetOfficeId = $targetUser->office_id;
+                } elseif ($recipientType === 'office' && $recipientId) {
+                    $targetOfficeId = $recipientId;
+                }
+
+                // Personnel without an assigned office still receives the document;
+                // it simply stays at its current office for tracking.
+                $targetOfficeId = $targetOfficeId ?? $fromOfficeId;
+
                 $document->update([
                     'status' => DocumentStatus::RETURNED,
-                    'current_office_id' => $request->to_office_id,
+                    'current_office_id' => $targetOfficeId,
+                    'recipient_type' => $recipientType,
+                    'recipient_id' => $recipientId,
                 ]);
 
                 RoutingHistory::create([
                     'document_id' => $document->id,
-                    'from_office_id' => $document->current_office_id,
-                    'to_office_id' => $request->to_office_id,
+                    'from_office_id' => $fromOfficeId,
+                    'to_office_id' => $targetOfficeId,
                     'action' => $canonicalAction,
                     'disposition' => $action,
                     'remarks' => $request->remarks,
@@ -415,13 +493,19 @@ class DocumentController extends Controller
                     'timestamp' => now(),
                 ]);
 
-                $returnOffice = \App\Models\Office::find($request->to_office_id);
-                if ($returnOffice && $returnOffice->head_user_id && $returnOffice->head_user_id !== $request->user()->id) {
+                $recipientUserId = null;
+                if ($recipientType === 'personnel') {
+                    $recipientUserId = $recipientId;
+                } elseif ($recipientType === 'office') {
+                    $office = \App\Models\Office::find($recipientId);
+                    $recipientUserId = $office?->head_user_id;
+                }
+                if ($recipientUserId && $recipientUserId !== $request->user()->id) {
                     $notification = \App\Models\Notification::create([
-                        'user_id' => $returnOffice->head_user_id,
+                        'user_id' => $recipientUserId,
                         'type' => 'document_returned',
                         'title' => 'Document Returned',
-                        'message' => "The document \"{$document->subject}\" ({$document->tracking_number}) was returned to your office ({$returnOffice->name}) with remarks. Please review and resubmit if needed.",
+                        'message' => "The document \"{$document->subject}\" ({$document->tracking_number}) was returned to you with remarks. Please review and resubmit if needed.",
                         'channel' => 'in_app',
                         'sent_at' => now(),
                         'data' => ['document_id' => $document->id, 'tracking_number' => $document->tracking_number, 'subject' => $document->subject],
@@ -437,15 +521,37 @@ class DocumentController extends Controller
                     );
                 }
             } elseif ($transition === 'resubmit') {
+                $fromOfficeId = $document->current_office_id;
+                $recipientType = $request->input('recipient_type', $document->recipient_type);
+                $recipientId = $request->input('recipient_id', $document->recipient_id);
+
+                $targetOfficeId = $request->to_office_id;
+                if ($recipientType === 'personnel' && $recipientId) {
+                    $targetUser = \App\Models\User::find($recipientId);
+                    if (!$targetUser) {
+                        DB::rollBack();
+                        return response()->json(['message' => 'Recipient not found'], 422);
+                    }
+                    $targetOfficeId = $targetUser->office_id;
+                } elseif ($recipientType === 'office' && $recipientId) {
+                    $targetOfficeId = $recipientId;
+                }
+
+                // Personnel without an assigned office still receives the document;
+                // it simply stays at its current office for tracking.
+                $targetOfficeId = $targetOfficeId ?? $fromOfficeId;
+
                 $document->update([
-'status' => DocumentStatus::RECEIVED,
-                    'current_office_id' => $request->to_office_id,
+                    'status' => DocumentStatus::RECEIVED,
+                    'current_office_id' => $targetOfficeId,
+                    'recipient_type' => $recipientType,
+                    'recipient_id' => $recipientId,
                 ]);
 
                 RoutingHistory::create([
                     'document_id' => $document->id,
-                    'from_office_id' => $document->current_office_id,
-                    'to_office_id' => $request->to_office_id,
+                    'from_office_id' => $fromOfficeId,
+                    'to_office_id' => $targetOfficeId,
                     'action' => $canonicalAction,
                     'disposition' => $action,
                     'remarks' => $request->remarks,
@@ -454,13 +560,19 @@ class DocumentController extends Controller
                     'timestamp' => now(),
                 ]);
 
-                $resubmitOffice = \App\Models\Office::find($request->to_office_id);
-                if ($resubmitOffice && $resubmitOffice->head_user_id && $resubmitOffice->head_user_id !== $request->user()->id) {
+                $recipientUserId = null;
+                if ($recipientType === 'personnel') {
+                    $recipientUserId = $recipientId;
+                } elseif ($recipientType === 'office') {
+                    $office = \App\Models\Office::find($recipientId);
+                    $recipientUserId = $office?->head_user_id;
+                }
+                if ($recipientUserId && $recipientUserId !== $request->user()->id) {
                     $notification = \App\Models\Notification::create([
-                        'user_id' => $resubmitOffice->head_user_id,
+                        'user_id' => $recipientUserId,
                         'type' => 'document_resubmitted',
                         'title' => 'Document Resubmitted',
-                        'message' => "The returned document \"{$document->subject}\" ({$document->tracking_number}) was resubmitted to your office. Please review the revisions.",
+                        'message' => "The returned document \"{$document->subject}\" ({$document->tracking_number}) was resubmitted to you. Please review the revisions.",
                         'channel' => 'in_app',
                         'sent_at' => now(),
                         'data' => ['document_id' => $document->id, 'tracking_number' => $document->tracking_number, 'subject' => $document->subject],

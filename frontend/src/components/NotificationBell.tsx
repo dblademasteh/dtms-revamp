@@ -56,6 +56,11 @@ export default function NotificationBell() {
           title: 'Document Approved',
           message: `The document "${n.data?.subject ?? n.message}"${tracking} you sent has been approved. You can track its progress.`,
         }
+      case 'document_forwarded':
+        return {
+          title: 'Document Forwarded',
+          message: `The document "${n.data?.subject ?? n.message}"${tracking} was forwarded to you for review. Open it to view details and take action.`,
+        }
       case 'document_returned':
         return {
           title: 'Document Returned',
