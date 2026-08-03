@@ -392,13 +392,11 @@ export default function Settings() {
                 <div className="flex-1 w-full min-w-0 space-y-4 text-sm">
                   <div>
                     <p className="text-slate-500 text-xs uppercase tracking-wider">Full Name</p>
-                    <p className="font-semibold text-slate-900 text-lg leading-tight">{user?.full_name || user?.name}</p>
+                    <p className="font-semibold text-slate-900 text-lg leading-tight">
+                      {[user?.rank, user?.full_name || user?.name].filter(Boolean).join(' ')}
+                    </p>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3">
-                    <div>
-                      <p className="text-slate-500 text-xs uppercase tracking-wider">Rank</p>
-                      <p className="font-medium text-slate-900 truncate">{user?.rank || '—'}</p>
-                    </div>
                     <div>
                       <p className="text-slate-500 text-xs uppercase tracking-wider">Designation</p>
                       <p className="font-medium text-slate-900 truncate">{user?.designation || '—'}</p>
