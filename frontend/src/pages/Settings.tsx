@@ -43,7 +43,7 @@ export default function Settings() {
   const [middleName, setMiddleName] = useState(user?.middle_name || '')
   const [rank, setRank] = useState(user?.rank || '')
   const [designation, setDesignation] = useState(user?.designation || '')
-  const [unitAssignment, setUnitAssignment] = useState(user?.unit_assignment || '')
+  const [officeId, setOfficeId] = useState<string>(user?.office_id ? String(user.office_id) : '')
   const [phone, setPhone] = useState(user?.phone || '')
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(true)
@@ -76,6 +76,16 @@ export default function Settings() {
     queryFn: () => api.get('/admin/settings').then((r) => r.data.settings),
     enabled: isSuperadmin,
   })
+
+  const officesQuery = useQuery({
+    queryKey: ['offices'],
+    queryFn: () => api.get('/offices').then((r) => r.data),
+  })
+
+  const officeOptions = useMemo(
+    () => (officesQuery.data ?? []).map((o: any) => ({ value: String(o.id), label: o.name.replace(/^[\d\.]+\s*/, '') })),
+    [officesQuery.data]
+  )
 
   useEffect(() => {
     if (slaQuery.data) {
@@ -158,7 +168,7 @@ export default function Settings() {
       middle_name: middleName,
       rank,
       designation,
-      unit_assignment: unitAssignment,
+      office_id: officeId ? Number(officeId) : null,
       phone,
     })
   }
@@ -467,8 +477,17 @@ export default function Settings() {
                       <input className="input" value={designation} onChange={(e) => setDesignation(e.target.value)} placeholder="e.g. System Administrator" />
                     </div>
                     <div>
-                      <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Unit Assignment</label>
-                      <input className="input" value={unitAssignment} onChange={(e) => setUnitAssignment(e.target.value)} placeholder="e.g. ICT Service" />
+                      <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Office Assignment</label>
+                      <Select
+                        className="text-sm"
+                        styles={buildSelectStyles()}
+                        options={officeOptions}
+                        isClearable
+                        placeholder="Select office..."
+                        value={officeId ? officeOptions.find((o: any) => o.value === officeId) : null}
+                        onChange={(opt: any) => setOfficeId(opt ? opt.value : '')}
+                      />
+                      <p className="text-xs text-slate-400 mt-1">The office you belong to. Incoming routed documents are directed here.</p>
                     </div>
                   </div>
 

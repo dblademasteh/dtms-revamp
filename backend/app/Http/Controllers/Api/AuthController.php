@@ -152,11 +152,12 @@ class AuthController extends Controller
             'rank' => 'sometimes|nullable|string|max:50',
             'designation' => 'sometimes|nullable|string|max:255',
             'unit_assignment' => 'sometimes|nullable|string|max:255',
+            'office_id' => 'sometimes|nullable|exists:offices,id',
             'phone' => 'sometimes|nullable|string|max:20',
         ]);
 
         $user = $request->user();
-        $user->update($request->only([
+        $data = $request->only([
             'name',
             'first_name',
             'last_name',
@@ -165,7 +166,18 @@ class AuthController extends Controller
             'designation',
             'unit_assignment',
             'phone',
-        ]));
+        ]);
+
+        if ($request->has('office_id')) {
+            $data['office_id'] = $request->input('office_id');
+        } elseif (array_key_exists('unit_assignment', $data)) {
+            $resolved = (new \App\Services\PersonnelOfficeResolver())->resolveForUnitId($data['unit_assignment']);
+            if ($resolved !== null) {
+                $data['office_id'] = $resolved;
+            }
+        }
+
+        $user->update($data);
 
         return response()->json([
             'user' => $user->refresh()->load('office'),
