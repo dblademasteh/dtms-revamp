@@ -96,10 +96,13 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Offices
+    Route::get('/offices/claimable', [OfficeController::class, 'claimable']);
     Route::apiResource('offices', OfficeController::class);
     Route::get('/offices-hierarchy', [OfficeController::class, 'hierarchy']);
 
     // Self-service office management for office accounts
+    Route::post('/my-office/claim', [OfficeController::class, 'claim']);
+    Route::post('/my-office/register', [OfficeController::class, 'register']);
     Route::get('/my-office', [OfficeController::class, 'myOffice']);
     Route::put('/my-office', [OfficeController::class, 'updateMyOffice']);
     Route::post('/my-office/logo', [OfficeController::class, 'uploadMyOfficeLogo']);

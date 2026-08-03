@@ -106,6 +106,126 @@ class OfficeController extends Controller
         return response()->json(['message' => 'Office deleted']);
     }
 
+    /**
+     * Offices a station account can claim: not yet assigned a chief.
+     */
+    public function claimable()
+    {
+        $offices = Office::with(['parent'])
+            ->whereNull('head_user_id')
+            ->orderByRaw("CASE
+                WHEN office_type = 'regional_office' THEN 1
+                WHEN office_type = 'provincial_office' THEN 2
+                WHEN office_type = 'fire_station' THEN 3
+                WHEN office_type = 'division' THEN 4
+                WHEN office_type = 'unit' THEN 5
+                WHEN office_type = 'others' THEN 6
+                ELSE 7
+            END, name")
+            ->get();
+
+        return response()->json($offices);
+    }
+
+    /**
+     * Let a station account bind itself to an existing unclaimed office.
+     * The claiming station becomes the office chief.
+     */
+    public function claim(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->role !== UserRole::OFFICE_STATION) {
+            return response()->json(['message' => 'Only station accounts can claim an office'], 403);
+        }
+
+        if ($this->resolveUserOffice($user)) {
+            return response()->json(['message' => 'Your account is already linked to an office'], 422);
+        }
+
+        $request->validate([
+            'office_id' => 'required|exists:offices,id',
+        ]);
+
+        $office = Office::findOrFail($request->office_id);
+
+        if ($office->head_user_id) {
+            return response()->json(['message' => 'This office has already been claimed'], 422);
+        }
+
+        $office->update(['head_user_id' => $user->id]);
+        $user->update(['office_id' => $office->id]);
+
+        $office->refresh()->load(['parent', 'head']);
+        $office->setAttribute('storage_usage_bytes', $office->storageUsageBytes());
+
+        return response()->json([
+            'message' => 'Office claimed successfully',
+            'office' => $office,
+        ]);
+    }
+
+    /**
+     * Let a station account with no office create its own station profile.
+     * The creating station becomes the office chief.
+     */
+    public function register(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->role !== UserRole::OFFICE_STATION) {
+            return response()->json(['message' => 'Only station accounts can register an office'], 403);
+        }
+
+        if ($this->resolveUserOffice($user)) {
+            return response()->json(['message' => 'Your account is already linked to an office'], 422);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'unit_code' => 'nullable|string|max:20|unique:offices,unit_code',
+            'office_type' => 'nullable|string|max:50',
+            'description' => 'nullable|string',
+            'parent_office_id' => 'nullable|exists:offices,id',
+        ]);
+
+        $office = Office::create([
+            'name' => $request->name,
+            'code' => $this->generateOfficeCode($request->unit_code),
+            'unit_code' => $request->unit_code,
+            'parent_office_id' => $request->parent_office_id,
+            'description' => $request->description,
+            'office_type' => $request->office_type ?: 'fire_station',
+            'head_user_id' => $user->id,
+            'status' => 'active',
+        ]);
+
+        $user->update(['office_id' => $office->id]);
+
+        $office->refresh()->load(['parent', 'head']);
+        $office->setAttribute('storage_usage_bytes', $office->storageUsageBytes());
+
+        return response()->json([
+            'message' => 'Station profile created successfully',
+            'office' => $office,
+        ], 201);
+    }
+
+    private function generateOfficeCode(?string $unitCode): string
+    {
+        $base = $unitCode ? preg_replace('/[^A-Za-z0-9]/', '', $unitCode) : '';
+        $base = strtoupper(substr($base, 0, 6)) ?: 'STN';
+
+        $candidate = $base;
+        $i = 1;
+
+        while (Office::where('code', $candidate)->exists()) {
+            $candidate = $base . '-' . ($i++);
+        }
+
+        return $candidate;
+    }
+
     public function hierarchy()
     {
         $offices = Office::with(['head', 'children.head', 'children.children.head', 'children.children.children.head'])

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import api from '@/services/api'
+import { useAuthStore } from '@/stores/authStore'
 import {
   FileText,
   Clock,
@@ -17,6 +18,7 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveCo
 const COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#06b6d4']
 
 export default function Dashboard() {
+  const { user } = useAuthStore()
   const { data: dashboardData, isLoading } = useQuery({
     queryKey: ['dashboard'],
     queryFn: () => api.get('/reports/dashboard').then(res => res.data),
@@ -103,6 +105,23 @@ export default function Dashboard() {
         <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
         <p className="text-sm text-slate-500 mt-1">Welcome back! Here's an overview of your documents.</p>
       </div>
+
+      {user?.role === 'office_station' && !user?.office_id && !user?.office && (
+        <div className="card p-4 flex flex-col sm:flex-row sm:items-center gap-3 border-l-4 border-l-amber-500">
+          <div className="flex items-center gap-3 flex-1">
+            <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-slate-900">Your station has no office profile yet</p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Claim an existing office or create your station profile to start using the system.
+              </p>
+            </div>
+          </div>
+          <Link to="/office-profile" className="btn btn-primary btn-sm">
+            Set up station
+          </Link>
+        </div>
+      )}
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">

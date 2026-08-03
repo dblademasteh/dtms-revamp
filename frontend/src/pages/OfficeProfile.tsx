@@ -13,7 +13,9 @@ import {
   MapPin,
   ShieldCheck,
   ChevronRight,
+  Plus,
 } from 'lucide-react'
+import { useAuthStore } from '@/stores/authStore'
 
 const OFFICE_TYPES = [
   { value: 'regional_office', label: 'Regional Office' },
@@ -41,6 +43,8 @@ export default function OfficeProfile() {
   const [officeType, setOfficeType] = useState('')
   const [headUserId, setHeadUserId] = useState<number | ''>('')
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [onboardMode, setOnboardMode] = useState<'claim' | 'create'>('claim')
+  const [parentId, setParentId] = useState<number | ''>('')
   const selectStyles = useMemo(() => buildSelectStyles(), [])
 
   const officeQuery = useQuery({
@@ -58,6 +62,66 @@ export default function OfficeProfile() {
   const members = personnel.filter(
     (p: any) => office && String(p.office_id) === String(office.id)
   )
+
+  const claimableQuery = useQuery({
+    queryKey: ['offices-claimable'],
+    queryFn: () =>
+      api.get('/offices/claimable').then((r) =>
+        Array.isArray(r.data) ? r.data : r.data?.value || r.data || []
+      ),
+  })
+
+  const parentQuery = useQuery({
+    queryKey: ['offices'],
+    queryFn: () =>
+      api.get('/offices').then((r) =>
+        Array.isArray(r.data) ? r.data : r.data?.value || r.data || []
+      ),
+  })
+
+  const claimMutation = useMutation({
+    mutationFn: (officeId: number) => api.post('/my-office/claim', { office_id: officeId }),
+    onSuccess: (res) => {
+      handleBound(res.data.office)
+      toast.success('Office claimed')
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Failed to claim office'),
+  })
+
+  const registerMutation = useMutation({
+    mutationFn: (data: any) => api.post('/my-office/register', data),
+    onSuccess: (res) => {
+      handleBound(res.data.office)
+      toast.success('Station profile created')
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Failed to create station profile'),
+  })
+
+  const handleBound = (office: any) => {
+    const { user, setUser } = useAuthStore.getState()
+    if (user) {
+      setUser({ ...user, office_id: office.id, office: { id: office.id, name: office.name } })
+    }
+    queryClient.invalidateQueries({ queryKey: ['my-office'] })
+    queryClient.invalidateQueries({ queryKey: ['my-office-personnel'] })
+    queryClient.invalidateQueries({ queryKey: ['offices'] })
+    queryClient.invalidateQueries({ queryKey: ['offices-hierarchy'] })
+    queryClient.invalidateQueries({ queryKey: ['offices-claimable'] })
+    queryClient.invalidateQueries({ queryKey: ['personnel'] })
+    queryClient.invalidateQueries({ queryKey: ['documents'] })
+  }
+
+  const handleRegister = (e: React.FormEvent) => {
+    e.preventDefault()
+    const data: any = {
+      name,
+      unit_code: unitCode || null,
+      office_type: officeType || null,
+      description: description || null,
+    }
+    if (parentId) data.parent_office_id = parentId
+    registerMutation.mutate(data)
+  }
 
   useEffect(() => {
     if (office) {
@@ -142,10 +206,181 @@ export default function OfficeProfile() {
 
   if (officeQuery.isError || !office) {
     return (
-      <div className="card">
-        <div className="card-body text-sm text-slate-500">
-          No office is assigned to your account.
+      <div className="space-y-6 max-w-3xl mx-auto">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Set Up Your Station</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Your station has no office profile yet. Claim an existing office or create your own
+            station profile.
+          </p>
         </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <button
+            type="button"
+            onClick={() => setOnboardMode('claim')}
+            className={`card p-5 text-left cursor-pointer transition-all ${
+              onboardMode === 'claim'
+                ? 'ring-2 ring-primary-500 border-primary-500'
+                : 'hover:border-slate-300'
+            }`}
+          >
+            <Building2 className="w-6 h-6 text-primary-600" />
+            <h2 className="mt-2 font-semibold text-slate-900">Claim an existing office</h2>
+            <p className="text-xs text-slate-500 mt-1">
+              Pick your station from the list of unclaimed offices.
+            </p>
+          </button>
+          <button
+            type="button"
+            onClick={() => setOnboardMode('create')}
+            className={`card p-5 text-left cursor-pointer transition-all ${
+              onboardMode === 'create'
+                ? 'ring-2 ring-primary-500 border-primary-500'
+                : 'hover:border-slate-300'
+            }`}
+          >
+            <Plus className="w-6 h-6 text-primary-600" />
+            <h2 className="mt-2 font-semibold text-slate-900">Create station profile</h2>
+            <p className="text-xs text-slate-500 mt-1">
+              Register a brand-new office for your station.
+            </p>
+          </button>
+        </div>
+
+        {onboardMode === 'claim' ? (
+          <div className="card">
+            <div className="card-header">
+              <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
+                Available offices
+              </h2>
+            </div>
+            <div className="card-body">
+              {claimableQuery.isLoading ? (
+                <div className="text-sm text-slate-500">Loading offices...</div>
+              ) : claimableQuery.data?.length === 0 ? (
+                <div className="text-sm text-slate-500">
+                  No unclaimed offices available. Create your station profile instead.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {(claimableQuery.data || []).map((o: any) => (
+                    <div
+                      key={o.id}
+                      className="flex items-center gap-3 rounded-lg border border-slate-200 px-4 py-3 hover:border-primary-300"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-800 truncate">{o.name}</p>
+                        <p className="text-xs text-slate-500 flex items-center gap-2 flex-wrap">
+                          {o.unit_code && <span className="font-mono">{o.unit_code}</span>}
+                          <span className="font-mono">{o.code}</span>
+                          {o.office_type && (
+                            <span className="capitalize">{o.office_type.replace('_', ' ')}</span>
+                          )}
+                          {o.parent && <span>· {o.parent.name}</span>}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => claimMutation.mutate(o.id)}
+                        disabled={claimMutation.isPending}
+                        className="btn btn-primary btn-sm"
+                      >
+                        Claim
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="card">
+            <div className="card-header">
+              <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
+                Station profile
+              </h2>
+            </div>
+            <form onSubmit={handleRegister} className="card-body space-y-4">
+              <div>
+                <label className="label">
+                  <span className="label-text">Station name *</span>
+                </label>
+                <input
+                  className="input input-bordered w-full"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. BFP Cauayan Fire Station"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="label">
+                    <span className="label-text">Unit code</span>
+                  </label>
+                  <input
+                    className="input input-bordered w-full"
+                    value={unitCode}
+                    onChange={(e) => setUnitCode(e.target.value)}
+                    placeholder="e.g. 9.0"
+                  />
+                </div>
+                <div>
+                  <label className="label">
+                    <span className="label-text">Office type</span>
+                  </label>
+                  <select
+                    className="select select-bordered w-full"
+                    value={officeType}
+                    onChange={(e) => setOfficeType(e.target.value)}
+                  >
+                    <option value="">Select type</option>
+                    {OFFICE_TYPES.map((t) => (
+                      <option key={t.value} value={t.value}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="label">
+                  <span className="label-text">Under office (optional)</span>
+                </label>
+                <select
+                  className="select select-bordered w-full"
+                  value={parentId}
+                  onChange={(e) => setParentId(e.target.value ? Number(e.target.value) : '')}
+                >
+                  <option value="">— None —</option>
+                  {(parentQuery.data || []).map((o: any) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="label">
+                  <span className="label-text">Description</span>
+                </label>
+                <textarea
+                  className="textarea textarea-bordered w-full"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={3}
+                  placeholder="Brief description of your station"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <button type="submit" disabled={registerMutation.isPending} className="btn btn-primary">
+                  {registerMutation.isPending ? 'Creating...' : 'Create station profile'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
       </div>
     )
   }
