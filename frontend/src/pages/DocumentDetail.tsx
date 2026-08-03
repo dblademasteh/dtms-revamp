@@ -35,6 +35,7 @@ import {
   User,
   EyeOff,
   Archive,
+  BadgeCheck,
 } from 'lucide-react'
 import { useState, useCallback } from 'react'
 import toast from 'react-hot-toast'
@@ -322,11 +323,13 @@ export default function DocumentDetail() {
     }
   }
 
+  const isRoutingDisposition = action === 'approve' && ['forwarded', 'endorsed', 'recommended'].includes(disposition)
+
   const handleAction = () => {
     if (!action || !remarks || !disposition) return
     
     let targetOffice = document?.current_office_id
-    if (action === 'return' || action === 'resubmit' || action === 'send') {
+    if (action === 'return' || action === 'resubmit' || action === 'send' || isRoutingDisposition) {
       if (recipientSelection.length === 0) {
         toast.error('Please select a recipient')
         return
@@ -338,20 +341,10 @@ export default function DocumentDetail() {
         // it simply stays at its current office for tracking.
         targetOffice = recipientSelection[0].office_id || targetOffice
       }
-    } else if (action === 'approve' && recipientSelection.length > 0) {
-      // Optional forward target on approval
-      if (recipientMode === 'office') {
-        targetOffice = recipientSelection[0].value
-      } else {
-        targetOffice = recipientSelection[0].office_id || targetOffice
-      }
     }
 
     const extra: Record<string, any> = {}
-    if (action === 'return' || action === 'resubmit' || action === 'send') {
-      extra.recipient_type = recipientMode
-      extra.recipient_id = recipientSelection[0].value
-    } else if (action === 'approve' && recipientSelection.length > 0) {
+    if (action === 'return' || action === 'resubmit' || action === 'send' || isRoutingDisposition) {
       extra.recipient_type = recipientMode
       extra.recipient_id = recipientSelection[0].value
     }
@@ -820,6 +813,17 @@ export default function DocumentDetail() {
                       </div>
                       <div className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-blue-50/50 transition-colors">
                         <div className="p-1.5 rounded-md bg-white text-blue-400 shadow-sm border border-blue-50 flex-shrink-0 mt-0.5">
+                          <BadgeCheck className="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <dt className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Designation</dt>
+                          <dd className="text-sm font-semibold text-slate-800">
+                            {document.originator?.designation || '—'}
+                          </dd>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-blue-50/50 transition-colors">
+                        <div className="p-1.5 rounded-md bg-white text-blue-400 shadow-sm border border-blue-50 flex-shrink-0 mt-0.5">
                           <Send className="w-3.5 h-3.5" />
                         </div>
                         <div>
@@ -874,6 +878,45 @@ export default function DocumentDetail() {
                             </dt>
                             <dd className="text-sm font-semibold text-slate-800">
                               {personLabel(document.recipient)}
+                            </dd>
+                          </div>
+                        </div>
+                      )}
+                      {document.recipient_type === 'personnel' && document.recipient && (
+                        <>
+                          <div className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-emerald-50/50 transition-colors">
+                            <div className="p-1.5 rounded-md bg-white text-emerald-400 shadow-sm border border-emerald-50 flex-shrink-0 mt-0.5">
+                              <BadgeCheck className="w-3.5 h-3.5" />
+                            </div>
+                            <div>
+                              <dt className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Designation</dt>
+                              <dd className="text-sm font-semibold text-slate-800">
+                                {document.recipient?.designation || '—'}
+                              </dd>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-emerald-50/50 transition-colors">
+                            <div className="p-1.5 rounded-md bg-white text-emerald-400 shadow-sm border border-emerald-50 flex-shrink-0 mt-0.5">
+                              <Building2 className="w-3.5 h-3.5" />
+                            </div>
+                            <div>
+                              <dt className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Office</dt>
+                              <dd className="text-sm font-semibold text-slate-800">
+                                {document.recipient?.office?.name || document.current_office?.name || '—'}
+                              </dd>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      {document.recipient_type === 'office' && document.recipient && (
+                        <div className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-emerald-50/50 transition-colors">
+                          <div className="p-1.5 rounded-md bg-white text-emerald-400 shadow-sm border border-emerald-50 flex-shrink-0 mt-0.5">
+                            <Building2 className="w-3.5 h-3.5" />
+                          </div>
+                          <div>
+                            <dt className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Destination Office</dt>
+                            <dd className="text-sm font-semibold text-slate-800">
+                              {document.recipient?.name || '—'}
                             </dd>
                           </div>
                         </div>
@@ -1350,12 +1393,12 @@ className="flex items-center justify-between w-full text-left"
                         </div>
                       )}
 
-                      {/* Return/Resubmit/Send/Approve recipient */}
-                      {(action === 'approve' || action === 'return' || action === 'resubmit' || action === 'send') && (
+                      {/* Return/Resubmit/Send/Approve-forward recipient */}
+                      {(action === 'approve' ? isRoutingDisposition : action === 'return' || action === 'resubmit' || action === 'send') && (
                         <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
                           <div className="flex items-center justify-between mb-3">
                             <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
-                              {action === 'approve' ? 'Forward To (optional)' : action === 'return' ? 'Return To' : action === 'resubmit' ? 'Resubmit To' : 'Send To'}
+                              {action === 'approve' ? 'Forward To' : action === 'return' ? 'Return To' : action === 'resubmit' ? 'Resubmit To' : 'Send To'}
                             </label>
                             <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
                               <button
@@ -1403,7 +1446,7 @@ className="flex items-center justify-between w-full text-left"
                           </div>
                           {action === 'approve' && (
                             <p className="text-[11px] font-medium text-slate-500 mt-2">
-                              Leave empty to approve in place; select a recipient to route the document onward.
+                              This disposition routes the document onward; a recipient is required.
                             </p>
                           )}
                         </div>
@@ -1498,7 +1541,7 @@ className="flex items-center justify-between w-full text-left"
                         </button>
                         <button
                           onClick={handleAction}
-                          disabled={!remarks || routeMutation.isPending || (['return', 'resubmit', 'send'].includes(action) && recipientSelection.length === 0)}
+                          disabled={!remarks || routeMutation.isPending || ((['return', 'resubmit', 'send'].includes(action) || isRoutingDisposition) && recipientSelection.length === 0)}
                           className={`inline-flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ${cfg.btnClass}`}
                         >
                           {routeMutation.isPending ? (

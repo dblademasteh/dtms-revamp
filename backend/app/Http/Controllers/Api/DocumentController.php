@@ -212,7 +212,7 @@ class DocumentController extends Controller
     public function show(\Illuminate\Http\Request $request, Document $document)
     {
         $with = [
-            'originator',
+            'originator.office',
             'currentOffice',
             'routingTemplate',
             'latestAttachments.uploader',
@@ -232,7 +232,7 @@ class DocumentController extends Controller
 
         if ($document->recipient_id) {
             if ($document->recipient_type === 'personnel') {
-                $document->setRelation('recipient', \App\Models\User::find($document->recipient_id));
+                $document->setRelation('recipient', \App\Models\User::with('office')->find($document->recipient_id));
             } else {
                 $document->setRelation('recipient', \App\Models\Office::find($document->recipient_id));
             }
@@ -310,13 +310,21 @@ class DocumentController extends Controller
                 $templateSteps = $document->routingTemplate?->steps ?? [];
                 $isLastStep = empty($templateSteps) || $nextStep >= count($templateSteps);
 
+                // Routing dispositions forward the document onward and never
+                // finalize it; approval dispositions sign off in place.
+                $routingDispositions = ['forwarded', 'endorsed', 'recommended'];
+                $isRoutingDisposition = in_array($action, $routingDispositions, true);
+
                 $fromOfficeId = $document->current_office_id;
                 $recipientType = $request->input('recipient_type');
                 $recipientId = $request->input('recipient_id');
                 $targetOfficeId = $request->input('to_office_id');
 
-                // Optional forward target: approving may route the document on to
-                // a specific office or personnel.
+                if ($isRoutingDisposition && (!$recipientType || !$recipientId)) {
+                    DB::rollBack();
+                    return response()->json(['message' => 'Please select a recipient to forward the document to'], 422);
+                }
+
                 if ($recipientType === 'personnel' && $recipientId) {
                     $targetUser = \App\Models\User::find($recipientId);
                     if (!$targetUser) {
@@ -332,7 +340,9 @@ class DocumentController extends Controller
 
                 $document->update([
                     'current_step' => $nextStep,
-                    'status' => $isLastStep ? DocumentStatus::APPROVED : DocumentStatus::IN_REVIEW,
+                    'status' => $isRoutingDisposition
+                        ? DocumentStatus::IN_REVIEW
+                        : ($isLastStep ? DocumentStatus::APPROVED : DocumentStatus::IN_REVIEW),
                     'current_office_id' => $targetOfficeId,
                     'recipient_type' => $forwarding ? $recipientType : $document->recipient_type,
                     'recipient_id' => $forwarding ? $recipientId : $document->recipient_id,
