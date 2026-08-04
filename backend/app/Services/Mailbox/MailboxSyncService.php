@@ -110,7 +110,7 @@ class MailboxSyncService
     protected function storeMessage(Mailbox $mailbox, string $folder, array $item): void
     {
         $parser = new MailMimeParser();
-        $msg = $parser->parse($item['raw']);
+        $msg = $parser->parse($item['raw'], true);
 
         $from = $this->firstAddress($msg, 'from');
         $receivedAt = $this->parseDate($item['internaldate'], $msg->getHeaderValue('date'));

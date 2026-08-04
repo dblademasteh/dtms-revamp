@@ -23,6 +23,58 @@ Route::get('/track/{trackingNumber}', [DocumentController::class, 'trackByNumber
 // Public QR code for tracking (matches public /track route)
 Route::get('/documents/{document}/qr', [DocumentController::class, 'qrCode']);
 
+// Public Ranks endpoint
+Route::get('/ranks', function () {
+    $defaultRanks = [
+        ['value' => 'COMMR', 'label' => 'COMMR - Commissioner'],
+        ['value' => 'DIR', 'label' => 'DIR - Director'],
+        ['value' => 'FCSUPT', 'label' => 'FCSUPT - Fire Chief Superintendent'],
+        ['value' => 'CSUPT', 'label' => 'CSUPT - Chief Superintendent'],
+        ['value' => 'SSUPT', 'label' => 'SSUPT - Senior Superintendent'],
+        ['value' => 'SUPT', 'label' => 'SUPT - Superintendent'],
+        ['value' => 'FCINSP', 'label' => 'FCINSP - Fire Chief Inspector'],
+        ['value' => 'CINSP', 'label' => 'CINSP - Chief Inspector'],
+        ['value' => 'SINSP', 'label' => 'SINSP - Senior Inspector'],
+        ['value' => 'INSP', 'label' => 'INSP - Inspector'],
+        ['value' => 'SFO4', 'label' => 'SFO4 - Senior Fire Officer 4'],
+        ['value' => 'SFO3', 'label' => 'SFO3 - Senior Fire Officer 3'],
+        ['value' => 'SFO2', 'label' => 'SFO2 - Senior Fire Officer 2'],
+        ['value' => 'SFO1', 'label' => 'SFO1 - Senior Fire Officer 1'],
+        ['value' => 'FO3', 'label' => 'FO3 - Fire Officer 3'],
+        ['value' => 'FO2', 'label' => 'FO2 - Fire Officer 2'],
+        ['value' => 'FO1', 'label' => 'FO1 - Fire Officer 1'],
+        ['value' => 'NUP', 'label' => 'NUP - Non-Uniformed Personnel'],
+    ];
+
+    $custom = \App\Models\SystemSetting::get('custom_ranks');
+    $ranks = $custom ? json_decode($custom, true) : $defaultRanks;
+
+    $changed = false;
+    foreach ($ranks as &$r) {
+        if ($r['value'] === 'FINSP' && (str_starts_with($r['label'], 'INSP - ') || $r['label'] === 'FINSP')) {
+            $r['label'] = 'FINSP - Inspector';
+            $changed = true;
+        }
+        if ($r['value'] === 'FSINSP' && (str_starts_with($r['label'], 'SINSP - ') || $r['label'] === 'FSINSP')) {
+            $r['label'] = 'FSINSP - Senior Inspector';
+            $changed = true;
+        }
+        if ($r['value'] === 'FSUPT' && (str_starts_with($r['label'], 'SUPT - ') || $r['label'] === 'FSUPT')) {
+            $r['label'] = 'FSUPT - Superintendent';
+            $changed = true;
+        }
+        if ($r['value'] === 'FSSUPT' && (str_starts_with($r['label'], 'SSUPT - ') || $r['label'] === 'FSSUPT')) {
+            $r['label'] = 'FSSUPT - Senior Superintendent';
+            $changed = true;
+        }
+    }
+    if ($changed) {
+        \App\Models\SystemSetting::set('custom_ranks', json_encode($ranks));
+    }
+
+    return response()->json($ranks ?: $defaultRanks);
+});
+
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     // Auth routes
@@ -110,7 +162,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Personnel directory (all authenticated users)
     Route::get('/personnel', function () {
-        return \App\Models\User::with(['office', 'headedOffice'])
+        return \App\Models\User::whereNotIn('role', ['office_station', 'office'])
+            ->with(['office', 'headedOffice'])
             ->withCount(['documents', 'routedDocuments'])
             ->orderBy('name')
             ->get()
@@ -315,6 +368,115 @@ Route::middleware('auth:sanctum')->group(function () {
             ]);
         });
 
+        Route::post('/ranks', function (\Illuminate\Http\Request $request) {
+            $request->validate([
+                'value' => 'required|string|max:20',
+                'label' => 'required|string|max:255',
+                'original_value' => 'sometimes|nullable|string|max:20',
+            ]);
+
+            $defaultRanks = [
+                ['value' => 'COMMR', 'label' => 'COMMR - Commissioner'],
+                ['value' => 'DIR', 'label' => 'DIR - Director'],
+                ['value' => 'FCSUPT', 'label' => 'FCSUPT - Fire Chief Superintendent'],
+                ['value' => 'CSUPT', 'label' => 'CSUPT - Chief Superintendent'],
+                ['value' => 'SSUPT', 'label' => 'SSUPT - Senior Superintendent'],
+                ['value' => 'SUPT', 'label' => 'SUPT - Superintendent'],
+                ['value' => 'FCINSP', 'label' => 'FCINSP - Fire Chief Inspector'],
+                ['value' => 'CINSP', 'label' => 'CINSP - Chief Inspector'],
+                ['value' => 'SINSP', 'label' => 'SINSP - Senior Inspector'],
+                ['value' => 'INSP', 'label' => 'INSP - Inspector'],
+                ['value' => 'SFO4', 'label' => 'SFO4 - Senior Fire Officer 4'],
+                ['value' => 'SFO3', 'label' => 'SFO3 - Senior Fire Officer 3'],
+                ['value' => 'SFO2', 'label' => 'SFO2 - Senior Fire Officer 2'],
+                ['value' => 'SFO1', 'label' => 'SFO1 - Senior Fire Officer 1'],
+                ['value' => 'FO3', 'label' => 'FO3 - Fire Officer 3'],
+                ['value' => 'FO2', 'label' => 'FO2 - Fire Officer 2'],
+                ['value' => 'FO1', 'label' => 'FO1 - Fire Officer 1'],
+                ['value' => 'NUP', 'label' => 'NUP - Non-Uniformed Personnel'],
+            ];
+
+            $raw = \App\Models\SystemSetting::get('custom_ranks');
+            $ranks = $raw ? json_decode($raw, true) : $defaultRanks;
+
+            $newValue = strtoupper(trim($request->value));
+            $newLabel = trim($request->label);
+            $origValue = $request->original_value ? strtoupper(trim($request->original_value)) : null;
+
+            if ($origValue) {
+                foreach ($ranks as &$r) {
+                    if (strtoupper($r['value']) === $origValue) {
+                        $r['value'] = $newValue;
+                        $r['label'] = $newLabel;
+                    }
+                }
+                \App\Models\User::where('rank', $origValue)->update(['rank' => $newValue]);
+                \App\Models\SystemSetting::set('custom_ranks', json_encode($ranks));
+                return response()->json(['message' => 'Rank code and title updated successfully', 'ranks' => $ranks]);
+            }
+
+            foreach ($ranks as &$r) {
+                if (strtoupper($r['value']) === $newValue) {
+                    $r['label'] = $newLabel;
+                    \App\Models\SystemSetting::set('custom_ranks', json_encode($ranks));
+                    return response()->json(['message' => 'Rank title updated successfully', 'ranks' => $ranks]);
+                }
+            }
+
+            $ranks[] = ['value' => $newValue, 'label' => $newLabel];
+            \App\Models\SystemSetting::set('custom_ranks', json_encode($ranks));
+
+            return response()->json(['message' => 'Rank added successfully', 'ranks' => $ranks]);
+        });
+
+        Route::put('/ranks', function (\Illuminate\Http\Request $request) {
+            $request->validate([
+                'ranks' => 'required|array',
+                'ranks.*.value' => 'required|string',
+                'ranks.*.label' => 'required|string',
+            ]);
+
+            \App\Models\SystemSetting::set('custom_ranks', json_encode($request->ranks));
+
+            return response()->json(['message' => 'Ranks updated successfully', 'ranks' => $request->ranks]);
+        });
+
+        Route::delete('/ranks/{value}', function ($value) {
+            $defaultRanks = [
+                ['value' => 'COMMR', 'label' => 'COMMR - Commissioner'],
+                ['value' => 'DIR', 'label' => 'DIR - Director'],
+                ['value' => 'FCSUPT', 'label' => 'FCSUPT - Fire Chief Superintendent'],
+                ['value' => 'CSUPT', 'label' => 'CSUPT - Chief Superintendent'],
+                ['value' => 'SSUPT', 'label' => 'SSUPT - Senior Superintendent'],
+                ['value' => 'SUPT', 'label' => 'SUPT - Superintendent'],
+                ['value' => 'FCINSP', 'label' => 'FCINSP - Fire Chief Inspector'],
+                ['value' => 'CINSP', 'label' => 'CINSP - Chief Inspector'],
+                ['value' => 'SINSP', 'label' => 'SINSP - Senior Inspector'],
+                ['value' => 'INSP', 'label' => 'INSP - Inspector'],
+                ['value' => 'SFO4', 'label' => 'SFO4 - Senior Fire Officer 4'],
+                ['value' => 'SFO3', 'label' => 'SFO3 - Senior Fire Officer 3'],
+                ['value' => 'SFO2', 'label' => 'SFO2 - Senior Fire Officer 2'],
+                ['value' => 'SFO1', 'label' => 'SFO1 - Senior Fire Officer 1'],
+                ['value' => 'FO3', 'label' => 'FO3 - Fire Officer 3'],
+                ['value' => 'FO2', 'label' => 'FO2 - Fire Officer 2'],
+                ['value' => 'FO1', 'label' => 'FO1 - Fire Officer 1'],
+                ['value' => 'NUP', 'label' => 'NUP - Non-Uniformed Personnel'],
+            ];
+
+            $raw = \App\Models\SystemSetting::get('custom_ranks');
+            $ranks = $raw ? json_decode($raw, true) : $defaultRanks;
+
+            $filtered = array_values(array_filter($ranks, fn($r) => strtoupper($r['value']) !== strtoupper($value)));
+            \App\Models\SystemSetting::set('custom_ranks', json_encode($filtered));
+
+            return response()->json(['message' => 'Rank removed', 'ranks' => $filtered]);
+        });
+
+        Route::post('/ranks/reset', function () {
+            \App\Models\SystemSetting::set('custom_ranks', null);
+            return response()->json(['message' => 'Ranks reset to default BFP ranks']);
+        });
+
         // Users (admin only) — only accounts with an account number
         Route::get('/users', function () {
             return \App\Models\User::with('office')
@@ -468,13 +630,14 @@ Route::middleware('auth:sanctum')->group(function () {
                 'designation' => 'sometimes|nullable|string|max:255',
                 'unit_assignment' => 'sometimes|nullable|string|max:255',
                 'password' => 'sometimes|string|min:6',
+                'can_view_all_documents' => 'sometimes|boolean',
             ]);
 
             $allowed = $request->only([
                 'name', 'role', 'status', 'office_id',
                 'rank', 'first_name', 'last_name', 'middle_name', 'suffix',
                 'item_no', 'accnt_no', 'email', 'designation', 'unit_assignment',
-                'password',
+                'password', 'can_view_all_documents',
             ]);
 
             if ($request->has('password')) {
@@ -516,11 +679,9 @@ Route::middleware('auth:sanctum')->group(function () {
         });
 
         Route::delete('/personnel/clear', function () {
-            $deleted = \App\Models\User::where('role', '!=', 'superadmin')->delete();
-
+            \Illuminate\Support\Facades\Artisan::call('app:clear-personnel-offices');
             return response()->json([
-                'message' => "{$deleted} personnel records deleted",
-                'count' => $deleted,
+                'message' => 'Personnel, users (except superadmin), offices, and documents cleared successfully',
             ]);
         });
 

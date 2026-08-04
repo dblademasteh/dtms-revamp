@@ -13,7 +13,7 @@ function resolveConfig() {
     scheme,
     host,
     port,
-    path: import.meta.env.VITE_REVERB_PATH || '/app',
+    path: import.meta.env.VITE_REVERB_PATH || '',
   }
 }
 

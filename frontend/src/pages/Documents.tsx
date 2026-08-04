@@ -4,9 +4,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
 import ModalPortal from '@/components/ModalPortal'
-import { Plus, Search, FileText, ChevronLeft, ChevronRight, CheckCircle, XCircle, RotateCcw, X, Trash2, Building2, Clock } from 'lucide-react'
+import { Plus, Search, FileText, ChevronLeft, ChevronRight, CheckCircle, XCircle, RotateCcw, Trash2, Building2, Clock, Send, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { documentTypeLabel, DOCUMENT_TYPES, statusLabel } from '@/constants/documentOptions'
+
+import SearchableSelect from '@/components/SearchableSelect'
 
 export default function Documents() {
   const queryClient = useQueryClient()
@@ -27,6 +29,20 @@ export default function Documents() {
   const [bulkAction, setBulkAction] = useState<'approved' | 'rejected' | 'returned'>('approved')
   const [bulkRemarks, setBulkRemarks] = useState('')
 
+  const hasActiveFilters = Boolean(search || officeFilter || personnelFilter || status || priority || docType || mineOnly || forMeOnly)
+
+  const clearAllFilters = () => {
+    setSearch('')
+    setOfficeFilter('')
+    setPersonnelFilter('')
+    setStatus('')
+    setPriority('')
+    setDocType('')
+    setMineOnly(false)
+    setForMeOnly(false)
+    setPage(1)
+  }
+
   const { data: offices } = useQuery({
     queryKey: ['offices'],
     queryFn: () => api.get('/offices').then((r) => r.data),
@@ -37,9 +53,22 @@ export default function Documents() {
     queryFn: () => api.get('/personnel').then((r) => r.data),
   })
 
+  const officeOptions = [
+    { value: '', label: 'All Offices' },
+    ...(offices?.map((o: any) => ({ value: String(o.id), label: o.name })) || []),
+  ]
+
   const personnelOptions = personnel?.filter(
     (p: any) => !officeFilter || String(p.office_id) === officeFilter
   ) || []
+
+  const personnelSelectOptions = [
+    { value: '', label: 'All Personnel' },
+    ...personnelOptions.map((p: any) => ({
+      value: String(p.id),
+      label: `${p.rank ? p.rank + ' ' : ''}${p.full_name || p.name}`,
+    })),
+  ]
 
   const { data, isLoading } = useQuery({
     queryKey: ['documents', search, status, priority, docType, page, mineOnly, forMeOnly, officeFilter, personnelFilter],
@@ -84,24 +113,7 @@ export default function Documents() {
   const documents = data?.data || []
   const totalPages = data?.last_page || 1
 
-  // Documents that can still receive routing actions (exlude terminal/approved states)
-  const isActionable = (doc: any) => !['approved', 'released'].includes(doc.status)
-
-  const toggleSelect = (id: number) => {
-    const next = new Set(selected)
-    if (next.has(id)) next.delete(id)
-    else next.add(id)
-    setSelected(next)
-  }
-
-  const toggleSelectAll = () => {
-    const actionable = documents.filter(isActionable).map((d: any) => d.id)
-    if (actionable.every((id: number) => selected.has(id))) {
-      setSelected(new Set())
-    } else {
-      setSelected(new Set(actionable))
-    }
-  }
+  // Document query results
 
   const handleBulkAction = () => {
     if (!bulkRemarks.trim()) return
@@ -164,95 +176,86 @@ export default function Documents() {
 
       {/* Filters */}
       <div className="card">
-        <div className="card-body">
-          <div className="flex flex-col sm:flex-row gap-3">
+        <div className="card-body space-y-3">
+          {/* Row 1: Search & Quick Filters */}
+          <div className="flex flex-col md:flex-row gap-3">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search by tracking # or subject..."
-                className="input pl-9"
+                className="input pl-9 w-full"
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1) }}
               />
             </div>
-            <select className="input w-full sm:w-48" value={officeFilter} onChange={(e) => { setOfficeFilter(e.target.value); setPersonnelFilter(''); setPage(1) }}>
-              <option value="">All Offices</option>
-              {offices?.map((o: any) => <option key={o.id} value={o.id}>{o.name}</option>)}
-            </select>
-            <select className="input w-full sm:w-48" value={personnelFilter} onChange={(e) => { setPersonnelFilter(e.target.value); setPage(1) }}>
-              <option value="">All Personnel</option>
-              {personnelOptions.map((p: any) => (
-                <option key={p.id} value={p.id}>
-                  {p.rank ? `${p.rank} ` : ''}{p.full_name || p.name}
-                </option>
-              ))}
-            </select>
-            <select className="input w-full sm:w-40" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1) }}>
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              {user && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => { setMineOnly(!mineOnly); setForMeOnly(false); setPage(1) }}
+                    className={`btn whitespace-nowrap ${mineOnly ? 'btn-primary' : 'btn-secondary'}`}
+                  >
+                    {mineOnly ? 'My Documents ✓' : 'My Documents'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setForMeOnly(!forMeOnly); setMineOnly(false); setPage(1) }}
+                    className={`btn whitespace-nowrap ${forMeOnly ? 'btn-success' : 'btn-secondary'}`}
+                  >
+                    {forMeOnly ? 'For Me (Action Required) ✓' : 'For Me (Action Required)'}
+                  </button>
+                </>
+              )}
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={clearAllFilters}
+                  className="btn btn-ghost btn-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 gap-1 whitespace-nowrap"
+                  title="Clear all filters"
+                >
+                  <X className="w-3.5 h-3.5" /> Clear Filters
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Row 2: Searchable selects & category filters */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <SearchableSelect
+              options={officeOptions}
+              value={officeFilter}
+              onChange={(val) => { setOfficeFilter(val); setPersonnelFilter(''); setPage(1) }}
+              placeholder="All Offices"
+              isClearable
+            />
+            <SearchableSelect
+              options={personnelSelectOptions}
+              value={personnelFilter}
+              onChange={(val) => { setPersonnelFilter(val); setPage(1) }}
+              placeholder="All Personnel"
+              isClearable
+            />
+            <select className="input w-full" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1) }}>
               {statusOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
-            <select className="input w-full sm:w-36" value={priority} onChange={(e) => { setPriority(e.target.value); setPage(1) }}>
+            <select className="input w-full" value={priority} onChange={(e) => { setPriority(e.target.value); setPage(1) }}>
               <option value="">All Priority</option>
               <option value="low">Low</option>
               <option value="normal">Normal</option>
               <option value="high">High</option>
               <option value="urgent">Urgent</option>
             </select>
-            <select className="input w-full sm:w-44" value={docType} onChange={(e) => { setDocType(e.target.value); setPage(1) }}>
+            <select className="input w-full" value={docType} onChange={(e) => { setDocType(e.target.value); setPage(1) }}>
               <option value="">All Types</option>
               {DOCUMENT_TYPES.map((type) => (
                 <option key={type.value} value={type.value}>{type.label}</option>
               ))}
             </select>
-            {user && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => { setMineOnly(!mineOnly); setForMeOnly(false); setPage(1) }}
-                  className={`btn ${mineOnly ? 'btn-primary' : 'btn-secondary'}`}
-                >
-                  {mineOnly ? 'My Documents ✓' : 'My Documents'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setForMeOnly(!forMeOnly); setMineOnly(false); setPage(1) }}
-                  className={`btn ${forMeOnly ? 'btn-success' : 'btn-secondary'}`}
-                >
-                  {forMeOnly ? 'For Me (Action Required) ✓' : 'For Me (Action Required)'}
-                </button>
-              </>
-            )}
           </div>
         </div>
       </div>
-
-      {/* Bulk Actions Bar */}
-      {selected.size > 0 && (
-        <div className="card border-primary-200 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/30">
-          <div className="card-body py-3 flex items-center justify-between">
-            <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
-              {selected.size} document(s) selected
-            </span>
-            <div className="flex items-center gap-2">
-              <button onClick={() => { setBulkAction('approved'); setShowBulkModal(true) }} className="btn btn-success btn-sm">
-                <CheckCircle className="w-3.5 h-3.5" /> Approve
-              </button>
-              <button onClick={() => { setBulkAction('rejected'); setShowBulkModal(true) }} className="btn btn-danger btn-sm">
-                <XCircle className="w-3.5 h-3.5" /> Decline
-              </button>
-              <button onClick={() => { setBulkAction('returned'); setShowBulkModal(true) }} className="btn btn-secondary btn-sm">
-                <RotateCcw className="w-3.5 h-3.5" /> Return
-              </button>
-              <button onClick={() => setSelected(new Set())} className="btn btn-ghost btn-sm">
-                <X className="w-3.5 h-3.5" /> Clear
-              </button>
-              <button onClick={() => bulkDeleteMutation.mutate({ document_ids: Array.from(selected) })} disabled={bulkDeleteMutation.isPending} className="btn btn-danger-outline btn-sm">
-                <Trash2 className="w-3.5 h-3.5" /> Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Documents Table */}
       <div className="card overflow-hidden">
@@ -283,48 +286,24 @@ export default function Documents() {
           <div className="overflow-x-auto rounded-xl">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  <th className="py-4 pl-6 pr-3 w-10">
-                    {documents.some(isActionable) && (
-                      <input
-                        type="checkbox"
-                        className="checkbox"
-                        checked={
-                          documents.filter(isActionable).length > 0 &&
-                          documents.filter(isActionable).every((d: any) => selected.has(d.id))
-                        }
-                        onChange={toggleSelectAll}
-                      />
-                    )}
-                  </th>
-                  <th className="py-4 px-4">Document Info</th>
+                <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <th className="py-4 pl-6 px-4">Document Info</th>
                   <th className="py-4 px-4">Status</th>
                   <th className="py-4 px-4">Details</th>
                   <th className="py-4 px-4">Current Location</th>
+                  <th className="py-4 pr-6 px-4 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {documents.map((doc: any) => (
                   <tr
                     key={doc.id}
                     onClick={() => navigate(`/documents/${doc.id}`)}
-                    className={`cursor-pointer transition-colors ${selected.has(doc.id) ? 'bg-primary-50/50 dark:bg-primary-900/20 hover:bg-primary-50 dark:hover:bg-primary-900/30' : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/50'}`}
+                    className="cursor-pointer transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/50"
                   >
-                    <td className="py-4 pl-6 pr-3" onClick={(e) => e.stopPropagation()}>
-                      {isActionable(doc) ? (
-                        <input
-                          type="checkbox"
-                          className="checkbox mt-1"
-                          checked={selected.has(doc.id)}
-                          onChange={() => toggleSelect(doc.id)}
-                        />
-                      ) : (
-                        <span className="block w-4 h-4" />
-                      )}
-                    </td>
-                    <td className="py-4 px-4 min-w-[280px] max-w-sm">
+                    <td className="py-4 pl-6 px-4 min-w-[280px] max-w-sm">
                       <div className="flex flex-col">
-                        <span className="font-semibold text-slate-900 truncate mb-1" title={doc.subject}>
+                        <span className="font-semibold text-slate-900 dark:text-slate-100 truncate mb-1" title={doc.subject}>
                           {doc.subject}
                         </span>
                         <div className="flex items-center gap-2">
@@ -347,7 +326,7 @@ export default function Documents() {
                     </td>
                     <td className="py-4 px-4 whitespace-nowrap">
                       <div className="flex flex-col">
-                        <span className="text-[13px] font-semibold text-slate-700 flex items-center gap-1.5">
+                        <span className="text-[13px] font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
                           <Building2 className="w-4 h-4 text-slate-400" />
                           {doc.current_office?.name || '—'}
                         </span>
@@ -355,6 +334,70 @@ export default function Documents() {
                           <Clock className="w-3.5 h-3.5" />
                           {new Date(doc.created_at).toLocaleDateString()}
                         </span>
+                      </div>
+                    </td>
+                    <td className="py-4 pr-6 px-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1.5">
+                        {doc.status === 'created' && (
+                          <button
+                            type="button"
+                            title="Send Document"
+                            onClick={() => navigate(`/documents/${doc.id}`)}
+                            className="btn btn-primary btn-sm gap-1 px-2.5 py-1 text-xs"
+                          >
+                            <Send className="w-3.5 h-3.5" /> Send
+                          </button>
+                        )}
+                        {['received', 'in_review'].includes(doc.status) && (
+                          <>
+                            <button
+                              type="button"
+                              title="Approve"
+                              onClick={() => { setSelected(new Set([doc.id])); setBulkAction('approved'); setShowBulkModal(true) }}
+                              className="btn btn-success btn-sm gap-1 px-2.5 py-1 text-xs"
+                            >
+                              <CheckCircle className="w-3.5 h-3.5" /> Approve
+                            </button>
+                            <button
+                              type="button"
+                              title="Decline"
+                              onClick={() => { setSelected(new Set([doc.id])); setBulkAction('rejected'); setShowBulkModal(true) }}
+                              className="btn btn-danger btn-sm gap-1 px-2.5 py-1 text-xs"
+                            >
+                              <XCircle className="w-3.5 h-3.5" /> Decline
+                            </button>
+                            <button
+                              type="button"
+                              title="Return"
+                              onClick={() => { setSelected(new Set([doc.id])); setBulkAction('returned'); setShowBulkModal(true) }}
+                              className="btn btn-secondary btn-sm gap-1 px-2.5 py-1 text-xs"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" /> Return
+                            </button>
+                          </>
+                        )}
+                        {doc.status === 'returned' && (
+                          <button
+                            type="button"
+                            title="Resubmit Document"
+                            onClick={() => navigate(`/documents/${doc.id}`)}
+                            className="btn btn-warning btn-sm gap-1 px-2.5 py-1 text-xs text-slate-900"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" /> Resubmit
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          title="Delete"
+                          onClick={() => {
+                            if (window.confirm('Are you sure you want to delete this document?')) {
+                              bulkDeleteMutation.mutate({ document_ids: [doc.id] })
+                            }
+                          }}
+                          className="btn btn-danger-outline btn-sm p-1.5 text-xs"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -382,7 +425,7 @@ export default function Documents() {
         )}
       </div>
 
-      {/* Bulk Action Modal */}
+      {/* Action Remarks Modal */}
       {showBulkModal && (
         <ModalPortal>
           <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -390,7 +433,7 @@ export default function Documents() {
             <div className="relative bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-md mx-4">
             <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
               <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 capitalize">
-                {bulkAction} {selected.size} document(s)
+                {bulkAction === 'rejected' ? 'Decline' : bulkAction === 'approved' ? 'Approve' : 'Return'} Document
               </h3>
             </div>
             <div className="px-6 py-4">

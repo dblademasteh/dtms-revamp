@@ -1,11 +1,23 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
 import api from '@/services/api'
-import { Search, FileText, MapPin, Clock, CheckCircle, AlertCircle } from 'lucide-react'
+import { Search, FileText, MapPin, Clock, CheckCircle, AlertCircle, ScanLine } from 'lucide-react'
+import QrScannerModal from '@/components/QrScannerModal'
 
 export default function Track() {
   const [trackingNumber, setTrackingNumber] = useState('')
   const [search, setSearch] = useState('')
+  const [scannerOpen, setScannerOpen] = useState(false)
+  const [searchParams] = useSearchParams()
+
+  useEffect(() => {
+    const urlTrack = searchParams.get('track')?.trim()
+    if (urlTrack) {
+      setTrackingNumber(urlTrack)
+      setSearch(urlTrack)
+    }
+  }, [searchParams])
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['track', search],
@@ -20,6 +32,13 @@ export default function Track() {
       setSearch(trackingNumber.trim())
     }
   }
+
+  const handleQrResult = useCallback((tracking: string) => {
+    if (!tracking) return
+    setScannerOpen(false)
+    setTrackingNumber(tracking)
+    setSearch(tracking)
+  }, [])
 
   const statusColors: Record<string, string> = {
     created: 'bg-slate-200 text-slate-800 border-slate-300',
@@ -68,6 +87,14 @@ export default function Track() {
                 onChange={(e) => setTrackingNumber(e.target.value)}
               />
             </div>
+            <button
+              type="button"
+              onClick={() => setScannerOpen(true)}
+              aria-label="Scan QR code"
+              className="px-4 py-3.5 rounded-xl bg-white/10 border border-white/10 text-white hover:bg-white/20 transition-colors"
+            >
+              <ScanLine className="w-5 h-5" />
+            </button>
             <button
               type="submit"
               disabled={!trackingNumber.trim() || isLoading}
@@ -158,6 +185,8 @@ export default function Track() {
           <p>Philippine Government Document Tracking and Management System</p>
         </div>
       </div>
+
+      <QrScannerModal open={scannerOpen} onClose={() => setScannerOpen(false)} onResult={handleQrResult} />
     </div>
   )
 }

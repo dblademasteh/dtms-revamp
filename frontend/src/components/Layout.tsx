@@ -17,7 +17,8 @@ import {
   Megaphone,
   Lightbulb,
   HardDrive,
-  Mail
+  Mail,
+  MapPin
 } from 'lucide-react'
 import { useState } from 'react'
 import NotificationBell from '@/components/NotificationBell'
@@ -25,6 +26,7 @@ import NotificationBell from '@/components/NotificationBell'
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Documents', href: '/documents', icon: FileText },
+  { name: 'Track', href: '/track', icon: MapPin },
   { name: 'Announcements', href: '/announcements', icon: Megaphone },
   { name: 'Reports', href: '/reports', icon: BarChart3 },
   { name: 'Suggestions', href: '/suggestions', icon: Lightbulb },

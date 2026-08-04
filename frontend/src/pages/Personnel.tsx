@@ -7,9 +7,11 @@ import StatCard from '@/components/StatCard'
 import ModalPortal from '@/components/ModalPortal'
 import Select from 'react-select'
 import { buildSelectStyles } from '@/utils/selectStyles'
+import { useRanks } from '@/hooks/useRanks'
 
 export default function Personnel() {
   const queryClient = useQueryClient()
+  const ranks = useRanks()
   const [search, setSearch] = useState('')
   const [officeFilter, setOfficeFilter] = useState('')
   const [selected, setSelected] = useState<any>(null)
@@ -78,6 +80,8 @@ export default function Personnel() {
 
   const selectStyles = buildSelectStyles()
 
+  const [rankFilter, setRankFilter] = useState('')
+
   const filtered = (personnel ?? []).filter((u: any) => {
     const q = search.toLowerCase()
     const matchesSearch =
@@ -91,7 +95,9 @@ export default function Personnel() {
       u.designation?.toLowerCase().includes(q)
     const matchesOffice =
       !officeFilter || String(u.office_id) === String(officeFilter)
-    return matchesSearch && matchesOffice
+    const matchesRank =
+      !rankFilter || u.rank === rankFilter
+    return matchesSearch && matchesOffice && matchesRank
   })
 
   const openDetail = (u: any) => {
@@ -193,6 +199,16 @@ export default function Personnel() {
               <option key={o.id} value={o.id}>
                 {o.name}
               </option>
+            ))}
+          </select>
+          <select
+            className="input sm:w-48 text-sm"
+            value={rankFilter}
+            onChange={(e) => setRankFilter(e.target.value)}
+          >
+            <option value="">All Ranks</option>
+            {ranks.map((r) => (
+              <option key={r.value} value={r.value}>{r.label}</option>
             ))}
           </select>
         </div>
@@ -298,9 +314,9 @@ export default function Personnel() {
                   <div>
                     <label className="block text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-1">Rank</label>
                     <select className="input input-sm w-full text-sm" value={editForm.rank} onChange={(e) => setEditForm({ ...editForm, rank: e.target.value })}>
-                      <option value="">—</option>
-                      {['SUPT', 'CSUPT', 'FCSUPT', 'SINSP', 'CINSP', 'FCINSP', 'INSP', 'FO1', 'FO2', 'FO3', 'SFO1', 'SFO2', 'SFO3', 'SFO4'].map((r) => (
-                        <option key={r} value={r}>{r}</option>
+                      <option value="">Select Rank...</option>
+                      {ranks.map((r) => (
+                        <option key={r.value} value={r.value}>{r.label}</option>
                       ))}
                     </select>
                   </div>
@@ -400,9 +416,9 @@ export default function Personnel() {
                   <div>
                     <label className="block text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-1">Rank</label>
                     <select className="input input-sm w-full text-sm" value={newPersonnel.rank} onChange={(e) => setNewPersonnel({ ...newPersonnel, rank: e.target.value })}>
-                      <option value="">—</option>
-                      {['SUPT', 'CSUPT', 'FCSUPT', 'SINSP', 'CINSP', 'FCINSP', 'INSP', 'FO1', 'FO2', 'FO3', 'SFO1', 'SFO2', 'SFO3', 'SFO4'].map((r) => (
-                        <option key={r} value={r}>{r}</option>
+                      <option value="">Select Rank...</option>
+                      {ranks.map((r) => (
+                        <option key={r.value} value={r.value}>{r.label}</option>
                       ))}
                     </select>
                   </div>

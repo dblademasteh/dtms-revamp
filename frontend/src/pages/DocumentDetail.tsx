@@ -49,10 +49,10 @@ import {
   transmittalLabel,
   ROUTING_DISPOSITIONS,
 } from '@/constants/documentOptions'
-import { BFP_ORG, BFP_ACTION_LEGEND, legendForDisposition } from '@/constants/bfp'
+import RoutingSlipModal from '@/components/RoutingSlipModal'
 
 const personLabel = (p: any) =>
-  p ? [p.rank, p.full_name || p.name].filter(Boolean).join(' ') : '—'
+  p ? [p.rank, p.full_name || p.name].filter(Boolean).join(' ') : 'â€”'
 import EditDocumentModal from '@/components/EditDocumentModal'
 import MultiSelect from '@/components/MultiSelect'
 
@@ -70,6 +70,7 @@ export default function DocumentDetail() {
   const [showDisseminateModal, setShowDisseminateModal] = useState(false)
   const [disseminateRemarks, setDisseminateRemarks] = useState('')
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showSlipModal, setShowSlipModal] = useState(false)
   const [recallRemarks, setRecallRemarks] = useState('')
   const [newComment, setNewComment] = useState('')
   const [previewAttachment, setPreviewAttachment] = useState<any>(null)
@@ -155,7 +156,7 @@ export default function DocumentDetail() {
 
   const personnel = Array.isArray(personnelRaw) ? personnelRaw : (personnelRaw?.data ?? [])
   const personnelOptions = personnel
-    .filter((p: any) => p.role !== 'superadmin')
+    .filter((p: any) => p.role !== 'superadmin' && p.role !== 'office_station' && p.role !== 'office')
     .map((p: any) => {
       const head = [p.rank, p.full_name || p.name].filter(Boolean).join(' ')
       const tail = p.unit_assignment || p.designation
@@ -201,7 +202,7 @@ export default function DocumentDetail() {
     onSuccess: (res: any) => {
       queryClient.invalidateQueries({ queryKey: ['document', id] })
       if (res?.data?.duplicate) {
-        toast(res.data.message || 'Identical file already attached', { icon: '⚠️' })
+        toast(res.data.message || 'Identical file already attached', { icon: 'âš ï¸' })
       } else {
         toast.success(res?.data?.message || 'Attachment uploaded')
       }
@@ -496,8 +497,8 @@ export default function DocumentDetail() {
       </style></head><body>
       <div style="display:flex;justify-content:space-between;align-items:start;">
         <div>
-          <h1>${document.tracking_number}</h1>
-          <p style="color:#64748b;font-size:14px;">${document.subject}</p>
+          <h1>${document.subject}</h1>
+          <p style="color:#64748b;font-size:14px;font-family:monospace;">${document.tracking_number}</p>
         </div>
         <span class="badge ${statusBadgeClass(document.status)}">${statusLabel(document.status)}</span>
       </div>
@@ -534,193 +535,6 @@ export default function DocumentDetail() {
     setTimeout(() => w.print(), 200)
   }
 
-  const handlePrintSlip = () => {
-    const w = window.open('', '_blank')
-    if (!w) return
-
-    const history: any[] = sortedHistory
-    const checked = new Set<string>()
-    history.forEach((h) => {
-      const label = legendForDisposition(h.disposition || h.action)
-      if (label) checked.add(label)
-    })
-
-    // Always render at least 8 data rows (blank rows padded at bottom)
-    const minRows = Math.max(history.length, 8)
-    const blankRowsNeeded = minRows - history.length
-
-    const dataRows = history.map((h) => {
-      const sig = h.actor ? personLabel(h.actor) : ''
-      const desig = h.actor?.role || h.fromOffice?.name || ''
-      const forTo = h.toOffice?.name || ''
-      const date = h.timestamp ? new Date(h.timestamp).toLocaleDateString('en-PH') : ''
-      const remarks = [h.disposition ? h.disposition : '', h.remarks].filter(Boolean).join(' – ')
-      return `<tr style="height:30px;">
-        <td style="border:1px solid #000;padding:1px 4px;font-size:10px;vertical-align:middle;">${sig}</td>
-        <td style="border:1px solid #000;padding:1px 4px;font-size:10px;vertical-align:middle;">${desig}</td>
-        <td style="border:1px solid #000;padding:1px 4px;font-size:10px;vertical-align:middle;">${forTo}</td>
-        <td style="border:1px solid #000;padding:1px 4px;font-size:10px;vertical-align:middle;white-space:nowrap;">${date}</td>
-        <td style="border:1px solid #000;padding:1px 4px;font-size:10px;vertical-align:middle;">${remarks}</td>
-      </tr>`
-    })
-    const blankRows = Array(blankRowsNeeded).fill(
-      `<tr style="height:30px;">
-        <td style="border:1px solid #000;"></td>
-        <td style="border:1px solid #000;"></td>
-        <td style="border:1px solid #000;"></td>
-        <td style="border:1px solid #000;"></td>
-        <td style="border:1px solid #000;"></td>
-      </tr>`
-    )
-    const rowsHtml = [...dataRows, ...blankRows].join('')
-
-    const legendRows = BFP_ACTION_LEGEND.map((item) => {
-      const isChecked = checked.has(item)
-      const box = isChecked
-        ? `<td style="width:18px;border:1px solid #000;text-align:center;font-size:11px;padding:0;">&#10003;</td>`
-        : `<td style="width:18px;border:1px solid #000;text-align:center;padding:0;">&nbsp;</td>`
-      return `<tr style="height:28px;">
-        ${box}
-        <td style="border:1px solid #000;padding:1px 5px;font-size:10px;font-weight:bold;letter-spacing:0.1px;">${item}</td>
-      </tr>`
-    }).join('')
-
-    const logoUrl = window.location.origin + '/logo.png'
-
-    w.document.write(`<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Routing Slip – ${document.tracking_number}</title>
-<style>
-  @page { size: A4 portrait; margin: 12mm 14mm 12mm 14mm; }
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Times New Roman', Times, serif; color: #000; background: #fff; font-size: 11px; }
-
-  /* ── LETTERHEAD ── */
-  .lh { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 6px; }
-  .lh-logo { width: 68px; height: 68px; object-fit: contain; flex-shrink: 0; }
-  .lh-text { text-align: center; line-height: 1.45; }
-  .lh-text .t1 { font-size: 10px; font-style: italic; color: #224; }
-  .lh-text .t2 { font-size: 10px; }
-  .lh-text .t3 { font-size: 10.5px; }
-  .lh-text .t4 { font-size: 13.5px; font-weight: bold; letter-spacing: 0.3px; }
-  .lh-text .t5 { font-size: 11.5px; font-weight: bold; letter-spacing: 0.2px; }
-  .lh-text .t6 { font-size: 9.5px; }
-  .lh-text .t7 { font-size: 9.5px; }
-  .lh-text .t8 { font-size: 9.5px; }
-
-  /* ── DIVIDER ── */
-  hr.thick { border: none; border-top: 2px solid #000; margin: 6px 0 0; }
-  hr.thin  { border: none; border-top: 1px solid #000; margin: 0 0 5px; }
-
-  /* ── SUBJECT BLOCK ── */
-  table.subj { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
-  table.subj td { border: 1px solid #000; padding: 3px 6px; font-size: 11px; }
-  .subj-lbl { font-weight: bold; font-style: italic; }
-  .ctrl-cell { width: 210px; white-space: nowrap; }
-
-  /* ── OUTER SPLIT TABLE ── */
-  table.outer { width: 100%; border-collapse: collapse; }
-  table.outer > tbody > tr > td { border: 1px solid #000; vertical-align: top; padding: 0; }
-  td.legend-col { width: 190px; }
-
-  /* ── LEGEND ── */
-  .leg-hdr { text-align: center; font-weight: bold; font-style: italic; font-size: 10.5px;
-    border-bottom: 1px solid #000; padding: 3px 4px; background: #fff; letter-spacing: 0.3px; }
-  table.leg { width: 100%; border-collapse: collapse; }
-
-  /* ── SLIP TABLE (right side) ── */
-  table.slip { width: 100%; border-collapse: collapse; }
-  table.slip th { border: 1px solid #000; padding: 2px 5px; font-size: 10px;
-    font-weight: bold; font-style: italic; text-align: center; background: #fff; }
-  table.slip td { border: 1px solid #000; padding: 1px 4px; font-size: 10px; }
-
-  /* ── FOOTER ── */
-  .footer { margin-top: 8px; font-size: 9px; color: #555; text-align: right; }
-
-  @media print {
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  }
-</style>
-</head>
-<body>
-
-<!-- LETTERHEAD -->
-<div class="lh">
-  <img class="lh-logo" src="${logoUrl}" alt="BFP" onerror="this.style.display='none'">
-  <div class="lh-text">
-    <div class="t1">BAGONG PILIPINAS</div>
-    <div class="t2">${BFP_ORG.republic}</div>
-    <div class="t3">${BFP_ORG.parent}</div>
-    <div class="t4">${BFP_ORG.agency}</div>
-    <div class="t5">${BFP_ORG.office}</div>
-    <div class="t6">${BFP_ORG.address}</div>
-    <div class="t7">Telefax Number: ${BFP_ORG.telefax} / Hotline: ${BFP_ORG.hotline}</div>
-    <div class="t8">Email: ${BFP_ORG.email}</div>
-  </div>
-  <img class="lh-logo" src="${logoUrl}" alt="BFP" onerror="this.style.display='none'">
-</div>
-
-<hr class="thick">
-<hr class="thin">
-
-<!-- SUBJECT / CONTROL NO -->
-<table class="subj">
-  <tr>
-    <td style="height:22px;">
-      <span class="subj-lbl">SUBJECT:&nbsp;</span>${document.subject || ''}
-    </td>
-    <td class="ctrl-cell" style="height:22px;">
-      <span class="subj-lbl">Control No:&nbsp;</span>${document.tracking_number}
-    </td>
-  </tr>
-  <tr><td style="height:18px;"></td><td></td></tr>
-  <tr><td style="height:18px;"></td><td></td></tr>
-</table>
-
-<!-- MAIN TABLE -->
-<table class="outer">
-  <tbody>
-    <tr>
-      <!-- Left: ACTION REQUESTED -->
-      <td class="legend-col">
-        <div class="leg-hdr">ACTION REQUESTED</div>
-        <table class="leg">
-          <tbody>${legendRows}</tbody>
-        </table>
-      </td>
-
-      <!-- Right: Routing columns -->
-      <td>
-        <table class="slip">
-          <thead>
-            <tr>
-              <th colspan="2" style="text-align:center;border-bottom:1px solid #000;">FROM</th>
-              <th rowspan="2" style="width:130px;">FOR / TO</th>
-              <th rowspan="2" style="width:78px;">DATE</th>
-              <th rowspan="2" style="min-width:90px;">REMARKS</th>
-            </tr>
-            <tr>
-              <th style="width:105px;">SIGNATURE</th>
-              <th>DESIGNATION</th>
-            </tr>
-          </thead>
-          <tbody>${rowsHtml}</tbody>
-        </table>
-      </td>
-    </tr>
-  </tbody>
-</table>
-
-<div class="footer">Generated by DTMS &mdash; ${new Date().toLocaleString('en-PH')}</div>
-</body>
-</html>`)
-    w.document.close()
-    setTimeout(() => w.print(), 300)
-  }
-
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -734,8 +548,8 @@ export default function DocumentDetail() {
           </Link>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-slate-900">
-                {document.tracking_number}
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                {document.subject}
               </h1>
               <span className={`badge ${statusBadgeClass(document.status)}`}>
                 {statusLabel(document.status)}
@@ -752,7 +566,11 @@ export default function DocumentDetail() {
                 {classificationLabel(document.classification)}
               </span>
             </div>
-            <p className="text-sm text-slate-500 mt-1">{document.subject}</p>
+            <div className="mt-1.5">
+              <span className="font-mono text-xs font-bold tracking-wide text-primary-700 dark:text-primary-300 bg-primary-100 dark:bg-primary-900/40 px-2.5 py-1 rounded border border-primary-200 dark:border-primary-700/60 shadow-sm inline-block">
+                {document.tracking_number}
+              </span>
+            </div>
           </div>
         </div>
           <div className="flex items-center gap-2">
@@ -762,7 +580,7 @@ export default function DocumentDetail() {
             <button onClick={handlePrint} className="btn btn-secondary btn-sm">
               <Printer className="w-4 h-4" /> Print
             </button>
-            <button onClick={handlePrintSlip} className="btn btn-secondary btn-sm">
+            <button onClick={() => setShowSlipModal(true)} className="btn btn-secondary btn-sm">
               <FileText className="w-4 h-4" /> Routing Slip
             </button>
           </div>
@@ -771,7 +589,7 @@ export default function DocumentDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Document Details — Sender / Receiver panels */}
+          {/* Document Details â€” Sender / Receiver panels */}
           <div className="card">
             <div className="card-header">
               <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
@@ -807,7 +625,7 @@ export default function DocumentDetail() {
                         <div>
                           <dt className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Office</dt>
                           <dd className="text-sm font-semibold text-slate-800">
-                            {document.originator?.office?.name || document.current_office?.name || '—'}
+                            {document.originator?.office?.name || document.current_office?.name || 'â€”'}
                           </dd>
                         </div>
                       </div>
@@ -818,7 +636,7 @@ export default function DocumentDetail() {
                         <div>
                           <dt className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Designation</dt>
                           <dd className="text-sm font-semibold text-slate-800">
-                            {document.originator?.designation || '—'}
+                            {document.originator?.designation || 'â€”'}
                           </dd>
                         </div>
                       </div>
@@ -891,7 +709,7 @@ export default function DocumentDetail() {
                             <div>
                               <dt className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Designation</dt>
                               <dd className="text-sm font-semibold text-slate-800">
-                                {document.recipient?.designation || '—'}
+                                {document.recipient?.designation || 'â€”'}
                               </dd>
                             </div>
                           </div>
@@ -902,7 +720,7 @@ export default function DocumentDetail() {
                             <div>
                               <dt className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Office</dt>
                               <dd className="text-sm font-semibold text-slate-800">
-                                {document.recipient?.office?.name || document.current_office?.name || '—'}
+                                {document.recipient?.office?.name || document.current_office?.name || 'â€”'}
                               </dd>
                             </div>
                           </div>
@@ -916,7 +734,7 @@ export default function DocumentDetail() {
                           <div>
                             <dt className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Destination Office</dt>
                             <dd className="text-sm font-semibold text-slate-800">
-                              {document.recipient?.name || '—'}
+                              {document.recipient?.name || 'â€”'}
                             </dd>
                           </div>
                         </div>
@@ -1044,7 +862,7 @@ export default function DocumentDetail() {
                                   {history.actor?.id ? personLabel(history.actor) : 'System'}
                                 </h3>
                                 <p className="text-xs text-slate-500 font-medium mt-0.5">
-                                  {[history.actor?.role?.replace('_', ' '), history.fromOffice?.name].filter(Boolean).map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' • ')}
+                                  {[history.actor?.role?.replace('_', ' '), history.fromOffice?.name].filter(Boolean).map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' â€¢ ')}
                                 </p>
                               </div>
                             </div>
@@ -1138,8 +956,8 @@ className="flex items-center justify-between w-full text-left"
                             {lastReturn.remarks || 'No reason provided.'}
                           </p>
                           <p className="text-[11px] text-amber-500 mt-1">
-                            Returned by {lastReturn.actor?.id ? personLabel(lastReturn.actor) : '—'}
-                            {lastReturn.fromOffice?.name && <> • {lastReturn.fromOffice.name}</>}
+                            Returned by {lastReturn.actor?.id ? personLabel(lastReturn.actor) : 'â€”'}
+                            {lastReturn.fromOffice?.name && <> â€¢ {lastReturn.fromOffice.name}</>}
                           </p>
                         </div>
                       )}
@@ -1198,7 +1016,7 @@ className="flex items-center justify-between w-full text-left"
                   )}
                 </p>
               )}
-              {document.status === 'received' && (user?.role === 'superadmin' || document.originator_id === user?.id) && (
+              {document.status === 'released' && (user?.role === 'superadmin' || document.originator_id === user?.id) && (
                 <button
                   onClick={() => setShowRecallModal(true)}
                   className="w-full btn btn-warning"
@@ -1331,7 +1149,7 @@ className="flex items-center justify-between w-full text-left"
                     {/* Body */}
                     <div className="p-6 -mt-3 space-y-5">
 
-                      {/* Disposition — card grid for approve, dropdown for others */}
+                      {/* Disposition â€” card grid for approve, dropdown for others */}
                       {action === 'approve' ? (
                         <div>
                           <label className="block text-[11px] font-bold text-slate-500 mb-2 uppercase tracking-widest">
@@ -1634,7 +1452,7 @@ className="flex items-center gap-2 text-left"
                           <p className="text-xs text-slate-400">
                             {(attachment.file_size / 1024).toFixed(0)} KB
                             {attachment.version > 1 && (
-                              <span className="ml-1 text-primary-500">• {attachment.version} versions</span>
+                              <span className="ml-1 text-primary-500">â€¢ {attachment.version} versions</span>
                             )}
                           </p>
                           {attachment.file_hash && (
@@ -1806,7 +1624,7 @@ className="flex items-center gap-2 text-left"
                         <p className="text-sm text-slate-500 mt-0.5">{trail.description}</p>
                         <p className="text-xs text-slate-400 mt-1">
                           {new Date(trail.created_at).toLocaleString()}
-                          {trail.ip_address && <> • {trail.ip_address}</>}
+                          {trail.ip_address && <> â€¢ {trail.ip_address}</>}
                         </p>
                       </div>
                     </div>
@@ -2043,6 +1861,16 @@ className="flex items-center gap-2 text-left"
       {/* Edit Modal */}
       {showEditModal && document && (
         <EditDocumentModal document={document} onClose={() => setShowEditModal(false)} />
+      )}
+
+      {/* Routing Slip Modal */}
+      {document && (
+        <RoutingSlipModal
+          open={showSlipModal}
+          onClose={() => setShowSlipModal(false)}
+          document={document}
+          history={sortedHistory}
+        />
       )}
     </div>
   )

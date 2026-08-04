@@ -7,10 +7,34 @@ import ModalPortal from '@/components/ModalPortal'
 import { DOCUMENT_TYPES, CLASSIFICATIONS, MODES_OF_TRANSMITTAL } from '@/constants/documentOptions'
 
 const PRIORITY_OPTIONS = [
-  { value: 'low', label: 'Low', desc: 'Standard processing' },
-  { value: 'normal', label: 'Normal', desc: 'Default priority' },
-  { value: 'high', label: 'High', desc: 'Expedited processing' },
-  { value: 'urgent', label: 'Urgent', desc: 'Immediate attention' },
+  {
+    value: 'low',
+    label: 'Low',
+    desc: 'Standard processing',
+    badgeClass: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+    activeStyle: 'border-slate-500 bg-slate-50 dark:bg-slate-800/60 ring-2 ring-slate-400/30',
+  },
+  {
+    value: 'normal',
+    label: 'Normal',
+    desc: 'Default priority',
+    badgeClass: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-800',
+    activeStyle: 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 ring-2 ring-blue-400/30',
+  },
+  {
+    value: 'high',
+    label: 'High',
+    desc: 'Expedited processing',
+    badgeClass: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800',
+    activeStyle: 'border-amber-500 bg-amber-50 dark:bg-amber-900/30 ring-2 ring-amber-400/30',
+  },
+  {
+    value: 'urgent',
+    label: 'Urgent',
+    desc: 'Immediate attention',
+    badgeClass: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800',
+    activeStyle: 'border-red-500 bg-red-50 dark:bg-red-900/30 ring-2 ring-red-400/30',
+  },
 ]
 
 export default function EditDocumentModal({
@@ -153,24 +177,24 @@ export default function EditDocumentModal({
               <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-2">
                 Priority <span className="text-danger-500">*</span>
               </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 {PRIORITY_OPTIONS.map((opt) => (
                   <button
                     key={opt.value}
                     type="button"
                     onClick={() => setPriority(opt.value)}
-                    className={`p-3 rounded-lg border-2 text-left transition-all ${
+                    className={`p-3 rounded-xl border-2 text-left transition-all ${
                       priority === opt.value
-                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30'
+                        ? opt.activeStyle
                         : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800'
                     }`}
                   >
-                    <p className={`text-sm font-medium ${
-                      priority === opt.value ? 'text-primary-700 dark:text-primary-400' : 'text-slate-900 dark:text-slate-100'
-                    }`}>
-                      {opt.label}
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{opt.desc}</p>
+                    <div className="flex items-center justify-between gap-1 mb-1">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold border uppercase tracking-wider ${opt.badgeClass}`}>
+                        {opt.label}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{opt.desc}</p>
                   </button>
                 ))}
               </div>

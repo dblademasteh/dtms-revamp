@@ -166,7 +166,8 @@ export default function Offices() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    const data: any = { name, code, description }
+    const autoCode = (unitCode || code || name.replace(/[^A-Za-z0-9]/g, '')).substring(0, 10).toUpperCase()
+    const data: any = { name, code: autoCode, description }
     if (unitCode) data.unit_code = unitCode
     if (parentId) data.parent_office_id = parentId
     if (headUserId) data.head_user_id = headUserId
@@ -197,7 +198,6 @@ export default function Offices() {
               <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{cleanOfficeName(office.name)}</span>
             </div>
           </td>
-          <td className="text-sm text-slate-500 dark:text-slate-400 font-mono">{office.code}</td>
           <td>
             {office.unit_code ? (
               <span className="px-2 py-0.5 text-xs font-semibold rounded-md bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 font-mono">
@@ -355,15 +355,18 @@ export default function Offices() {
                     </div>
                     <div>
                       <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                        Code <span className="text-danger-500">*</span>
-                      </label>
-                      <input className="input" value={code} onChange={e => setCode(e.target.value)} required maxLength={10} />
-                    </div>
-                    <div>
-                      <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                         Unit Code
                       </label>
-                      <input className="input" value={unitCode} onChange={e => setUnitCode(e.target.value)} placeholder="e.g. 5.1a" maxLength={20} />
+                      <input
+                        className="input"
+                        value={unitCode}
+                        onChange={e => {
+                          setUnitCode(e.target.value)
+                          setCode(e.target.value.substring(0, 10))
+                        }}
+                        placeholder="e.g. 5.1a or BFP-R2-ICTS"
+                        maxLength={20}
+                      />
                     </div>
                   </div>
                   <div className="mt-4">
@@ -517,8 +520,7 @@ export default function Offices() {
             <table className="table">
               <thead>
                 <tr>
-                  <th className="w-[38%]">Office</th>
-                  <th>Code</th>
+                  <th className="w-[42%]">Office</th>
                   <th>Unit Code</th>
                   <th>Type</th>
                   <th>Head</th>

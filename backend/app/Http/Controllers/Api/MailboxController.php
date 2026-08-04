@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Jobs\SyncMailbox;
 use App\Http\Controllers\Controller;
 use App\Models\MailAttachment;
 use App\Models\Mailbox;
@@ -183,16 +184,13 @@ class MailboxController extends Controller
     {
         $mailbox = $this->mailbox($request);
 
-        if ($mailbox->last_synced_at === null || $mailbox->last_synced_at->lt(now()->subMinute())) {
-            try {
-                $this->sync->sync($mailbox);
-            } catch (Throwable $e) {
-                // ignore sync errors on read; show what we have
-            }
+        if ($mailbox->sync_enabled && ($mailbox->last_synced_at === null || $mailbox->last_synced_at->lt(now()->subMinutes(5)))) {
+            SyncMailbox::dispatch($mailbox);
         }
 
         $query = $mailbox->messages()
             ->where('folder', $request->get('folder', 'INBOX'))
+            ->select(['id', 'mailbox_id', 'folder', 'uid', 'subject', 'from_name', 'from_email', 'to', 'is_seen', 'has_attachments', 'received_at', 'created_at'])
             ->withCount('attachments');
 
         if ($search = trim((string) $request->get('search'))) {
@@ -219,26 +217,10 @@ class MailboxController extends Controller
     {
         $this->authorizeMessage($request, $message);
 
-        if ($message->mailbox->last_synced_at === null || $message->mailbox->last_synced_at->lt(now()->subMinute())) {
-            try {
-                $this->sync->sync($message->mailbox);
-            } catch (Throwable $e) {
-                // ignore
-            }
-        }
-
         $message->load('attachments');
 
         if (!$message->is_seen && $message->folder === 'INBOX') {
             $message->update(['is_seen' => true]);
-            try {
-                $client = $this->sync->client($message->mailbox);
-                $client->connect();
-                $client->setFlag('INBOX', $message->uid, '\\Seen', true);
-                $client->logout();
-            } catch (Throwable $e) {
-                // ignore flag sync failure
-            }
         }
 
         return response()->json(['message' => $message]);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import api from '@/services/api'
@@ -43,12 +43,6 @@ export default function CreateDocument() {
   const [recipientSelection, setRecipientSelection] = useState<Option[]>([])
   const [files, setFiles] = useState<File[]>([])
   const [isDragging, setIsDragging] = useState(false)
-  const [now, setNow] = useState(new Date())
-
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 1000)
-    return () => clearInterval(timer)
-  }, [])
 
   const { data: officesRaw } = useQuery({
     queryKey: ['offices-min'],
@@ -65,20 +59,23 @@ export default function CreateDocument() {
       .replace(/^\s*\d+(?:\.\d+)?[a-z]?\s+/i, '')
       .replace(/\s+/g, ' ')
       .trim()
-    const chief = o.head?.full_name || o.head?.name
+    const chief = (o.head?.full_name || o.head?.name || '').trim()
+    const showChief = chief && chief.toLowerCase() !== name.toLowerCase()
     return {
       value: String(o.id),
-      label: chief ? `${name} - ${chief}` : name,
+      label: showChief ? `${name} - ${chief}` : name,
     }
   })
   const personnelOptions: Option[] = personnel
-    .filter((p: any) => p.role !== 'superadmin')
+    .filter((p: any) => p.role !== 'superadmin' && p.role !== 'office_station' && p.role !== 'office')
     .map((p: any) => {
       const head = [p.rank, p.full_name || p.name].filter(Boolean).join(' ')
-      const tail = p.unit_assignment || p.designation
+      const tail = (p.unit_assignment || p.designation || '').trim()
+      const nameOnly = (p.full_name || p.name || '').trim()
+      const showTail = tail && tail.toLowerCase() !== nameOnly.toLowerCase() && tail.toLowerCase() !== head.toLowerCase()
       return {
         value: String(p.id),
-        label: [head, tail].filter(Boolean).join(' - '),
+        label: showTail ? `${head} - ${tail}` : head,
       }
     })
 
@@ -177,8 +174,8 @@ export default function CreateDocument() {
     for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)]
     return `BFP-${new Date().getFullYear()}-${code}`
   })
-  const dateToday = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
-  const timeNow = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  const dateToday = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+  const timeNow = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">

@@ -285,9 +285,12 @@ class ImapClient
             $item = $this->readLine();
             $line = $item['line'];
 
-            if ($line === '+' || $line === '+ OK') {
+            if (str_starts_with($line, '+')) {
                 if ($literals) {
                     $data = array_shift($literals);
+                    if ($literals) {
+                        $data .= ' {' . strlen($literals[0]) . '}';
+                    }
                     fwrite($this->socket, $data . "\r\n");
                 }
                 continue;

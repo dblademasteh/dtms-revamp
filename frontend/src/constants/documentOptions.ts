@@ -1,3 +1,24 @@
+export const BFP_RANKS = [
+  { value: 'COMMR', label: 'COMMR - Commissioner' },
+  { value: 'DIR', label: 'DIR - Director' },
+  { value: 'FCSUPT', label: 'FCSUPT - Fire Chief Superintendent' },
+  { value: 'CSUPT', label: 'CSUPT - Chief Superintendent' },
+  { value: 'SSUPT', label: 'SSUPT - Senior Superintendent' },
+  { value: 'SUPT', label: 'SUPT - Superintendent' },
+  { value: 'FCINSP', label: 'FCINSP - Fire Chief Inspector' },
+  { value: 'CINSP', label: 'CINSP - Chief Inspector' },
+  { value: 'SINSP', label: 'SINSP - Senior Inspector' },
+  { value: 'INSP', label: 'INSP - Inspector' },
+  { value: 'SFO4', label: 'SFO4 - Senior Fire Officer 4' },
+  { value: 'SFO3', label: 'SFO3 - Senior Fire Officer 3' },
+  { value: 'SFO2', label: 'SFO2 - Senior Fire Officer 2' },
+  { value: 'SFO1', label: 'SFO1 - Senior Fire Officer 1' },
+  { value: 'FO3', label: 'FO3 - Fire Officer 3' },
+  { value: 'FO2', label: 'FO2 - Fire Officer 2' },
+  { value: 'FO1', label: 'FO1 - Fire Officer 1' },
+  { value: 'NUP', label: 'NUP - Non-Uniformed Personnel' },
+]
+
 export const DOCUMENT_TYPES = [
   { value: 'memorandum', label: 'Memorandum' },
   { value: 'memorandum_circular', label: 'Memorandum Circular' },

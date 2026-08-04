@@ -8,6 +8,7 @@ import ModalPortal from '@/components/ModalPortal'
 import { useAuthStore } from '@/stores/authStore'
 import StatCard from '@/components/StatCard'
 import { buildSelectStyles } from '@/utils/selectStyles'
+import { useRanks } from '@/hooks/useRanks'
 
 const ROLES = [
   { value: 'superadmin', label: 'Super Admin', color: 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800' },
@@ -28,12 +29,15 @@ const STATUSES = [
 export default function Users() {
   const user = useAuthStore((s) => s.user)
   const queryClient = useQueryClient()
+  const ranks = useRanks()
   const [search, setSearch] = useState('')
   const [accountFilter, setAccountFilter] = useState<'all' | 'personnel' | 'office'>('all')
   const [editingUser, setEditingUser] = useState<any>(null)
   const [editRole, setEditRole] = useState('')
   const [editStatus, setEditStatus] = useState('')
   const [editOffice, setEditOffice] = useState('')
+  const [editRank, setEditRank] = useState('')
+  const [editCanViewAllDocs, setEditCanViewAllDocs] = useState(false)
   const [resetPassword, setResetPassword] = useState('')
   const [showResetPassword, setShowResetPassword] = useState(false)
   // Build select styles once on mount (dark-mode aware)
@@ -121,13 +125,21 @@ export default function Users() {
     setEditRole(u.role)
     setEditStatus(u.status)
     setEditOffice(u.office_id ? String(u.office_id) : '')
+    setEditRank(u.rank || '')
+    setEditCanViewAllDocs(Boolean(u.can_view_all_documents))
     setResetPassword('')
     setShowResetPassword(false)
   }
 
   const saveEdit = () => {
     if (!editingUser) return
-    const data: any = { role: editRole, status: editStatus, office_id: editOffice || null }
+    const data: any = { 
+      role: editRole, 
+      status: editStatus, 
+      office_id: editOffice || null, 
+      rank: editRank || null,
+      can_view_all_documents: editCanViewAllDocs 
+    }
     if (resetPassword) data.password = resetPassword
     updateMutation.mutate({ id: editingUser.id, data })
   }
@@ -284,9 +296,16 @@ export default function Users() {
                       <span className="text-sm font-mono text-slate-600 dark:text-slate-400">{u.accnt_no || '—'}</span>
                     </td>
                     <td>
-                      <span className={`badge ${getRoleBadge(u.role)}`}>
-                        {getRoleLabel(u.role)}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`badge ${getRoleBadge(u.role)}`}>
+                          {getRoleLabel(u.role)}
+                        </span>
+                        {u.can_view_all_documents && (
+                          <span className="badge bg-indigo-100 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-800 text-[10px]" title="Granted permission to view all system documents">
+                            View All Docs
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td>
                       <span className={`badge ${getStatusBadge(u.status)}`}>
@@ -331,6 +350,25 @@ export default function Users() {
 
               {/* Body */}
               <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+                {/* Rank */}
+                <div>
+                  <label className="block text-[13px] font-bold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wide">
+                    Rank
+                  </label>
+                  <select
+                    value={editRank}
+                    onChange={(e) => setEditRank(e.target.value)}
+                    className="w-full px-3.5 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  >
+                    <option value="">No Rank / Select Rank...</option>
+                    {ranks.map((r) => (
+                      <option key={r.value} value={r.value}>
+                        {r.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Role */}
                 <div>
                   <label className="text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-3 block">Role</label>
@@ -350,14 +388,34 @@ export default function Users() {
                           {r.label}
                         </div>
                         <p className="text-xs text-slate-500">
-                          {r.value === 'superadmin' && 'Full system access'}
-                          {r.value === 'officer' && 'Can approve & route'}
-                          {r.value === 'non_officer' && 'Can create documents'}
-                          {r.value === 'fcos' && 'Fire Code Officer'}
+                          {r.value === 'superadmin' && 'Full system access & elevated doc status tracking'}
+                          {r.value === 'officer' && 'Can approve & route office documents'}
+                          {r.value === 'non_officer' && 'Can create & track own documents'}
+                          {r.value === 'fcos' && 'Elevated access — View & track all system documents'}
                           {r.value === 'office_station' && 'Office/station account'}
                         </p>
                       </button>
                     ))}
+                  </div>
+                </div>
+
+                {/* Custom Permissions */}
+                <div className="p-4 rounded-xl border border-primary-200 dark:border-primary-800/60 bg-primary-50/50 dark:bg-primary-900/20">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        View & Track All System Documents
+                      </p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        Grants permission to view and check status of all documents system-wide without changing account role.
+                      </p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      className="checkbox w-5 h-5 accent-primary-600 rounded cursor-pointer"
+                      checked={editCanViewAllDocs}
+                      onChange={(e) => setEditCanViewAllDocs(e.target.checked)}
+                    />
                   </div>
                 </div>
 

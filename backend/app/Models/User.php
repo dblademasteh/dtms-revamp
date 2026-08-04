@@ -35,7 +35,8 @@ class User extends Authenticatable
         'two_factor_confirmed_at',
         'two_factor_recovery_codes',
         'avatar',
-            'pincode',
+        'pincode',
+        'can_view_all_documents',
     ];
 
     protected $appends = ['full_name', 'has_pincode'];
@@ -54,6 +55,7 @@ class User extends Authenticatable
         'role' => UserRole::class,
         'notification_preferences' => 'array',
         'two_factor_enabled' => 'boolean',
+        'can_view_all_documents' => 'boolean',
         'two_factor_confirmed_at' => 'datetime',
         'two_factor_recovery_codes' => 'array',
     ];

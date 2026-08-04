@@ -274,8 +274,7 @@ export default function OfficeProfile() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-slate-800 truncate">{o.name}</p>
                         <p className="text-xs text-slate-500 flex items-center gap-2 flex-wrap">
-                          {o.unit_code && <span className="font-mono">{o.unit_code}</span>}
-                          <span className="font-mono">{o.code}</span>
+                          {(o.unit_code || o.code) && <span className="font-mono">{o.unit_code || o.code}</span>}
                           {o.office_type && (
                             <span className="capitalize">{o.office_type.replace('_', ' ')}</span>
                           )}
@@ -448,14 +447,11 @@ export default function OfficeProfile() {
             <div className="flex-1 min-w-0 pb-1">
               <h2 className="text-xl font-bold text-slate-900 truncate">{office.name}</h2>
               <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                {office.unit_code && (
+                {(office.unit_code || office.code) && (
                   <span className="font-mono text-[11px] font-bold tracking-wide text-primary-700 dark:text-primary-300 bg-primary-100 dark:bg-primary-900/40 px-2 py-0.5 rounded border border-primary-200 dark:border-primary-700/60">
-                    {office.unit_code}
+                    {office.unit_code || office.code}
                   </span>
                 )}
-                <span className="font-mono text-[11px] font-semibold text-slate-500 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-600">
-                  {office.code}
-                </span>
                 {typeLabel && (
                   <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-600 capitalize">
                     {typeLabel}

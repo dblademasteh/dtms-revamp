@@ -25,7 +25,32 @@ class DocumentController extends Controller
 {
     public function index(Request $request)
     {
+        $user = $request->user();
         $query = Document::with(['originator', 'currentOffice', 'routingTemplate']);
+
+        // Permission Gating:
+        // Users with explicit permission (can_view_all_documents = true) or elevated roles (superadmin, fcos)
+        // can view all documents system-wide.
+        $roleValue = is_object($user->role) ? $user->role->value : $user->role;
+        $hasGlobalPermission = !empty($user->can_view_all_documents) || in_array($roleValue, ['superadmin', 'fcos']);
+
+        if (!$hasGlobalPermission) {
+            $query->where(function ($q) use ($user) {
+                $userOfficeId = $user->office_id;
+                $userId = $user->id;
+                $q->where('originator_id', $userId)
+                  ->orWhere('current_office_id', $userOfficeId)
+                  ->orWhere(function ($q2) use ($userId) {
+                      $q2->where('recipient_type', 'personnel')
+                         ->where('recipient_id', $userId);
+                  })
+                  ->orWhere(function ($q2) use ($userOfficeId) {
+                      $q2->where('recipient_type', 'office')
+                         ->where('recipient_id', $userOfficeId);
+                  })
+                  ->orWhere('is_public', true);
+            });
+        }
 
         if ($request->has('status')) {
             $query->where('status', $request->status);
