@@ -78,6 +78,34 @@ class StorageController extends Controller
 
         $reclaimable = $this->reclaimable();
 
+        $disk = Storage::disk('public');
+        $directories = [];
+        try {
+            $directories = collect($disk->directories())
+                ->map(function ($dir) use ($disk) {
+                    try {
+                        $files = $disk->allFiles($dir);
+                        $size = 0;
+                        foreach ($files as $f) {
+                            try {
+                                $size += $disk->size($f);
+                            } catch (\Exception $e) {}
+                        }
+                        return [
+                            'name' => $dir,
+                            'files_count' => count($files),
+                            'bytes' => $size,
+                        ];
+                    } catch (\Exception $e) {
+                        return [
+                            'name' => $dir,
+                            'files_count' => 0,
+                            'bytes' => 0,
+                        ];
+                    }
+                });
+        } catch (\Exception $e) {}
+
         return response()->json([
             'totals' => $totals,
             'by_type' => $byType,
@@ -85,6 +113,7 @@ class StorageController extends Controller
             'largest' => $largest,
             'growth' => $growth,
             'reclaimable' => $reclaimable,
+            'directories' => $directories,
         ]);
     }
 

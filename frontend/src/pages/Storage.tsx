@@ -17,6 +17,7 @@ import {
   ChevronRight,
   Link2,
   Boxes,
+  FolderOpen,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -215,6 +216,54 @@ export default function Storage() {
               </div>
             </>
           )}
+        </div>
+      </div>
+
+      {/* System Directories */}
+      <div className="card">
+        <div className="card-header flex items-center gap-2">
+          <FolderOpen className="w-4 h-4 text-slate-500" />
+          <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">System Directories</h2>
+        </div>
+        <div className="card-body p-0">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+              <thead className="bg-slate-50 dark:bg-slate-800/60">
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Directory</th>
+                  <th className="px-4 py-2 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Path Mapping</th>
+                  <th className="px-4 py-2 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Files Count</th>
+                  <th className="px-4 py-2 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Size</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {(data?.directories || []).map((d: any) => (
+                  <tr key={d.name} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                    <td className="px-4 py-2.5 text-sm font-semibold text-slate-900 flex items-center gap-2">
+                      <FolderOpen className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                      <span>{d.name}</span>
+                    </td>
+                    <td className="px-4 py-2.5 text-xs font-mono text-slate-500">
+                      storage/app/public/{d.name}
+                    </td>
+                    <td className="px-4 py-2.5 text-sm text-slate-600">
+                      {d.files_count.toLocaleString()} file(s)
+                    </td>
+                    <td className="px-4 py-2.5 text-sm font-bold text-slate-700">
+                      {formatBytes(d.bytes)}
+                    </td>
+                  </tr>
+                ))}
+                {!data?.directories?.length && (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-4 text-sm text-slate-400 text-center">
+                      No directories found in public storage
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
