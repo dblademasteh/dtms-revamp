@@ -547,8 +547,9 @@ class StorageController extends Controller
         }
 
         $disk = Storage::disk('public');
+        $fullPath = $disk->path($path);
         
-        if (!$disk->exists($path)) {
+        if (!file_exists($fullPath)) {
             return response()->json(['error' => 'Path not found'], 404);
         }
 
