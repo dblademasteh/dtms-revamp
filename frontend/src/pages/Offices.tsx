@@ -573,10 +573,7 @@ export default function Offices() {
                   <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Storage</th>
                   <th className="relative px-6 py-3 w-24">
-                    <div className="flex items-center justify-end gap-1">
-                      <Edit className="w-3.5 h-3.5 text-slate-400" />
-                      <Trash2 className="w-3.5 h-3.5 text-slate-400" />
-                    </div>
+                    <span className="sr-only">Actions</span>
                   </th>
                 </tr>
               </thead>
