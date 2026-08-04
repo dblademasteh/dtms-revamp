@@ -41,6 +41,7 @@ export default function Layout() {
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const [logoFailed, setLogoFailed] = useState(false)
 
   const handleLogout = () => {
     setShowLogoutConfirm(true)
@@ -62,14 +63,17 @@ export default function Layout() {
       {/* Brand */}
       <div className="flex items-center gap-3 px-5 h-16 border-b border-slate-200/80 dark:border-slate-800">
         <div className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-blue-600 dark:bg-blue-600 overflow-hidden flex-shrink-0 text-white shadow-md shadow-blue-500/20">
-          <img
-            src="/logo.png"
-            alt="DTMS logo"
-            className="w-7 h-7 object-contain"
-            draggable={false}
-            onError={(e) => (e.currentTarget.style.display = 'none')}
-          />
-          <Shield className="absolute w-5 h-5 text-white" />
+          {!logoFailed ? (
+            <img
+              src="/logo.png?v=2"
+              alt="DTMS logo"
+              className="w-7 h-7 object-contain relative z-10"
+              draggable={false}
+              onError={() => setLogoFailed(true)}
+            />
+          ) : (
+            <Shield className="w-5 h-5 text-white" />
+          )}
         </div>
         <div>
           <div className="text-slate-900 dark:text-white font-extrabold text-base leading-tight tracking-tight">DTMS</div>

@@ -400,6 +400,20 @@ html.font-jetbrains-mono, html.font-jetbrains-mono body, html.font-jetbrains-mon
   background-color: rgb(49 46 129 / 0.55) !important;
 }
 
+/* Violet */
+.dark :is(.bg-violet-50, .bg-violet-100) {
+  background-color: rgb(76 29 149 / 0.35) !important; /* violet-900/35 */
+}
+.dark :is(.text-violet-500, .text-violet-600, .text-violet-700) {
+  color: rgb(196 181 253) !important; /* violet-300 */
+}
+.dark :is(.border-violet-100, .border-violet-200) {
+  border-color: rgb(91 33 182 / 0.6) !important; /* violet-800 */
+}
+.dark :is(.hover\:bg-violet-50:hover) {
+  background-color: rgb(76 29 149 / 0.55) !important;
+}
+
 /* Red / Danger (standard palette) */
 .dark :is(.bg-red-50, .bg-red-100, .bg-red-500\/10) {
   background-color: rgb(127 29 29 / 0.35) !important; /* red-900/35 */
@@ -490,6 +504,52 @@ html.font-jetbrains-mono, html.font-jetbrains-mono body, html.font-jetbrains-mon
     -webkit-box-shadow: 0 0 0 30px rgb(30 41 59) inset !important;
     -webkit-text-fill-color: white !important;
     transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Global Custom Scrollbar Styling (Dynamic Light/Dark Mode) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(203 213 225); /* slate-300 */
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(148 163 184); /* slate-400 */
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+/* Dark mode scrollbars */
+.dark ::-webkit-scrollbar-thumb {
+  background: rgb(51 65 85); /* slate-700 */
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgb(71 85 105); /* slate-600 */
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+/* Firefox Support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(203 213 225) transparent;
+}
+
+.dark * {
+  scrollbar-color: rgb(51 65 85) transparent;
 }
 
 

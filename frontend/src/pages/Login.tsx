@@ -16,7 +16,6 @@ import {
   X,
   User,
   Lock,
-  Sparkles,
   Search,
   CheckCircle2,
   Shield,
@@ -118,7 +117,7 @@ export default function Login() {
           </div>
 
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-blue-200">
-            <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             <span>v2.5 System Online</span>
           </div>
         </div>
@@ -170,7 +169,7 @@ export default function Login() {
           <div className="flex flex-col items-center text-center space-y-3">
             <div className="w-20 h-20 rounded-3xl bg-white dark:bg-slate-900 p-3 shadow-md border border-slate-200/80 dark:border-slate-800 flex items-center justify-center">
               <img
-                src="/logo.png"
+                src="/logo.png?v=2"
                 alt="DTMS logo"
                 className="w-full h-full object-contain"
                 onError={(e) => (e.currentTarget.style.display = 'none')}

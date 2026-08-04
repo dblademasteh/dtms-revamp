@@ -9,7 +9,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icons/*.svg'],
+      includeAssets: ['favicon-*.png', 'icons/*.png'],
       manifest: {
         name: 'DTMS - Document Tracking and Management System',
         short_name: 'DTMS',
@@ -21,10 +21,8 @@ export default defineConfig({
         start_url: '/',
         scope: '/',
         icons: [
-          { src: '/icons/pwa-192x192.svg', sizes: '192x192', type: 'image/svg+xml', purpose: 'any' },
-          { src: '/icons/pwa-512x512.svg', sizes: '512x512', type: 'image/svg+xml', purpose: 'any' },
-          { src: '/icons/pwa-maskable-192.svg', sizes: '192x192', type: 'image/svg+xml', purpose: 'maskable' },
-          { src: '/icons/pwa-maskable-512.svg', sizes: '512x512', type: 'image/svg+xml', purpose: 'maskable' },
+          { src: '/icons/pwa-96x96.png', sizes: '96x96', type: 'image/png', purpose: 'any' },
+          { src: '/icons/pwa-256x256.png', sizes: '256x256', type: 'image/png', purpose: 'any' },
         ],
       },
       workbox: {

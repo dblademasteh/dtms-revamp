@@ -17,8 +17,7 @@ import {
   Clock,
   Filter,
   ArrowUpRight,
-  ShieldAlert,
-  Sparkles
+  ShieldAlert
 } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import toast from 'react-hot-toast'
@@ -159,20 +158,20 @@ export default function Announcements() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-10">
       {/* Hero Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 sm:p-8 text-white shadow-xl">
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-1/3 -mb-10 w-60 h-60 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-50 via-indigo-50/70 to-blue-50/40 dark:from-slate-900 dark:via-indigo-950 dark:to-slate-900 p-6 sm:p-8 text-slate-900 dark:text-white border border-blue-100/60 dark:border-none shadow-sm dark:shadow-xl">
+        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-80 h-80 bg-blue-500/5 dark:bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/3 -mb-10 w-60 h-60 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
         
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-blue-200">
-              <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
-              <span>Official Agency Broadcast Center</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100/70 dark:bg-white/10 backdrop-blur-md border border-blue-200/50 dark:border-white/15 text-xs font-semibold text-blue-800 dark:text-blue-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 dark:bg-white/40 animate-pulse" />
+              <span>Agency Broadcast Center</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
               Bulletin &amp; Announcements
             </h1>
-            <p className="text-slate-300 text-sm max-w-xl leading-relaxed">
+            <p className="text-slate-600 dark:text-slate-300 text-sm max-w-xl leading-relaxed">
               Stay informed with official agency memorandums, compliance policies, urgent advisories, and executive orders published for all staff.
             </p>
           </div>
@@ -189,37 +188,37 @@ export default function Announcements() {
         </div>
 
         {/* Quick Stats Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-8 pt-6 border-t border-white/10">
-          <div className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10">
-            <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-8 pt-6 border-t border-blue-100/60 dark:border-white/10">
+          <div className="bg-white/80 dark:bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-blue-100/50 dark:border-white/10 shadow-sm dark:shadow-none">
+            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium">
               <span>Total Broadcasts</span>
-              <Megaphone className="w-4 h-4 text-blue-400" />
+              <Megaphone className="w-4 h-4 text-blue-500 dark:text-blue-400" />
             </div>
-            <div className="text-2xl font-bold mt-2 text-white">{metrics.total}</div>
+            <div className="text-2xl font-bold mt-2 text-slate-900 dark:text-white">{metrics.total}</div>
           </div>
 
-          <div className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10">
-            <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
+          <div className="bg-white/80 dark:bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-blue-100/50 dark:border-white/10 shadow-sm dark:shadow-none">
+            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium">
               <span>Posted Today</span>
-              <Clock className="w-4 h-4 text-emerald-400" />
+              <Clock className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
             </div>
-            <div className="text-2xl font-bold mt-2 text-white">{metrics.today}</div>
+            <div className="text-2xl font-bold mt-2 text-slate-900 dark:text-white">{metrics.today}</div>
           </div>
 
-          <div className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10">
-            <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
+          <div className="bg-white/80 dark:bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-blue-100/50 dark:border-white/10 shadow-sm dark:shadow-none">
+            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium">
               <span>Urgent Advisories</span>
-              <AlertCircle className="w-4 h-4 text-amber-400" />
+              <AlertCircle className="w-4 h-4 text-amber-500 dark:text-amber-400" />
             </div>
-            <div className="text-2xl font-bold mt-2 text-white">{metrics.urgent}</div>
+            <div className="text-2xl font-bold mt-2 text-slate-900 dark:text-white">{metrics.urgent}</div>
           </div>
 
-          <div className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10">
-            <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
+          <div className="bg-white/80 dark:bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-blue-100/50 dark:border-white/10 shadow-sm dark:shadow-none">
+            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium">
               <span>Compliance Memos</span>
-              <ShieldAlert className="w-4 h-4 text-purple-400" />
+              <ShieldAlert className="w-4 h-4 text-purple-500 dark:text-purple-400" />
             </div>
-            <div className="text-2xl font-bold mt-2 text-white">{metrics.compliance}</div>
+            <div className="text-2xl font-bold mt-2 text-slate-900 dark:text-white">{metrics.compliance}</div>
           </div>
         </div>
       </div>
@@ -246,7 +245,7 @@ export default function Announcements() {
                     : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${active ? 'text-blue-400 dark:text-blue-600' : 'text-slate-400'}`} />
+                <Icon className={`w-3.5 h-3.5 ${active ? 'text-white' : 'text-slate-400'}`} />
                 {f.label}
               </button>
             )
@@ -522,21 +521,21 @@ export default function Announcements() {
               className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95 duration-200"
             >
               {/* Modal Header */}
-              <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 px-6 pt-6 pb-8 relative overflow-hidden text-white">
+              <div className="bg-gradient-to-r from-blue-50 via-indigo-50/70 to-blue-50/40 dark:from-slate-900 dark:via-indigo-950 dark:to-slate-900 px-6 pt-6 pb-8 relative overflow-hidden text-slate-900 dark:text-white border-b border-blue-100/60 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="absolute top-4 right-4 p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+                  className="absolute top-4 right-4 p-1.5 rounded-xl bg-slate-200/70 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 text-slate-700 dark:text-white transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>
                 <div className="relative flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-400">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-500/20 border border-blue-200 dark:border-blue-400/30 flex items-center justify-center text-blue-700 dark:text-blue-400">
                     <Megaphone className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-extrabold text-white">Post Announcement</h3>
-                    <p className="text-xs text-slate-300 mt-0.5">Publish a public bulletin for all staff reference</p>
+                    <h3 className="text-xl font-extrabold text-slate-900 dark:text-white">Post Announcement</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-300 mt-0.5">Publish a public bulletin for all staff reference</p>
                   </div>
                 </div>
               </div>
