@@ -800,51 +800,67 @@ export default function Settings() {
                 </h2>
               </div>
               {/* Master enable toggle */}
-              <label className="relative inline-flex items-center cursor-pointer gap-2">
-                <span className="text-xs text-slate-500 dark:text-slate-400">{soundEnabled ? 'On' : 'Off'}</span>
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  checked={soundEnabled}
-                  onChange={(e) => setSoundEnabled(e.target.checked)}
-                />
-                <div className="w-9 h-5 bg-slate-200 dark:bg-slate-700 peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-600"></div>
-              </label>
+              <div className="flex items-center gap-2">
+                {['On', 'Off'].map((opt) => {
+                  const val = opt === 'On'
+                  return (
+                    <label
+                      key={opt}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border cursor-pointer text-xs font-medium transition-all duration-150 ${
+                        soundEnabled === val
+                          ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                          : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="sound-enabled"
+                        checked={soundEnabled === val}
+                        onChange={() => setSoundEnabled(val)}
+                        className="w-3.5 h-3.5 accent-primary-500 cursor-pointer"
+                      />
+                      {opt}
+                    </label>
+                  )
+                })}
+              </div>
             </div>
             <div className={`card-body space-y-5 transition-opacity duration-200 ${soundEnabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
 
               {/* Tone selector */}
               <div>
                 <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Notification Tone</p>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="space-y-1.5">
                   {SOUND_TONES.map((tone) => (
-                    <button
+                    <label
                       key={tone.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedSound(tone.id)
-                        tone.play(soundVolume)
-                      }}
-                      className={`relative flex flex-col items-start px-3 py-2.5 rounded-lg border text-left transition-all duration-150 group ${
+                      className={`flex items-center gap-3 px-3 py-2 rounded-lg border cursor-pointer transition-all duration-150 ${
                         selectedSound === tone.id
-                          ? 'border-primary-500 dark:border-primary-500 bg-primary-50 dark:bg-primary-900/30 shadow-sm'
+                          ? 'border-primary-500 dark:border-primary-500 bg-primary-50 dark:bg-primary-900/30'
                           : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-primary-300 dark:hover:border-primary-600'
                       }`}
                     >
-                      <div className="flex items-center justify-between w-full mb-0.5">
-                        <span className={`text-sm font-semibold ${
+                      <input
+                        type="radio"
+                        name="sound-tone"
+                        value={tone.id}
+                        checked={selectedSound === tone.id}
+                        onChange={() => {
+                          setSelectedSound(tone.id)
+                          tone.play(soundVolume)
+                        }}
+                        className="w-4 h-4 accent-primary-500 flex-shrink-0 cursor-pointer"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-semibold ${
                           selectedSound === tone.id ? 'text-primary-700 dark:text-primary-300' : 'text-slate-700 dark:text-slate-200'
-                        }`}>{tone.label}</span>
-                        {selectedSound === tone.id && (
-                          <span className="w-2 h-2 rounded-full bg-primary-500 flex-shrink-0" />
-                        )}
+                        }`}>{tone.label}</p>
+                        <p className="text-[11px] text-slate-400 dark:text-slate-500">{tone.desc}</p>
                       </div>
-                      <span className="text-[10px] text-slate-400 dark:text-slate-500">{tone.desc}</span>
-                      {/* Play hint on hover */}
-                      <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span className="bg-primary-500/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">▶ Preview</span>
-                      </span>
-                    </button>
+                      {selectedSound === tone.id && (
+                        <span className="text-[10px] text-primary-600 dark:text-primary-400 font-semibold flex-shrink-0">✓ Selected</span>
+                      )}
+                    </label>
                   ))}
                 </div>
               </div>
