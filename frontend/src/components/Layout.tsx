@@ -58,10 +58,10 @@ export default function Layout() {
   }
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-navy-900">
+    <div className="flex flex-col h-full bg-white dark:bg-slate-900 border-r border-slate-200/80 dark:border-slate-800 transition-colors duration-200">
       {/* Brand */}
-      <div className="flex items-center gap-3 px-5 h-16 border-b border-white/10">
-        <div className="relative flex items-center justify-center w-9 h-9 rounded-lg bg-white/10 overflow-hidden flex-shrink-0">
+      <div className="flex items-center gap-3 px-5 h-16 border-b border-slate-200/80 dark:border-slate-800">
+        <div className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-blue-600 dark:bg-blue-600 overflow-hidden flex-shrink-0 text-white shadow-md shadow-blue-500/20">
           <img
             src="/logo.png"
             alt="DTMS logo"
@@ -72,8 +72,8 @@ export default function Layout() {
           <Shield className="absolute w-5 h-5 text-white" />
         </div>
         <div>
-          <div className="text-white font-bold text-base leading-tight tracking-tight">DTMS</div>
-          <div className="text-slate-400 text-[11px] font-medium">Document Tracking &amp; Management</div>
+          <div className="text-slate-900 dark:text-white font-extrabold text-base leading-tight tracking-tight">DTMS</div>
+          <div className="text-slate-500 dark:text-slate-400 text-[11px] font-medium">Document Tracking &amp; Management</div>
         </div>
       </div>
 
@@ -109,7 +109,7 @@ export default function Layout() {
         )}
         {user?.role === 'superadmin' && (
           <>
-            <div className="sidebar-section pt-4 mt-4 border-t border-white/10">
+            <div className="sidebar-section pt-4 mt-4 border-t border-slate-200/80 dark:border-slate-800">
               <div className="sidebar-label">Administration</div>
             </div>
             <Link
@@ -179,19 +179,19 @@ export default function Layout() {
   )
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
       {/* Mobile sidebar */}
       <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`}>
         <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
           onClick={() => setSidebarOpen(false)}
         />
         <div className="fixed inset-y-0 left-0 flex flex-col w-64 transform transition-transform">
-          <div className="flex items-center justify-between h-16 px-4 border-b border-white/10 bg-navy-900">
-            <span className="text-xl font-bold text-white">DTMS</span>
+          <div className="flex items-center justify-between h-16 px-4 border-b border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <span className="text-xl font-extrabold text-slate-900 dark:text-white">DTMS</span>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-white/10"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
             >
               <X className="h-5 w-5" />
             </button>
