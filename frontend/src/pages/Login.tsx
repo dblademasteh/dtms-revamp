@@ -4,7 +4,24 @@ import { useAuthStore } from '@/stores/authStore'
 import { useForm } from 'react-hook-form'
 import api from '@/services/api'
 import toast from 'react-hot-toast'
-import { Eye, EyeOff, FileText, GitBranch, ShieldCheck, Smartphone, ArrowLeft, KeyRound, X } from 'lucide-react'
+import {
+  Eye,
+  EyeOff,
+  FileText,
+  GitBranch,
+  ShieldCheck,
+  Smartphone,
+  ArrowLeft,
+  KeyRound,
+  X,
+  User,
+  Lock,
+  Sparkles,
+  Search,
+  CheckCircle2,
+  Shield,
+  ArrowRight
+} from 'lucide-react'
 import ModalPortal from '@/components/ModalPortal'
 
 interface LoginForm {
@@ -56,83 +73,117 @@ export default function Login() {
   const features = [
     {
       icon: FileText,
-      title: 'Full visibility',
-      desc: 'See where every document is and who holds it.',
+      title: 'Full Audit Trail Visibility',
+      desc: 'Track document movements and current office custodians in real time.',
     },
     {
       icon: GitBranch,
-      title: 'Guided routing',
-      desc: 'Move documents along approved office workflows.',
+      title: 'Guided Office Workflows',
+      desc: 'Seamlessly route memoranda and referrals along verified channels.',
     },
     {
       icon: ShieldCheck,
-      title: 'Secure by design',
-      desc: 'Role-based access with a complete activity log.',
+      title: 'Enterprise Security & Logs',
+      desc: 'Role-based authorization backed by immutable audit history.',
     },
   ]
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left panel - Branding */}
-      <div className="hidden lg:flex lg:w-[46%] bg-gradient-to-br from-navy-900 via-navy-800 to-primary-900 relative overflow-hidden">
+    <div className="min-h-screen flex bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200">
+      {/* Left panel - Branding Hero */}
+      <div className="hidden lg:flex lg:w-[48%] bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950 relative overflow-hidden text-white p-10 xl:p-14 flex-col justify-between shadow-2xl">
+        {/* Background Ambient Glows */}
+        <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-[128px] pointer-events-none" />
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-[128px] pointer-events-none" />
+
         {/* Grid pattern overlay */}
-        <div className="absolute inset-0 opacity-[0.04]" style={{
-          backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-          backgroundSize: '38px 38px',
-        }} />
+        <div
+          className="absolute inset-0 opacity-[0.03] pointer-events-none"
+          style={{
+            backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
+            backgroundSize: '40px 40px',
+          }}
+        />
 
-        {/* Top accent line */}
-        <div className="absolute top-0 inset-x-0 h-1 bg-primary-400/70" />
-
-        {/* Floating emblem */}
-        <div className="absolute -bottom-24 -right-24 w-96 h-96 rounded-full border border-white/5 bg-white/[0.03]" />
-        <div className="absolute bottom-10 right-10 w-40 h-40 rounded-full border border-white/5 bg-white/[0.03]" />
-
-        <div className="relative flex flex-col justify-between px-10 xl:px-14 py-10 w-full">
-          {/* Center - Main content */}
-          <div className="flex-1 flex flex-col justify-center max-w-md py-10">
-            <h1 className="text-3xl xl:text-4xl font-bold text-white leading-[1.15] tracking-tight">
-              Track, route, and account for every document.
-            </h1>
-            <p className="mt-4 text-base text-slate-400 leading-relaxed">
-              A secure system for routing memoranda, orders, and referrals across government
-              offices — with a clear, auditable trail from sender to receiver.
-            </p>
-
-            <div className="mt-10 space-y-5">
-              {features.map((f) => (
-                <div key={f.title} className="flex items-start gap-3.5">
-                  <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-white/10 border border-white/10 flex items-center justify-center">
-                    <f.icon className="w-4 h-4 text-primary-300" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-white">{f.title}</p>
-                    <p className="text-sm text-slate-400 mt-0.5">{f.desc}</p>
-                  </div>
-                </div>
-              ))}
+        {/* Header Branding */}
+        <div className="relative z-10 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
+              <Shield className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-lg font-extrabold tracking-tight">DTMS</div>
+              <div className="text-[10px] text-slate-400 font-medium">Document Tracking &amp; Management</div>
             </div>
           </div>
 
-          {/* Bottom - Footer */}
-          <div className="text-xs text-slate-500">
-            © {new Date().getFullYear()} Document Tracking and Management System
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-blue-200">
+            <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+            <span>v2.5 System Online</span>
           </div>
+        </div>
+
+        {/* Main Content Hero */}
+        <div className="relative z-10 my-auto max-w-lg space-y-8">
+          <div className="space-y-3">
+            <h1 className="text-3xl xl:text-4xl font-extrabold leading-tight tracking-tight text-white">
+              Track, route, and account for every document.
+            </h1>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              An official enterprise platform for routing memoranda, executive orders, circulars, and referrals across government offices with a verified audit trail.
+            </p>
+          </div>
+
+          {/* Feature Cards Grid */}
+          <div className="space-y-3.5">
+            {features.map((f) => (
+              <div
+                key={f.title}
+                className="flex items-start gap-3.5 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md hover:bg-white/10 transition-all duration-200"
+              >
+                <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-400">
+                  <f.icon className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">{f.title}</h3>
+                  <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">{f.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer info */}
+        <div className="relative z-10 text-xs text-slate-500 flex items-center justify-between border-t border-white/10 pt-6">
+          <span>© {new Date().getFullYear()} Document Tracking &amp; Management System</span>
+          <span className="flex items-center gap-1 text-emerald-400 font-semibold">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>SSL Encrypted</span>
+          </span>
         </div>
       </div>
 
       {/* Right panel - Login form */}
-      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-white">
-        <div className="w-full max-w-[380px]">
-          {/* Brand + Form header */}
-          <div className="mb-8 flex flex-col items-center text-center">
-            <div className="mb-6 bg-white p-4 rounded-2xl shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10 inline-flex">
-              <img src="/logo.png" alt="DTMS logo" className="w-28 h-28 object-contain" />
+      <div className="flex-1 flex items-center justify-center p-6 sm:p-10 lg:p-12">
+        <div className="w-full max-w-[400px] space-y-8">
+          {/* Header */}
+          <div className="flex flex-col items-center text-center space-y-3">
+            <div className="w-20 h-20 rounded-3xl bg-white dark:bg-slate-900 p-3 shadow-md border border-slate-200/80 dark:border-slate-800 flex items-center justify-center">
+              <img
+                src="/logo.png"
+                alt="DTMS logo"
+                className="w-full h-full object-contain"
+                onError={(e) => (e.currentTarget.style.display = 'none')}
+              />
             </div>
-            <h2 className="text-[28px] font-bold text-slate-900 tracking-tight">Welcome back</h2>
-            <p className="mt-2 text-sm text-slate-500">
-              Sign in to your account to continue
-            </p>
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                Welcome Back
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+                Sign in with your credentials to access your workspace
+              </p>
+            </div>
           </div>
 
           {twoFaToken ? (
@@ -146,113 +197,125 @@ export default function Login() {
             />
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div>
-                <label htmlFor="accnt_no" className="block text-[13px] font-medium text-slate-700 mb-1.5">
+              {/* Account Number Field */}
+              <div className="space-y-1.5">
+                <label htmlFor="accnt_no" className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                   Account Number
                 </label>
-                <input
-                  id="accnt_no"
-                  type="text"
-                  autoComplete="username"
-                  className="input h-11"
-                  placeholder="P12345"
-                  {...register('accnt_no', {
-                    required: 'Account Number is required',
-                  })}
-                />
+                <div className="relative">
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    id="accnt_no"
+                    type="text"
+                    autoComplete="username"
+                    className="w-full pl-10 pr-4 py-3 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white font-mono placeholder:text-slate-400"
+                    placeholder="e.g. P12345"
+                    {...register('accnt_no', {
+                      required: 'Account Number is required',
+                    })}
+                  />
+                </div>
                 {errors.accnt_no && (
-                  <p className="mt-1.5 text-xs text-danger-600 flex items-center gap-1">
-                    <span className="inline-block w-1 h-1 rounded-full bg-danger-500" />
+                  <p className="text-xs text-red-500 font-medium flex items-center gap-1 mt-1">
+                    <span className="w-1 h-1 rounded-full bg-red-500" />
                     {errors.accnt_no.message}
                   </p>
                 )}
               </div>
 
-              <div>
-                <label htmlFor="password" className="block text-[13px] font-medium text-slate-700 mb-1.5">
-                  Password
-                </label>
+              {/* Password Field */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="password" className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                    Password
+                  </label>
+                  <Link to="/forgot-password" className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold">
+                    Forgot password?
+                  </Link>
+                </div>
                 <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
-                    className="input h-11 pr-10"
+                    className="w-full pl-10 pr-10 py-3 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white placeholder:text-slate-400"
                     placeholder="Enter your password"
                     {...register('password', { required: 'Password is required' })}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-0.5"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5"
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="mt-1.5 text-xs text-danger-600 flex items-center gap-1">
-                    <span className="inline-block w-1 h-1 rounded-full bg-danger-500" />
+                  <p className="text-xs text-red-500 font-medium flex items-center gap-1 mt-1">
+                    <span className="w-1 h-1 rounded-full bg-red-500" />
                     {errors.password.message}
                   </p>
                 )}
               </div>
 
+              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full h-11 btn btn-primary mt-2"
+                className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition-all shadow-md shadow-blue-500/20 disabled:opacity-50 flex items-center justify-center gap-2 mt-2"
               >
                 {isLoading ? (
                   <span className="flex items-center gap-2">
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Signing in now...
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Signing in...
                   </span>
                 ) : (
-                  'Sign in'
+                  <>
+                    <span>Sign in to System</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
                 )}
               </button>
             </form>
           )}
 
-          {/* PIN code button */}
-          <div className="mt-4 text-center">
+          {/* Auxiliary Links */}
+          <div className="space-y-3 pt-2">
             <button
               type="button"
               onClick={() => setShowPincodeModal(true)}
-              className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-primary-600 font-medium transition-colors"
+              className="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-800 text-xs font-bold transition-all"
             >
-              <KeyRound className="w-4 h-4" />
-              Sign in with PIN code
+              <KeyRound className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <span>Sign in with 4-Digit PIN Code</span>
             </button>
+
+            <div className="text-center">
+              <Link
+                to="/track"
+                className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                <Search className="w-3.5 h-3.5" />
+                <span>Track a Document Without Login →</span>
+              </Link>
+            </div>
           </div>
 
-          {/* PIN code modal */}
-          {showPincodeModal && (
-            <PincodeModal onClose={() => setShowPincodeModal(false)} />
-          )}
-
-          <div className="mt-4 text-center flex items-center justify-center gap-4">
-            <Link to="/track" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
-              Track a Document →
-            </Link>
-            <span className="text-slate-300">|</span>
-            <Link to="/forgot-password" className="text-sm text-slate-500 hover:text-slate-700 font-medium">
-              Forgot password?
-            </Link>
-          </div>
-
-          {/* Status */}
-          <div className="mt-8 pt-6 border-t border-slate-100 flex flex-col items-center gap-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 w-fit rounded-full bg-success-50 border border-success-100">
-              <span className="w-1.5 h-1.5 rounded-full bg-success-500 animate-pulse" />
-              <span className="text-xs font-medium text-success-700">System Online</span>
+          {/* System Status Footer */}
+          <div className="pt-4 border-t border-slate-200/80 dark:border-slate-800/80 flex items-center justify-center">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>All Systems Operational</span>
             </div>
           </div>
         </div>
       </div>
+
+      {/* PIN Code Modal */}
+      {showPincodeModal && (
+        <PincodeModal onClose={() => setShowPincodeModal(false)} />
+      )}
     </div>
   )
 }
@@ -307,28 +370,24 @@ function PincodeModal({ onClose }: { onClose: () => void }) {
   return (
     <ModalPortal>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
-        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={onClose} />
+        <div className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95 duration-200">
           {/* Header */}
-          <div className="bg-gradient-to-br from-primary-600 to-primary-800 px-6 pt-6 pb-8 relative overflow-hidden">
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute -top-4 -right-4 w-32 h-32 rounded-full bg-white" />
-              <div className="absolute -bottom-8 -left-4 w-24 h-24 rounded-full bg-white" />
-            </div>
+          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 px-6 pt-6 pb-8 relative overflow-hidden text-white">
             <button
               type="button"
               onClick={onClose}
-              className="absolute top-4 right-4 p-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors"
+              className="absolute top-4 right-4 p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
             <div className="relative flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center shadow-lg">
-                <KeyRound className="w-7 h-7 text-white" />
+              <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-400">
+                <KeyRound className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-white">Sign in with PIN</h3>
-                <p className="text-sm text-white/75 mt-0.5">Enter your account number and 4-digit PIN</p>
+                <h3 className="text-xl font-extrabold text-white">Sign in with PIN</h3>
+                <p className="text-xs text-slate-300 mt-0.5">Enter account # and 4-digit code</p>
               </div>
             </div>
           </div>
@@ -336,22 +395,22 @@ function PincodeModal({ onClose }: { onClose: () => void }) {
           {/* Body */}
           <div className="p-6 space-y-4">
             <div>
-              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">
+              <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                 Account Number
               </label>
               <input
                 type="text"
-                className="input w-full bg-slate-50/50 border-slate-200 focus:bg-white text-sm h-11"
-                placeholder="P12345"
+                className="w-full px-3.5 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white font-mono"
+                placeholder="e.g. P12345"
                 value={accntNo}
                 onChange={(e) => setAccntNo(e.target.value)}
               />
             </div>
             <div>
-              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">
-                PIN Code
+              <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5 text-center">
+                4-Digit PIN Code
               </label>
-              <div className="flex gap-2 justify-center">
+              <div className="flex gap-2.5 justify-center pt-1">
                 {pincode.map((digit, idx) => (
                   <input
                     key={idx}
@@ -362,7 +421,7 @@ function PincodeModal({ onClose }: { onClose: () => void }) {
                     value={digit}
                     onChange={(e) => handleDigit(idx, e.target.value)}
                     onKeyDown={(e) => handleKeyDown(idx, e)}
-                    className="w-12 h-14 text-center text-xl font-bold rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
+                    className="w-12 h-14 text-center text-xl font-mono font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white outline-none transition-all"
                     autoFocus={idx === 0}
                   />
                 ))}
@@ -371,11 +430,11 @@ function PincodeModal({ onClose }: { onClose: () => void }) {
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
+          <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-200/60 transition-colors"
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors"
             >
               Cancel
             </button>
@@ -383,12 +442,12 @@ function PincodeModal({ onClose }: { onClose: () => void }) {
               type="button"
               disabled={submitting}
               onClick={submitPincode}
-              className="inline-flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold bg-primary-600 hover:bg-primary-700 text-white transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-md shadow-blue-500/20 disabled:opacity-50"
             >
               {submitting ? (
-                <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Signing in...</>
+                <><span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Signing in...</>
               ) : (
-                <><KeyRound className="w-4 h-4" /> Sign in</>
+                <><KeyRound className="w-3.5 h-3.5" /> Sign in with PIN</>
               )}
             </button>
           </div>
@@ -419,12 +478,12 @@ function TwoFactorStep({
   return (
     <div className="space-y-5">
       <div className="flex flex-col items-center text-center">
-        <div className="w-14 h-14 rounded-2xl bg-primary-50 border border-primary-100 flex items-center justify-center mb-4">
-          <Smartphone className="w-6 h-6 text-primary-600" />
+        <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-100 dark:border-blue-800 flex items-center justify-center mb-4 text-blue-600 dark:text-blue-400">
+          <Smartphone className="w-7 h-7" />
         </div>
-        <h2 className="text-xl font-bold text-slate-900">Two-Factor Authentication</h2>
-        <p className="mt-1.5 text-sm text-slate-500">
-          Enter the 6-digit code from your Google Authenticator app.
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white">Two-Factor Authentication</h2>
+        <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+          Enter the 6-digit code from your authenticator app.
         </p>
       </div>
 
@@ -438,20 +497,17 @@ function TwoFactorStep({
           value={code}
           onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
           placeholder="••••••"
-          className="input h-14 text-center text-2xl tracking-[0.5em] font-semibold"
+          className="w-full h-14 text-center text-2xl tracking-[0.5em] font-mono font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
         />
 
         <button
           type="submit"
           disabled={isLoading || code.length !== 6}
-          className="w-full h-11 btn btn-primary"
+          className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
         >
           {isLoading ? (
             <span className="flex items-center gap-2">
-              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
+              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               Verifying...
             </span>
           ) : (
@@ -462,10 +518,10 @@ function TwoFactorStep({
         <button
           type="button"
           onClick={onBack}
-          className="w-full flex items-center justify-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 font-medium"
+          className="w-full flex items-center justify-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-bold transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" />
-          Back to login
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Back to standard login
         </button>
       </form>
     </div>
