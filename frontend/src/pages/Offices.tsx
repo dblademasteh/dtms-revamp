@@ -345,31 +345,31 @@ export default function Offices() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={resetForm} />
             <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            {/* Header */}
-            <div className="flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-primary-600 to-primary-700 text-white">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15">
-                <Building2 className="w-5 h-5" />
-              </div>
-              <div className="flex-1">
-                <h2 className="text-base font-semibold leading-tight">
-                  {editingOffice ? 'Edit Office' : 'New Office'}
-                </h2>
-                <p className="text-xs text-primary-100">
-                  {editingOffice ? `Updating ${editingOffice.name}` : 'Add a unit to the organization hierarchy'}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={resetForm}
-                className="p-1.5 rounded-lg text-primary-100 hover:text-white hover:bg-white/10 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+        {/* Header */}
+          <div className="flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-primary-600 to-primary-700 text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15">
+              <Building2 className="w-5 h-5" />
             </div>
+            <div className="flex-1">
+              <h2 className="text-base font-semibold leading-tight">
+                {editingOffice ? 'Edit Office' : 'New Office'}
+              </h2>
+              <p className="text-xs text-primary-100">
+                {editingOffice ? `Updating ${editingOffice.name}` : 'Add a unit to the organization hierarchy'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={resetForm}
+              className="p-1.5 rounded-lg text-primary-100 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
             {/* Body */}
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-              <div className="px-6 py-5 space-y-6">
+              <div className="px-6 py-5 space-y-8">
                 {/* Details */}
                 <section>
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">Details</h3>
@@ -562,20 +562,25 @@ export default function Offices() {
             <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Try adjusting your search or type filter.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="table">
+          <div className="overflow-x-auto lg:overflow-visible">
+            <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
               <thead>
                 <tr>
-                  <th className="w-[42%]">Office</th>
-                  <th>Unit Code</th>
-                  <th>Type</th>
-                  <th>Head</th>
-                  <th>Status</th>
-                  <th>Storage</th>
-                  <th className="w-24 text-right">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Office</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Unit Code</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Head</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Storage</th>
+                  <th className="relative px-6 py-3 w-24">
+                    <div className="flex items-center justify-end gap-1">
+                      <Edit className="w-3.5 h-3.5 text-slate-400" />
+                      <Trash2 className="w-3.5 h-3.5 text-slate-400" />
+                    </div>
+                  </th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-900">
                 {filterOffices(offices || [], typeFilter, searchQuery).map((office: any) => renderOffice(office))}
               </tbody>
             </table>
