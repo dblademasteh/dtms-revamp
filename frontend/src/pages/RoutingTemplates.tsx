@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { DOCUMENT_TYPES, documentTypeLabel } from '@/constants/documentOptions'
 import ConfirmModal from '@/components/ConfirmModal'
+import SearchableSelect from '@/components/SearchableSelect'
 
 const ROLE_META: Record<string, { label: string; icon: typeof UserCheck }> = {
   approver: { label: 'Approver', icon: UserCheck },
@@ -171,12 +172,12 @@ export default function RoutingTemplates() {
                 </div>
                 <div>
                   <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Document Type</label>
-                  <select className="input cursor-pointer" value={docType} onChange={e => setDocType(e.target.value)} required>
-                    <option value="">Select type...</option>
-                    {DOCUMENT_TYPES.map(type => (
-                      <option key={type.value} value={type.value}>{type.label}</option>
-                    ))}
-                  </select>
+                   <SearchableSelect
+                     options={DOCUMENT_TYPES.map(type => ({ value: type.value, label: type.label }))}
+                     value={docType}
+                     onChange={setDocType}
+                     placeholder="Select type..."
+                   />
                 </div>
               </div>
               <div>
@@ -236,36 +237,28 @@ export default function RoutingTemplates() {
                       <span className="hidden flex-shrink-0 cursor-grab text-slate-300 hover:text-slate-500 active:cursor-grabbing sm:block dark:text-slate-600 dark:hover:text-slate-400">
                         <GripVertical className="h-4 w-4" />
                       </span>
-                      <div className="relative flex-1">
-                        <Building2 className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                        <select
-                          className="input !pl-8 cursor-pointer"
-                          value={step.office_id}
-                          onChange={e => updateStep(i, 'office_id', Number(e.target.value))}
-                          required
-                        >
-                          <option value="">Select office...</option>
-                          {offices?.map((o: any) => <option key={o.id} value={o.id}>{o.name}</option>)}
-                        </select>
-                      </div>
-                      <select
-                        className="input w-36 cursor-pointer"
-                        value={step.role}
-                        onChange={e => updateStep(i, 'role', e.target.value)}
-                      >
-                        {Object.entries(ROLE_META).map(([key, meta]) => (
-                          <option key={key} value={key}>{meta.label}</option>
-                        ))}
-                      </select>
-                       <select
-                         className="input w-28 cursor-pointer"
+                       <div className="relative flex-1">
+                         <Building2 className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
+                         <SearchableSelect
+                           className="!pl-8"
+                           options={offices?.map((o: any) => ({ value: String(o.id), label: o.name })) ?? []}
+                           value={String(step.office_id)}
+                           onChange={(v) => updateStep(i, 'office_id', Number(v))}
+                           placeholder="Select office..."
+                         />
+                       </div>
+                       <SearchableSelect
+                         options={Object.entries(ROLE_META).map(([key, meta]) => ({ value: key, label: meta.label }))}
+                         value={step.role}
+                         onChange={(v) => updateStep(i, 'role', v)}
+                         placeholder="Select role..."
+                       />
+                       <SearchableSelect
+                         options={Object.entries(ACTION_META).map(([key, meta]) => ({ value: key, label: meta.label }))}
                          value={step.action}
-                         onChange={e => updateStep(i, 'action', e.target.value)}
-                       >
-                         {Object.entries(ACTION_META).map(([key, meta]) => (
-                           <option key={key} value={key}>{meta.label}</option>
-                         ))}
-                       </select>
+                         onChange={(v) => updateStep(i, 'action', v)}
+                         placeholder="Select action..."
+                       />
                       {steps.length > 1 && (
                         <button
                           type="button"
