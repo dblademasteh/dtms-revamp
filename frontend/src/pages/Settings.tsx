@@ -67,7 +67,120 @@ export default function Settings() {
     }
   )
 
-  // Appearance State
+  // Sound / Alarm State
+  const [soundEnabled, setSoundEnabled] = useState(
+    () => localStorage.getItem('dtms-sound-enabled') !== 'false'
+  )
+  const [selectedSound, setSelectedSound] = useState(
+    () => localStorage.getItem('dtms-sound-tone') || 'chime'
+  )
+  const [soundVolume, setSoundVolume] = useState(
+    () => Number(localStorage.getItem('dtms-sound-volume') ?? 70)
+  )
+
+  const SOUND_TONES: { id: string; label: string; desc: string; play: (vol: number) => void }[] = [
+    {
+      id: 'chime',
+      label: 'Chime',
+      desc: 'Soft high bell',
+      play: (vol) => {
+        const ctx = new AudioContext()
+        const g = ctx.createGain(); g.gain.value = vol / 100
+        g.connect(ctx.destination)
+        ;[880, 1108, 1318].forEach((freq, i) => {
+          const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = freq
+          o.connect(g)
+          o.start(ctx.currentTime + i * 0.15)
+          o.stop(ctx.currentTime + i * 0.15 + 0.3)
+        })
+      },
+    },
+    {
+      id: 'ding',
+      label: 'Ding',
+      desc: 'Single clear bell',
+      play: (vol) => {
+        const ctx = new AudioContext()
+        const g = ctx.createGain(); g.gain.setValueAtTime(vol / 100, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1)
+        g.connect(ctx.destination)
+        const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = 1047
+        o.connect(g); o.start(); o.stop(ctx.currentTime + 1)
+      },
+    },
+    {
+      id: 'pop',
+      label: 'Pop',
+      desc: 'Short soft pop',
+      play: (vol) => {
+        const ctx = new AudioContext()
+        const g = ctx.createGain(); g.gain.setValueAtTime(vol / 100, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2)
+        g.connect(ctx.destination)
+        const o = ctx.createOscillator(); o.type = 'sine'
+        o.frequency.setValueAtTime(800, ctx.currentTime)
+        o.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.15)
+        o.connect(g); o.start(); o.stop(ctx.currentTime + 0.2)
+      },
+    },
+    {
+      id: 'alert',
+      label: 'Alert',
+      desc: 'Two-tone urgent',
+      play: (vol) => {
+        const ctx = new AudioContext()
+        const g = ctx.createGain(); g.gain.value = vol / 100
+        g.connect(ctx.destination)
+        ;[660, 880].forEach((freq, i) => {
+          const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = freq
+          const og = ctx.createGain(); og.gain.setValueAtTime(0.3, ctx.currentTime + i * 0.2); og.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.2 + 0.18)
+          o.connect(og); og.connect(g)
+          o.start(ctx.currentTime + i * 0.2)
+          o.stop(ctx.currentTime + i * 0.2 + 0.2)
+        })
+      },
+    },
+    {
+      id: 'pulse',
+      label: 'Pulse',
+      desc: 'Repeating blip',
+      play: (vol) => {
+        const ctx = new AudioContext()
+        for (let i = 0; i < 3; i++) {
+          const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = 520
+          const g = ctx.createGain()
+          g.gain.setValueAtTime(vol / 100, ctx.currentTime + i * 0.22)
+          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.22 + 0.15)
+          o.connect(g); g.connect(ctx.destination)
+          o.start(ctx.currentTime + i * 0.22)
+          o.stop(ctx.currentTime + i * 0.22 + 0.16)
+        }
+      },
+    },
+    {
+      id: 'melody',
+      label: 'Melody',
+      desc: 'Quick 4-note tune',
+      play: (vol) => {
+        const ctx = new AudioContext()
+        const notes = [523, 659, 784, 1047]
+        notes.forEach((freq, i) => {
+          const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = freq
+          const g = ctx.createGain()
+          g.gain.setValueAtTime(vol / 100 * 0.7, ctx.currentTime + i * 0.12)
+          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.25)
+          o.connect(g); g.connect(ctx.destination)
+          o.start(ctx.currentTime + i * 0.12)
+          o.stop(ctx.currentTime + i * 0.12 + 0.26)
+        })
+      },
+    },
+  ]
+
+  const saveSoundPrefs = (enabled: boolean, tone: string, vol: number) => {
+    localStorage.setItem('dtms-sound-enabled', String(enabled))
+    localStorage.setItem('dtms-sound-tone', tone)
+    localStorage.setItem('dtms-sound-volume', String(vol))
+    toast.success('Sound preferences saved')
+  }
   const [theme, setTheme] = useState(localStorage.getItem('dtms-theme') || 'light')
   const [font, setFont] = useState(localStorage.getItem('dtms-font') || 'inter')
   const [scale, setScale] = useState(localStorage.getItem('dtms-scale') || 'md')
@@ -323,99 +436,83 @@ export default function Settings() {
             </div>
           </div>
         ) : (
-        <div className="space-y-6">
-          {/* Identity card with avatar upload */}
+        <div className="space-y-3">
+          {/* Identity card — compact horizontal strip */}
           <div className="card">
-            <div className="card-header flex items-center gap-2">
-              <User className="w-4 h-4 text-slate-500" />
-              <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
-                Profile
-              </h2>
-            </div>
-            <div className="card-body">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-6">
-                {/* Avatar + upload */}
-                <div className="flex flex-col items-center gap-3 sm:border-r sm:border-slate-200 sm:pr-6 sm:flex-shrink-0">
-                  <div className="relative">
-                    <div className="w-24 h-24 rounded-full overflow-hidden bg-primary-100 dark:bg-primary-900/40 ring-2 ring-primary-200 dark:ring-primary-700 flex items-center justify-center">
-                      {avatarPreview || user?.avatar ? (
-                        <img
-                          src={avatarPreview || user?.avatar || ''}
-                          alt="Avatar"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <span className="text-primary-700 dark:text-primary-300 text-2xl font-bold">
-                          {(user?.name?.charAt(0) || 'U').toUpperCase()}
-                        </span>
-                      )}
-                    </div>
-                    {avatarMutation.isPending && (
-                      <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center">
-                        <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      </div>
-                    )}
-                  </div>
-                  <label className="btn btn-secondary btn-sm cursor-pointer">
-                    Upload Photo
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0]
-                        if (!file) return
-                        if (file.size > 5 * 1024 * 1024) {
-                          toast.error('Image must be under 5 MB')
-                          return
-                        }
-                        setAvatarPreview(URL.createObjectURL(file))
-                        avatarMutation.mutate(file)
-                      }}
+            <div className="flex items-center gap-4 px-4 py-3">
+              {/* Avatar + upload — compact */}
+              <div className="relative flex-shrink-0">
+                <div className="w-14 h-14 rounded-full overflow-hidden bg-primary-100 dark:bg-primary-900/40 ring-2 ring-primary-200 dark:ring-primary-700 flex items-center justify-center">
+                  {avatarPreview || user?.avatar ? (
+                    <img
+                      src={avatarPreview || user?.avatar || ''}
+                      alt="Avatar"
+                      className="w-full h-full object-cover"
                     />
-                  </label>
-                  {(user?.avatar || avatarPreview) && (
-                    <button
-                      type="button"
-                      className="text-xs text-danger-600 hover:text-danger-700"
-                      onClick={() => {
-                        setAvatarPreview(null)
-                        if (user) setUser({ ...user, avatar: null })
-                        api.delete('/auth/avatar').catch(() => {})
-                      }}
-                    >
-                      Remove
-                    </button>
+                  ) : (
+                    <span className="text-primary-700 dark:text-primary-300 text-xl font-bold">
+                      {(user?.name?.charAt(0) || 'U').toUpperCase()}
+                    </span>
                   )}
                 </div>
+                {avatarMutation.isPending && (
+                  <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center">
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+              </div>
 
-                {/* Key identity summary */}
-                <div className="flex-1 w-full min-w-0 space-y-4 text-sm">
-                  <div>
-                    <p className="text-slate-500 text-xs uppercase tracking-wider">Full Name</p>
-                    <p className="font-semibold text-slate-900 text-lg leading-tight">
-                      {[user?.rank, user?.full_name || user?.name].filter(Boolean).join(' ')}
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3">
-                    <div>
-                      <p className="text-slate-500 text-xs uppercase tracking-wider">Designation</p>
-                      <p className="font-medium text-slate-900 truncate">{user?.designation || '—'}</p>
-                    </div>
-                    <div>
-                      <p className="text-slate-500 text-xs uppercase tracking-wider">Account No.</p>
-                      <p className="font-medium text-slate-900 font-mono truncate">{user?.accnt_no || '—'}</p>
-                    </div>
-                    <div>
-                      <p className="text-slate-500 text-xs uppercase tracking-wider">Item No.</p>
-                      <p className="font-medium text-slate-900 font-mono truncate">{user?.item_no || '—'}</p>
-                    </div>
-                    <div>
-                      <p className="text-slate-500 text-xs uppercase tracking-wider">Office</p>
-                      <p className="font-medium text-slate-900 truncate">{(user as any)?.office?.name || 'N/A'}</p>
-                    </div>
-                  </div>
+              {/* Identity info */}
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm leading-tight truncate">
+                  {[user?.rank, user?.full_name || user?.name].filter(Boolean).join(' ')}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                  {user?.designation || user?.role?.replace('_', ' ')} {(user as any)?.office?.name ? `· ${(user as any).office.name}` : ''}
+                </p>
+                <div className="flex items-center gap-3 mt-1">
+                  {user?.accnt_no && (
+                    <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">Acct: {user.accnt_no}</span>
+                  )}
+                  {user?.item_no && (
+                    <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">Item: {user.item_no}</span>
+                  )}
                 </div>
+              </div>
+
+              {/* Upload / Remove actions — right side */}
+              <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                <label className="btn btn-secondary btn-sm cursor-pointer !py-1 !px-2.5 !text-xs">
+                  Change Photo
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      if (file.size > 5 * 1024 * 1024) {
+                        toast.error('Image must be under 5 MB')
+                        return
+                      }
+                      setAvatarPreview(URL.createObjectURL(file))
+                      avatarMutation.mutate(file)
+                    }}
+                  />
+                </label>
+                {(user?.avatar || avatarPreview) && (
+                  <button
+                    type="button"
+                    className="text-[10px] text-danger-500 hover:text-danger-600"
+                    onClick={() => {
+                      setAvatarPreview(null)
+                      if (user) setUser({ ...user, avatar: null })
+                      api.delete('/auth/avatar').catch(() => {})
+                    }}
+                  >
+                    Remove
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -425,44 +522,42 @@ export default function Settings() {
             <button
               type="button"
               onClick={() => setDetailsOpen(!detailsOpen)}
-              className="card-header flex items-center justify-between w-full text-left hover:bg-slate-50 transition-colors"
+              className="flex items-center justify-between w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-100 dark:border-slate-800"
             >
-              <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
+              <h2 className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                 Personal Details
               </h2>
               <ChevronDown
-                className={`h-4 w-4 text-slate-400 transition-transform ${detailsOpen ? '' : '-rotate-90'}`}
+                className={`h-3.5 w-3.5 text-slate-400 transition-transform ${detailsOpen ? '' : '-rotate-90'}`}
               />
             </button>
             {detailsOpen && (
-              <div className="card-body">
-                <form onSubmit={handleProfileSubmit} className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="px-4 py-3">
+                <form onSubmit={handleProfileSubmit} className="space-y-3">
+                  <div className="grid grid-cols-3 gap-2">
                     <div>
-                      <label className="block text-[13px] font-medium text-slate-700 mb-1.5">First Name</label>
-                      <input className="input" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+                      <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">First Name</label>
+                      <input className="input !py-1.5 !text-sm" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
                     </div>
                     <div>
-                      <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Middle Name</label>
-                      <input className="input" value={middleName} onChange={(e) => setMiddleName(e.target.value)} />
+                      <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Middle Name</label>
+                      <input className="input !py-1.5 !text-sm" value={middleName} onChange={(e) => setMiddleName(e.target.value)} />
                     </div>
                     <div>
-                      <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Last Name</label>
-                      <input className="input" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+                      <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Last Name</label>
+                      <input className="input !py-1.5 !text-sm" value={lastName} onChange={(e) => setLastName(e.target.value)} />
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Display Name</label>
-                    <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
-                    <p className="text-xs text-slate-400 mt-1">Shown across the app (defaults to full name).</p>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-1.5">Rank</label>
+                      <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Display Name</label>
+                      <input className="input !py-1.5 !text-sm" value={name} onChange={(e) => setName(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Rank</label>
                       <select
-                        className="input text-sm w-full"
+                        className="input !py-1.5 !text-sm w-full"
                         value={rank}
                         onChange={(e) => setRank(e.target.value)}
                       >
@@ -473,31 +568,31 @@ export default function Settings() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Phone</label>
-                      <input type="tel" className="input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Optional" />
+                      <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Phone</label>
+                      <input type="tel" className="input !py-1.5 !text-sm" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Optional" />
                     </div>
                     <div>
-                      <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Designation</label>
-                      <input className="input" value={designation} onChange={(e) => setDesignation(e.target.value)} placeholder="e.g. System Administrator" />
-                    </div>
-                    <div>
-                      <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Office Assignment</label>
-                      <Select
-                        className="text-sm"
-                        styles={buildSelectStyles()}
-                        options={officeOptions}
-                        isClearable
-                        placeholder="Select office..."
-                        value={officeId ? officeOptions.find((o: any) => o.value === officeId) : null}
-                        onChange={(opt: any) => setOfficeId(opt ? opt.value : '')}
-                      />
-                      <p className="text-xs text-slate-400 mt-1">The office you belong to. Incoming routed documents are directed here.</p>
+                      <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Designation</label>
+                      <input className="input !py-1.5 !text-sm" value={designation} onChange={(e) => setDesignation(e.target.value)} placeholder="e.g. System Administrator" />
                     </div>
                   </div>
 
-                  <div className="flex justify-end">
-                    <button type="submit" disabled={profileMutation.isPending} className="btn btn-primary btn-sm">
-                      {profileMutation.isPending ? 'Saving...' : 'Save Profile'}
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Office Assignment</label>
+                    <Select
+                      className="text-sm"
+                      styles={buildSelectStyles()}
+                      options={officeOptions}
+                      isClearable
+                      placeholder="Select office..."
+                      value={officeId ? officeOptions.find((o: any) => o.value === officeId) : null}
+                      onChange={(opt: any) => setOfficeId(opt ? opt.value : '')}
+                    />
+                  </div>
+
+                  <div className="flex justify-end pt-1">
+                    <button type="submit" disabled={profileMutation.isPending} className="btn btn-primary btn-sm !py-1 !px-3 !text-xs">
+                      {profileMutation.isPending ? 'Saving...' : 'Save Changes'}
                     </button>
                   </div>
                 </form>
@@ -510,29 +605,29 @@ export default function Settings() {
             <button
               type="button"
               onClick={() => setAccountOpen(!accountOpen)}
-              className="card-header flex items-center justify-between w-full text-left hover:bg-slate-50 transition-colors"
+              className="flex items-center justify-between w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-100 dark:border-slate-800"
             >
-              <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
+              <h2 className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                 Account Information
               </h2>
               <ChevronDown
-                className={`h-4 w-4 text-slate-400 transition-transform ${accountOpen ? '' : '-rotate-90'}`}
+                className={`h-3.5 w-3.5 text-slate-400 transition-transform ${accountOpen ? '' : '-rotate-90'}`}
               />
             </button>
             {accountOpen && (
-              <div className="card-body">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+              <div className="px-4 py-3">
+                <div className="grid grid-cols-3 gap-3 text-sm">
                   <div>
-                    <p className="text-slate-500 text-xs uppercase tracking-wider">Email</p>
-                    <p className="font-medium text-slate-900 truncate">{user?.email}</p>
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-0.5">Email</p>
+                    <p className="font-medium text-slate-800 dark:text-slate-200 text-xs truncate">{user?.email}</p>
                   </div>
                   <div>
-                    <p className="text-slate-500 text-xs uppercase tracking-wider">Role</p>
-                    <p className="font-medium text-slate-900 capitalize">{user?.role?.replace('_', ' ')}</p>
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-0.5">Role</p>
+                    <p className="font-medium text-slate-800 dark:text-slate-200 text-xs capitalize">{user?.role?.replace('_', ' ')}</p>
                   </div>
                   <div>
-                    <p className="text-slate-500 text-xs uppercase tracking-wider">Status</p>
-                    <p className="font-medium text-slate-900 capitalize">{user?.status}</p>
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-0.5">Status</p>
+                    <p className="font-medium text-slate-800 dark:text-slate-200 text-xs capitalize">{user?.status}</p>
                   </div>
                 </div>
               </div>
@@ -647,49 +742,157 @@ export default function Settings() {
 
       {/* Notification Preferences */}
       {activeTab === 'notifications' && (
-        <div className="card">
-          <div className="card-header flex items-center gap-2">
-            <Bell className="w-4 h-4 text-slate-500" />
-            <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
-              Notification Preferences
-            </h2>
-          </div>
-          <div className="card-body space-y-4">
-            {[
-              { key: 'doc_routed', label: 'Document routed to my office', desc: 'When a document is forwarded to your office' },
-              { key: 'doc_status', label: 'Document status changes', desc: 'When a document you created changes status' },
-              { key: 'doc_overdue', label: 'Overdue document alerts', desc: 'When a document in your office passes SLA deadline' },
-              { key: 'doc_created', label: 'New document notifications', desc: 'When a new document is created in your office' },
-            ].map((pref) => (
-              <div key={pref.key} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
-                <div>
-                  <p className="text-sm font-medium text-slate-900">{pref.label}</p>
-                  <p className="text-xs text-slate-500">{pref.desc}</p>
+        <div className="space-y-4">
+
+          {/* Notification Types */}
+          <div className="card">
+            <div className="card-header flex items-center gap-2">
+              <Bell className="w-4 h-4 text-slate-500" />
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+                Notification Preferences
+              </h2>
+            </div>
+            <div className="card-body space-y-4">
+              {[
+                { key: 'doc_routed', label: 'Document routed to my office', desc: 'When a document is forwarded to your office' },
+                { key: 'doc_status', label: 'Document status changes', desc: 'When a document you created changes status' },
+                { key: 'doc_overdue', label: 'Overdue document alerts', desc: 'When a document in your office passes SLA deadline' },
+                { key: 'doc_created', label: 'New document notifications', desc: 'When a new document is created in your office' },
+              ].map((pref) => (
+                <div key={pref.key} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-700">
+                  <div>
+                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{pref.label}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{pref.desc}</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={notifPrefs[pref.key] || false}
+                      onChange={(e) => setNotifPrefs({ ...notifPrefs, [pref.key]: e.target.checked })}
+                    />
+                    <div className="w-9 h-5 bg-slate-200 dark:bg-slate-700 peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-600"></div>
+                  </label>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="sr-only peer"
-                    checked={notifPrefs[pref.key] || false}
-                    onChange={(e) => setNotifPrefs({ ...notifPrefs, [pref.key]: e.target.checked })}
-                  />
-                  <div className="w-9 h-5 bg-slate-200 peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-600"></div>
-                </label>
+              ))}
+              <div className="flex items-center justify-between pt-2">
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                  Email notifications are sent in addition to in-app notifications.
+                </p>
+                <button
+                  onClick={() => notifMutation.mutate({ preferences: notifPrefs })}
+                  disabled={notifMutation.isPending}
+                  className="btn btn-primary btn-sm"
+                >
+                  {notifMutation.isPending ? 'Saving...' : 'Save Preferences'}
+                </button>
               </div>
-            ))}
-            <div className="flex items-center justify-between pt-2">
-              <p className="text-xs text-slate-400">
-                Email notifications are sent in addition to in-app notifications.
-              </p>
-              <button
-                onClick={() => notifMutation.mutate({ preferences: notifPrefs })}
-                disabled={notifMutation.isPending}
-                className="btn btn-primary btn-sm"
-              >
-                {notifMutation.isPending ? 'Saving...' : 'Save Preferences'}
-              </button>
             </div>
           </div>
+
+          {/* Sound & Alarm */}
+          <div className="card">
+            <div className="card-header flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-base">🔔</span>
+                <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+                  Sound &amp; Alarm
+                </h2>
+              </div>
+              {/* Master enable toggle */}
+              <label className="relative inline-flex items-center cursor-pointer gap-2">
+                <span className="text-xs text-slate-500 dark:text-slate-400">{soundEnabled ? 'On' : 'Off'}</span>
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={soundEnabled}
+                  onChange={(e) => setSoundEnabled(e.target.checked)}
+                />
+                <div className="w-9 h-5 bg-slate-200 dark:bg-slate-700 peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-600"></div>
+              </label>
+            </div>
+            <div className={`card-body space-y-5 transition-opacity duration-200 ${soundEnabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+
+              {/* Tone selector */}
+              <div>
+                <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Notification Tone</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {SOUND_TONES.map((tone) => (
+                    <button
+                      key={tone.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedSound(tone.id)
+                        tone.play(soundVolume)
+                      }}
+                      className={`relative flex flex-col items-start px-3 py-2.5 rounded-lg border text-left transition-all duration-150 group ${
+                        selectedSound === tone.id
+                          ? 'border-primary-500 dark:border-primary-500 bg-primary-50 dark:bg-primary-900/30 shadow-sm'
+                          : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-primary-300 dark:hover:border-primary-600'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full mb-0.5">
+                        <span className={`text-sm font-semibold ${
+                          selectedSound === tone.id ? 'text-primary-700 dark:text-primary-300' : 'text-slate-700 dark:text-slate-200'
+                        }`}>{tone.label}</span>
+                        {selectedSound === tone.id && (
+                          <span className="w-2 h-2 rounded-full bg-primary-500 flex-shrink-0" />
+                        )}
+                      </div>
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500">{tone.desc}</span>
+                      {/* Play hint on hover */}
+                      <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="bg-primary-500/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">▶ Preview</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Volume slider */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Volume</p>
+                  <span className="text-xs font-mono text-slate-600 dark:text-slate-300">{soundVolume}%</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm">🔈</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={soundVolume}
+                    onChange={(e) => setSoundVolume(Number(e.target.value))}
+                    className="flex-1 h-1.5 rounded-full appearance-none bg-slate-200 dark:bg-slate-700 accent-primary-500 cursor-pointer"
+                  />
+                  <span className="text-sm">🔊</span>
+                </div>
+              </div>
+
+              {/* Preview + Save row */}
+              <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const tone = SOUND_TONES.find((t) => t.id === selectedSound)
+                    tone?.play(soundVolume)
+                  }}
+                  className="btn btn-secondary btn-sm flex items-center gap-1.5"
+                >
+                  <span>▶</span> Preview Sound
+                </button>
+                <button
+                  type="button"
+                  onClick={() => saveSoundPrefs(soundEnabled, selectedSound, soundVolume)}
+                  className="btn btn-primary btn-sm"
+                >
+                  Save Sound Settings
+                </button>
+              </div>
+            </div>
+          </div>
+
         </div>
       )}
 
