@@ -52,7 +52,7 @@ import {
 import RoutingSlipModal from '@/components/RoutingSlipModal'
 
 const personLabel = (p: any) =>
-  p ? [p.rank, p.full_name || p.name].filter(Boolean).join(' ') : 'â€”'
+  p ? [p.rank, p.full_name || p.name].filter(Boolean).join(' ') : '—'
 import EditDocumentModal from '@/components/EditDocumentModal'
 import MultiSelect from '@/components/MultiSelect'
 
@@ -508,9 +508,8 @@ export default function DocumentDetail() {
        <div class="field"><span class="label">Mode of Transmittal:</span> ${transmittalLabel(document.mode_of_transmittal)}</div>
        <div class="field"><span class="label">Priority:</span> ${document.priority}</div>
       <div class="field"><span class="label">Originator:</span> ${personLabel(document.originator)}</div>
-      <div class="field"><span class="label">Current Office:</span> ${document.current_office?.name}</div>
-      ${document.sla_deadline ? `<div class="field"><span class="label">SLA Deadline:</span> ${new Date(document.sla_deadline).toLocaleString()}</div>` : ''}
-      ${document.description ? `<div class="field"><span class="label">Description:</span> ${document.description}</div>` : ''}
+       <div class="field"><span class="label">Current Office:</span> ${document.current_office?.name}</div>
+       ${document.description ? `<div class="field"><span class="label">Description:</span> ${document.description}</div>` : ''}
       ${sortedHistory.length > 0 ? `
       <h2>Routing History</h2>
       <table>
@@ -589,7 +588,7 @@ export default function DocumentDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Document Details â€” Sender / Receiver panels */}
+          {/* Document Details — Sender / Receiver panels */}
           <div className="card">
             <div className="card-header">
               <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
@@ -608,7 +607,7 @@ export default function DocumentDetail() {
                     </div>
                     <dl className="space-y-2">
                       <div className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-blue-50/50 transition-colors">
-                        <div className="p-1.5 rounded-md bg-white text-blue-400 shadow-sm border border-blue-50 flex-shrink-0 mt-0.5">
+                        <div className="p-1.5 rounded-md bg-white dark:bg-slate-800 text-blue-400 shadow-sm border border-blue-50 dark:border-blue-900/50 flex-shrink-0 mt-0.5">
                           <User className="w-3.5 h-3.5" />
                         </div>
                         <div>
@@ -619,29 +618,29 @@ export default function DocumentDetail() {
                         </div>
                       </div>
                       <div className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-blue-50/50 transition-colors">
-                        <div className="p-1.5 rounded-md bg-white text-blue-400 shadow-sm border border-blue-50 flex-shrink-0 mt-0.5">
+                        <div className="p-1.5 rounded-md bg-white dark:bg-slate-800 text-blue-400 shadow-sm border border-blue-50 dark:border-blue-900/50 flex-shrink-0 mt-0.5">
                           <Building2 className="w-3.5 h-3.5" />
                         </div>
                         <div>
                           <dt className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Office</dt>
                           <dd className="text-sm font-semibold text-slate-800">
-                            {document.originator?.office?.name || document.current_office?.name || 'â€”'}
+                            {document.originator?.office?.name || document.current_office?.name || '—'}
                           </dd>
                         </div>
                       </div>
                       <div className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-blue-50/50 transition-colors">
-                        <div className="p-1.5 rounded-md bg-white text-blue-400 shadow-sm border border-blue-50 flex-shrink-0 mt-0.5">
+                        <div className="p-1.5 rounded-md bg-white dark:bg-slate-800 text-blue-400 shadow-sm border border-blue-50 dark:border-blue-900/50 flex-shrink-0 mt-0.5">
                           <BadgeCheck className="w-3.5 h-3.5" />
                         </div>
                         <div>
                           <dt className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Designation</dt>
                           <dd className="text-sm font-semibold text-slate-800">
-                            {document.originator?.designation || 'â€”'}
+                            {document.originator?.designation || '—'}
                           </dd>
                         </div>
                       </div>
                       <div className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-blue-50/50 transition-colors">
-                        <div className="p-1.5 rounded-md bg-white text-blue-400 shadow-sm border border-blue-50 flex-shrink-0 mt-0.5">
+                        <div className="p-1.5 rounded-md bg-white dark:bg-slate-800 text-blue-400 shadow-sm border border-blue-50 dark:border-blue-900/50 flex-shrink-0 mt-0.5">
                           <Send className="w-3.5 h-3.5" />
                         </div>
                         <div>
@@ -652,7 +651,7 @@ export default function DocumentDetail() {
                         </div>
                       </div>
                       <div className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-blue-50/50 transition-colors">
-                        <div className="p-1.5 rounded-md bg-white text-blue-400 shadow-sm border border-blue-50 flex-shrink-0 mt-0.5">
+                        <div className="p-1.5 rounded-md bg-white dark:bg-slate-800 text-blue-400 shadow-sm border border-blue-50 dark:border-blue-900/50 flex-shrink-0 mt-0.5">
                           <FileText className="w-3.5 h-3.5" />
                         </div>
                         <div>
@@ -663,7 +662,7 @@ export default function DocumentDetail() {
                         </div>
                       </div>
                       <div className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-blue-50/50 transition-colors">
-                        <div className="p-1.5 rounded-md bg-white text-blue-400 shadow-sm border border-blue-50 flex-shrink-0 mt-0.5">
+                        <div className="p-1.5 rounded-md bg-white dark:bg-slate-800 text-blue-400 shadow-sm border border-blue-50 dark:border-blue-900/50 flex-shrink-0 mt-0.5">
                           <AlertCircle className="w-3.5 h-3.5" />
                         </div>
                         <div>
@@ -687,7 +686,7 @@ export default function DocumentDetail() {
                     <dl className="space-y-2">
                       {document.recipient_type && (
                         <div className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-emerald-50/50 transition-colors">
-                          <div className="p-1.5 rounded-md bg-white text-emerald-400 shadow-sm border border-emerald-50 flex-shrink-0 mt-0.5">
+                          <div className="p-1.5 rounded-md bg-white dark:bg-slate-800 text-emerald-400 shadow-sm border border-emerald-50 dark:border-emerald-900/50 flex-shrink-0 mt-0.5">
                             <User className="w-3.5 h-3.5" />
                           </div>
                           <div>
@@ -703,24 +702,24 @@ export default function DocumentDetail() {
                       {document.recipient_type === 'personnel' && document.recipient && (
                         <>
                           <div className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-emerald-50/50 transition-colors">
-                            <div className="p-1.5 rounded-md bg-white text-emerald-400 shadow-sm border border-emerald-50 flex-shrink-0 mt-0.5">
+                            <div className="p-1.5 rounded-md bg-white dark:bg-slate-800 text-emerald-400 shadow-sm border border-emerald-50 dark:border-emerald-900/50 flex-shrink-0 mt-0.5">
                               <BadgeCheck className="w-3.5 h-3.5" />
                             </div>
                             <div>
                               <dt className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Designation</dt>
                               <dd className="text-sm font-semibold text-slate-800">
-                                {document.recipient?.designation || 'â€”'}
+                                {document.recipient?.designation || '—'}
                               </dd>
                             </div>
                           </div>
                           <div className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-emerald-50/50 transition-colors">
-                            <div className="p-1.5 rounded-md bg-white text-emerald-400 shadow-sm border border-emerald-50 flex-shrink-0 mt-0.5">
+                            <div className="p-1.5 rounded-md bg-white dark:bg-slate-800 text-emerald-400 shadow-sm border border-emerald-50 dark:border-emerald-900/50 flex-shrink-0 mt-0.5">
                               <Building2 className="w-3.5 h-3.5" />
                             </div>
                             <div>
                               <dt className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Office</dt>
                               <dd className="text-sm font-semibold text-slate-800">
-                                {document.recipient?.office?.name || document.current_office?.name || 'â€”'}
+                                {document.recipient?.office?.name || document.current_office?.name || '—'}
                               </dd>
                             </div>
                           </div>
@@ -728,20 +727,20 @@ export default function DocumentDetail() {
                       )}
                       {document.recipient_type === 'office' && document.recipient && (
                         <div className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-emerald-50/50 transition-colors">
-                          <div className="p-1.5 rounded-md bg-white text-emerald-400 shadow-sm border border-emerald-50 flex-shrink-0 mt-0.5">
+                          <div className="p-1.5 rounded-md bg-white dark:bg-slate-800 text-emerald-400 shadow-sm border border-emerald-50 dark:border-emerald-900/50 flex-shrink-0 mt-0.5">
                             <Building2 className="w-3.5 h-3.5" />
                           </div>
                           <div>
                             <dt className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Destination Office</dt>
                             <dd className="text-sm font-semibold text-slate-800">
-                              {document.recipient?.name || 'â€”'}
+                              {document.recipient?.name || '—'}
                             </dd>
                           </div>
                         </div>
                       )}
                       {document.cc_users && document.cc_users.length > 0 && (
                         <div className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-emerald-50/50 transition-colors">
-                          <div className="p-1.5 rounded-md bg-white text-emerald-400 shadow-sm border border-emerald-50 flex-shrink-0 mt-0.5">
+                          <div className="p-1.5 rounded-md bg-white dark:bg-slate-800 text-emerald-400 shadow-sm border border-emerald-50 dark:border-emerald-900/50 flex-shrink-0 mt-0.5">
                             <Users className="w-3.5 h-3.5" />
                           </div>
                           <div>
@@ -756,7 +755,7 @@ export default function DocumentDetail() {
                       )}
                       {document.bcc_users && document.bcc_users.length > 0 && (
                         <div className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-emerald-50/50 transition-colors">
-                          <div className="p-1.5 rounded-md bg-white text-emerald-400 shadow-sm border border-emerald-50 flex-shrink-0 mt-0.5">
+                          <div className="p-1.5 rounded-md bg-white dark:bg-slate-800 text-emerald-400 shadow-sm border border-emerald-50 dark:border-emerald-900/50 flex-shrink-0 mt-0.5">
                             <EyeOff className="w-3.5 h-3.5" />
                           </div>
                           <div>
@@ -771,22 +770,7 @@ export default function DocumentDetail() {
                           </div>
                         </div>
                       )}
-                      {document.sla_deadline && (
-                        <div className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-emerald-50/50 transition-colors">
-                          <div className="p-1.5 rounded-md bg-white text-emerald-400 shadow-sm border border-emerald-50 flex-shrink-0 mt-0.5">
-                            <Clock className="w-3.5 h-3.5" />
-                          </div>
-                          <div>
-                            <dt className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">
-                              SLA Deadline
-                            </dt>
-                            <dd className="text-sm font-semibold text-slate-800">
-                              {new Date(document.sla_deadline).toLocaleString()}
-                            </dd>
-                          </div>
-                        </div>
-                      )}
-                    </dl>
+                     </dl>
                   </div>
                 </div>
 
@@ -843,7 +827,7 @@ export default function DocumentDetail() {
                           </div>
 
                           {/* Content Card */}
-                          <div className={`flex-1 min-w-0 bg-white border rounded-xl p-4 transition-all hover:shadow-md ${isLatest ? 'border-primary-200 shadow-sm ring-1 ring-primary-500/10' : 'border-slate-100 hover:border-slate-200'}`}>
+                          <div className={`flex-1 min-w-0 bg-white dark:bg-slate-800 border rounded-xl p-4 transition-all hover:shadow-md ${isLatest ? 'border-primary-200 dark:border-primary-700 shadow-sm ring-1 ring-primary-500/10' : 'border-slate-100 dark:border-slate-700 hover:border-slate-200'}`}>
                             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-3">
                               <div>
                                 <div className="flex items-center gap-2 mb-1.5">
@@ -862,7 +846,7 @@ export default function DocumentDetail() {
                                   {history.actor?.id ? personLabel(history.actor) : 'System'}
                                 </h3>
                                 <p className="text-xs text-slate-500 font-medium mt-0.5">
-                                  {[history.actor?.role?.replace('_', ' '), history.fromOffice?.name].filter(Boolean).map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' â€¢ ')}
+                                  {[history.actor?.role?.replace('_', ' '), history.fromOffice?.name].filter(Boolean).map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' • ')}
                                 </p>
                               </div>
                             </div>
@@ -956,8 +940,8 @@ className="flex items-center justify-between w-full text-left"
                             {lastReturn.remarks || 'No reason provided.'}
                           </p>
                           <p className="text-[11px] text-amber-500 mt-1">
-                            Returned by {lastReturn.actor?.id ? personLabel(lastReturn.actor) : 'â€”'}
-                            {lastReturn.fromOffice?.name && <> â€¢ {lastReturn.fromOffice.name}</>}
+                            Returned by {lastReturn.actor?.id ? personLabel(lastReturn.actor) : '—'}
+                            {lastReturn.fromOffice?.name && <> • {lastReturn.fromOffice.name}</>}
                           </p>
                         </div>
                       )}
@@ -1121,7 +1105,7 @@ className="flex items-center justify-between w-full text-left"
               <ModalPortal>
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                   <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => { setAction(null); setRemarks('') }} />
-                  <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                  <div className="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
 
                     {/* Gradient Header */}
                     <div className={`bg-gradient-to-br ${cfg.gradient} px-6 pt-6 pb-8 relative overflow-hidden`}>
@@ -1149,7 +1133,7 @@ className="flex items-center justify-between w-full text-left"
                     {/* Body */}
                     <div className="p-6 -mt-3 space-y-5">
 
-                      {/* Disposition â€” card grid for approve, dropdown for others */}
+                      {/* Disposition — card grid for approve, dropdown for others */}
                       {action === 'approve' ? (
                         <div>
                           <label className="block text-[11px] font-bold text-slate-500 mb-2 uppercase tracking-widest">
@@ -1218,7 +1202,7 @@ className="flex items-center justify-between w-full text-left"
                             <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
                               {action === 'approve' ? 'Forward To' : action === 'return' ? 'Return To' : action === 'resubmit' ? 'Resubmit To' : 'Send To'}
                             </label>
-                            <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
+                            <div className="flex items-center gap-1 bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
                               <button
                                 type="button"
                                 onClick={() => { setRecipientMode('office'); setRecipientSelection([]) }}
@@ -1452,7 +1436,7 @@ className="flex items-center gap-2 text-left"
                           <p className="text-xs text-slate-400">
                             {(attachment.file_size / 1024).toFixed(0)} KB
                             {attachment.version > 1 && (
-                              <span className="ml-1 text-primary-500">â€¢ {attachment.version} versions</span>
+                              <span className="ml-1 text-primary-500">• {attachment.version} versions</span>
                             )}
                           </p>
                           {attachment.file_hash && (
@@ -1624,7 +1608,7 @@ className="flex items-center gap-2 text-left"
                         <p className="text-sm text-slate-500 mt-0.5">{trail.description}</p>
                         <p className="text-xs text-slate-400 mt-1">
                           {new Date(trail.created_at).toLocaleString()}
-                          {trail.ip_address && <> â€¢ {trail.ip_address}</>}
+                          {trail.ip_address && <> • {trail.ip_address}</>}
                         </p>
                       </div>
                     </div>
@@ -1651,8 +1635,8 @@ className="flex items-center gap-2 text-left"
         <ModalPortal>
           <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowRecallModal(false)} />
-            <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
-            <div className="px-6 py-4 border-b border-slate-200">
+            <div className="relative bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-md mx-4">
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
               <h3 className="text-lg font-semibold text-slate-900">Recall Document</h3>
             </div>
             <div className="px-6 py-4 space-y-3">
@@ -1687,8 +1671,8 @@ className="flex items-center gap-2 text-left"
         <ModalPortal>
           <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={closePreview} />
-            <div className="relative bg-white rounded-xl shadow-xl w-full max-w-4xl mx-4 h-[85vh] flex flex-col">
-              <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+            <div className="relative bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-4xl mx-4 h-[85vh] flex flex-col">
+              <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
                 <div className="flex items-center gap-2 min-w-0">
                   <h3 className="text-lg font-semibold text-slate-900 truncate">{previewAttachment.file_name}</h3>
                   <span className="flex-shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-700/60">
@@ -1731,7 +1715,7 @@ className="flex items-center gap-2 text-left"
                   )}
                 </div>
               {previewVersions.length > 1 && (
-                <div className="w-64 border-l border-slate-200 bg-white overflow-y-auto p-3">
+                <div className="w-64 border-l border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-y-auto p-3">
                   <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
                     <History className="w-3.5 h-3.5" /> Version History
                     {loadingPreviewVersions && (
@@ -1782,7 +1766,7 @@ className="flex items-center gap-2 text-left"
         <ModalPortal>
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => setShowDisseminateModal(false)} />
-            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div className="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
               {/* Header */}
               <div className="bg-gradient-to-br from-blue-500 to-indigo-600 px-6 pt-6 pb-8 relative overflow-hidden">
                 <div className="absolute inset-0 opacity-10">

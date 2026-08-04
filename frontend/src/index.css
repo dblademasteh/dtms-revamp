@@ -119,6 +119,10 @@ html.font-jetbrains-mono, html.font-jetbrains-mono body, html.font-jetbrains-mon
     @apply w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-md shadow-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors;
   }
 
+  .input-sm {
+    @apply px-2.5 py-1.5 text-xs;
+  }
+
   .input:disabled {
     @apply bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed shadow-none;
   }
@@ -215,6 +219,22 @@ html.font-jetbrains-mono, html.font-jetbrains-mono body, html.font-jetbrains-mon
 
   .dark .badge-neutral {
     @apply bg-slate-800 text-slate-300 border-slate-700;
+  }
+
+  .dark .badge-success {
+    @apply text-success-300 border-success-800;
+  }
+
+  .dark .badge-warning {
+    @apply text-warning-300 border-warning-800;
+  }
+
+  .dark .badge-danger {
+    @apply text-danger-300 border-danger-800;
+  }
+
+  .dark .badge-primary {
+    @apply text-primary-300 border-primary-800;
   }
 
   .stat-card {

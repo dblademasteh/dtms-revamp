@@ -31,7 +31,6 @@ class DocumentTest extends TestCase
                 'office_id' => $office->id,
                 'role' => 'approver',
                 'action' => 'approve',
-                'sla_hours' => 24,
             ];
         }
         return RoutingTemplate::create([
@@ -383,23 +382,11 @@ class DocumentTest extends TestCase
         $this->assertEquals(2, $response->json('total'));
     }
 
-    public function test_admin_can_update_default_sla(): void
-    {
-        $office = Office::factory()->create();
-        $admin = \App\Models\User::factory()->administrator()->create(['office_id' => $office->id]);
-        $token = $admin->createToken('test')->plainTextToken;
-        $this->withHeader('Authorization', "Bearer {$token}");
-
-        $response = $this->putJson('/api/admin/settings', ['default_sla_hours' => 72]);
-        $response->assertStatus(200)
-            ->assertJsonPath('settings.default_sla_hours', 72);
-    }
-
     public function test_non_admin_cannot_update_settings(): void
     {
         $this->authenticate();
 
-        $response = $this->putJson('/api/admin/settings', ['default_sla_hours' => 72]);
+        $response = $this->putJson('/api/admin/settings', ['retention_months' => 6]);
         $response->assertStatus(403);
     }
 

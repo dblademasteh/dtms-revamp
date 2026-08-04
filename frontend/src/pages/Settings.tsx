@@ -58,14 +58,13 @@ export default function Settings() {
   const [showPincodeForm, setShowPincodeForm] = useState(false)
   const [pincodeDigits, setPincodeDigits] = useState(['', '', '', ''])
   const [pincodePassword, setPincodePassword] = useState('')
-  const [notifPrefs, setNotifPrefs] = useState<Record<string, boolean>>(
-    (user as any)?.notification_preferences || {
-      doc_routed: true,
-      doc_status: true,
-      doc_overdue: true,
-      doc_created: true,
-    }
-  )
+   const [notifPrefs, setNotifPrefs] = useState<Record<string, boolean>>(
+     (user as any)?.notification_preferences || {
+       doc_routed: true,
+       doc_status: true,
+       doc_created: true,
+     }
+   )
 
   // Sound / Alarm State
   const [soundEnabled, setSoundEnabled] = useState(
@@ -185,16 +184,15 @@ export default function Settings() {
   const [font, setFont] = useState(localStorage.getItem('dtms-font') || 'inter')
   const [scale, setScale] = useState(localStorage.getItem('dtms-scale') || 'md')
 
-  const [slaHours, setSlaHours] = useState<number>(24)
-  const [retentionMonths, setRetentionMonths] = useState<number>(12)
+   const [retentionMonths, setRetentionMonths] = useState<number>(12)
 
-  const slaQuery = useQuery({
-    queryKey: ['admin-settings'],
-    queryFn: () => api.get('/admin/settings').then((r) => r.data.settings),
-    enabled: isSuperadmin,
-  })
+   const settingsQuery = useQuery({
+     queryKey: ['admin-settings'],
+     queryFn: () => api.get('/admin/settings').then((r) => r.data.settings),
+     enabled: isSuperadmin,
+   })
 
-  const officesQuery = useQuery({
+   const officesQuery = useQuery({
     queryKey: ['offices'],
     queryFn: () => api.get('/offices').then((r) => r.data),
   })
@@ -204,24 +202,22 @@ export default function Settings() {
     [officesQuery.data]
   )
 
-  useEffect(() => {
-    if (slaQuery.data) {
-      setSlaHours(slaQuery.data.default_sla_hours)
-      setRetentionMonths(slaQuery.data.retention_months ?? 12)
-    }
-  }, [slaQuery.data])
+   useEffect(() => {
+     if (settingsQuery.data) {
+       setRetentionMonths(settingsQuery.data.retention_months ?? 12)
+     }
+   }, [settingsQuery.data])
 
-  const slaMutation = useMutation({
-    mutationFn: (data: any) => api.put('/admin/settings', data),
-    onSuccess: (res) => {
-      setSlaHours(res.data.settings.default_sla_hours)
-      setRetentionMonths(res.data.settings.retention_months)
-      toast.success('Settings updated')
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Save failed')
-    },
-  })
+   const settingsMutation = useMutation({
+     mutationFn: (data: any) => api.put('/admin/settings', data),
+     onSuccess: (res) => {
+       setRetentionMonths(res.data.settings.retention_months)
+       toast.success('Settings updated')
+     },
+     onError: (error: any) => {
+       toast.error(error.response?.data?.message || 'Save failed')
+     },
+   })
 
   const profileMutation = useMutation({
     mutationFn: (data: any) => api.put('/auth/profile', data),
@@ -753,12 +749,11 @@ export default function Settings() {
               </h2>
             </div>
             <div className="card-body space-y-4">
-              {[
-                { key: 'doc_routed', label: 'Document routed to my office', desc: 'When a document is forwarded to your office' },
-                { key: 'doc_status', label: 'Document status changes', desc: 'When a document you created changes status' },
-                { key: 'doc_overdue', label: 'Overdue document alerts', desc: 'When a document in your office passes SLA deadline' },
-                { key: 'doc_created', label: 'New document notifications', desc: 'When a new document is created in your office' },
-              ].map((pref) => (
+               {[
+                 { key: 'doc_routed', label: 'Document routed to my office', desc: 'When a document is forwarded to your office' },
+                 { key: 'doc_status', label: 'Document status changes', desc: 'When a document you created changes status' },
+                 { key: 'doc_created', label: 'New document notifications', desc: 'When a new document is created in your office' },
+               ].map((pref) => (
                 <div key={pref.key} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-700">
                   <div>
                     <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{pref.label}</p>
@@ -1022,78 +1017,42 @@ export default function Settings() {
       {/* System (Admin only) */}
       {activeTab === 'system' && isSuperadmin && (
         <div className="space-y-6">
-          <div className="card">
-            <div className="card-header flex items-center gap-2">
-              <SettingsIcon className="w-4 h-4 text-slate-500" />
-              <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
-                SLA Configuration
-              </h2>
-            </div>
-            <div className="card-body space-y-4">
-              <p className="text-xs text-slate-500">
-                Default processing time (in hours) applied to a routing step when its template does not specify an SLA.
-                Changes apply to newly created or routed documents.
-              </p>
-              <div className="flex items-end gap-3">
-                <div className="flex-1">
-                  <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
-                    Default SLA (hours)
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    className="input"
-                    value={slaHours}
-                    onChange={(e) => setSlaHours(Number(e.target.value))}
-                  />
-                </div>
-                <button
-                  onClick={() => slaMutation.mutate({ default_sla_hours: slaHours })}
-                  disabled={slaMutation.isPending}
-                  className="btn btn-primary btn-sm"
-                >
-                  {slaMutation.isPending ? 'Saving...' : 'Save SLA'}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="card-header flex items-center gap-2">
-              <SettingsIcon className="w-4 h-4 text-slate-500" />
-              <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
-                Document Retention
-              </h2>
-            </div>
-            <div className="card-body space-y-4">
-              <p className="text-xs text-slate-500">
-                Attachments of completed (approved/released) documents are moved to the archive once they exceed this retention
-                window. Archived files can be restored from the Storage admin page and are purged permanently after a 30-day grace period.
-              </p>
-              <div className="flex items-end gap-3">
-                <div className="flex-1">
-                  <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
-                    Retention period (months)
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={240}
-                    className="input"
-                    value={retentionMonths}
-                    onChange={(e) => setRetentionMonths(Number(e.target.value))}
-                  />
-                </div>
-                <button
-                  onClick={() => slaMutation.mutate({ default_sla_hours: slaHours, retention_months: retentionMonths })}
-                  disabled={slaMutation.isPending}
-                  className="btn btn-primary btn-sm"
-                >
-                  {slaMutation.isPending ? 'Saving...' : 'Save Retention'}
-                </button>
-              </div>
-            </div>
-          </div>
+           <div className="card">
+             <div className="card-header flex items-center gap-2">
+               <SettingsIcon className="w-4 h-4 text-slate-500" />
+               <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
+                 Document Retention
+               </h2>
+             </div>
+             <div className="card-body space-y-4">
+               <p className="text-xs text-slate-500">
+                 Attachments of completed (approved/released) documents are moved to the archive once they exceed this retention
+                 window. Archived files can be restored from the Storage admin page and are purged permanently after a 30-day grace period.
+               </p>
+               <div className="flex items-end gap-3">
+                 <div className="flex-1">
+                   <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
+                     Retention period (months)
+                   </label>
+                   <input
+                     type="number"
+                     min={1}
+                     max={240}
+                     className="input"
+                     value={retentionMonths}
+                     onChange={(e) => setRetentionMonths(Number(e.target.value))}
+                   />
+                 </div>
+                 <button
+                   onClick={() => settingsMutation.mutate({ retention_months: retentionMonths })}
+                   disabled={settingsMutation.isPending}
+                   className="btn btn-primary btn-sm"
+                 >
+                   {settingsMutation.isPending ? 'Saving...' : 'Save Retention'}
+                 </button>
+               </div>
+             </div>
+           </div>
 
           {/* Rank Management Section */}
           <RankManagementSection />

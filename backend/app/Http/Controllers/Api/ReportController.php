@@ -199,9 +199,6 @@ class ReportController extends Controller
             'released_today' => Document::where('status', 'released')
                 ->whereDate('released_at', today())
                 ->count(),
-            'overdue_documents' => Document::where('sla_deadline', '<', now())
-                ->whereNotIn('status', ['approved', 'released', 'filed', 'rejected'])
-                ->count(),
         ];
 
         // Office-specific stats if not admin

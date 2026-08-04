@@ -635,7 +635,7 @@ function MailboxView({ mailbox, initialUnread, onOpenSettings }: { mailbox: Mail
 
       <div className="flex-1 min-h-0 flex gap-4">
         {/* Folders sidebar */}
-        <div className="hidden md:flex flex-col w-44 flex-shrink-0 bg-white border border-slate-200 rounded-xl p-2 overflow-y-auto">
+              <div className="hidden md:flex flex-col w-44 flex-shrink-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 overflow-y-auto">
           {folders.length === 0 && (
             <button
               onClick={() => syncMutation.mutate()}
@@ -667,7 +667,7 @@ function MailboxView({ mailbox, initialUnread, onOpenSettings }: { mailbox: Mail
         </div>
 
         {/* Message list */}
-        <div className="flex-1 min-w-0 flex flex-col bg-white border border-slate-200 rounded-xl overflow-hidden">
+              <div className="flex-1 min-w-0 flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
           {messagesPageQuery.isLoading ? (
             <div className="flex-1 flex items-center justify-center">
               <Loader2 className="w-6 h-6 text-primary-500 animate-spin" />
@@ -735,7 +735,7 @@ function MailboxView({ mailbox, initialUnread, onOpenSettings }: { mailbox: Mail
       {selectedId && (
         <div className="fixed inset-0 z-40 flex justify-end">
           <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-sm" onClick={() => setSelectedId(null)} />
-          <div className="relative w-full max-w-2xl bg-white shadow-2xl h-full flex flex-col animate-in slide-in-from-right duration-200">
+              <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 shadow-2xl h-full flex flex-col animate-in slide-in-from-right duration-200">
             {messageDetailQuery.isLoading ? (
               <div className="flex-1 flex items-center justify-center">
                 <Loader2 className="w-6 h-6 text-primary-500 animate-spin" />

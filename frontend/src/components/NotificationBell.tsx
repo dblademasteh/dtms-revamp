@@ -66,18 +66,13 @@ export default function NotificationBell() {
           title: 'Document Returned',
           message: `The document "${n.data?.subject ?? n.message}"${tracking} was returned to you with remarks. Please review and resubmit if needed.`,
         }
-      case 'document_rejected':
-        return {
-          title: 'Document Declined',
-          message: `The document "${n.data?.subject ?? n.message}"${tracking} you sent was declined. Open it to see the reason.`,
-        }
-      case 'document_overdue':
-        return {
-          title: 'Document Overdue',
-          message: `The document "${n.data?.subject ?? n.message}"${tracking} is past its SLA deadline. Action is required immediately.`,
-        }
-      default:
-        return { title: n.title || 'Update', message: n.message || '' }
+        case 'document_rejected':
+          return {
+            title: 'Document Declined',
+            message: `The document "${n.data?.subject ?? n.message}"${tracking} you sent was declined. Open it to see the reason.`,
+          }
+        default:
+          return { title: n.title || 'Update', message: n.message || '' }
     }
   }
 
@@ -213,7 +208,7 @@ export default function NotificationBell() {
       >
         <Bell className={`w-5 h-5 transition-colors ${unreadCount > 0 ? 'animate-bell-ring text-blue-600' : ''}`} />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold min-w-[18px] h-[18px]">
+          <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}

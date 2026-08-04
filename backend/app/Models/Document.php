@@ -24,7 +24,6 @@ class Document extends Model
         'current_office_id',
         'routing_template_id',
         'current_step',
-        'sla_deadline',
         'released_at',
         'is_public',
         'classification',
@@ -40,7 +39,6 @@ class Document extends Model
         'priority' => DocumentPriority::class,
         'status' => DocumentStatus::class,
         'current_step' => 'integer',
-        'sla_deadline' => 'datetime',
         'released_at' => 'datetime',
         'is_public' => 'boolean',
         'cc_list' => 'array',
@@ -241,17 +239,6 @@ class Document extends Model
         return $query->where('status', DocumentStatus::RELEASED);
     }
 
-    public function scopeOverdue($query)
-    {
-        return $query->where('sla_deadline', '<', now())
-                    ->whereNotIn('status', [
-                        DocumentStatus::APPROVED,
-                        DocumentStatus::RELEASED,
-                        DocumentStatus::FILED,
-                        DocumentStatus::REJECTED,
-                    ]);
-    }
-
     // Helper methods
     public static function generateTrackingNumber(?string $officeCode = null): string
     {
@@ -264,26 +251,5 @@ class Document extends Model
         }
 
         return sprintf('%s-%s-%s', $prefix, $year, $code);
-    }
-
-    public function isOverdue(): bool
-    {
-        return $this->sla_deadline && 
-               $this->sla_deadline->isPast() && 
-               !in_array($this->status, [
-                   DocumentStatus::APPROVED,
-                   DocumentStatus::RELEASED,
-                   DocumentStatus::FILED,
-                   DocumentStatus::REJECTED,
-               ]);
-    }
-
-    public function getDaysRemaining(): ?int
-    {
-        if (!$this->sla_deadline) {
-            return null;
-        }
-
-        return now()->diffInDays($this->sla_deadline, false);
     }
 }

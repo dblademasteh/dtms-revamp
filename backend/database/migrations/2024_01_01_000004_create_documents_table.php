@@ -27,7 +27,6 @@ return new class extends Migration
             $table->foreignId('originator_id')->constrained('users');
             $table->foreignId('current_office_id')->constrained('offices');
             $table->foreignId('routing_template_id')->nullable()->constrained();
-            $table->timestamp('sla_deadline')->nullable();
             $table->timestamp('released_at')->nullable();
             $table->boolean('is_public')->default(false);
             $table->timestamps();

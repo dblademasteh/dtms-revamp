@@ -31,9 +31,4 @@ class SystemSetting extends Model
         static::updateOrCreate(['key' => $key], ['value' => (string) $value]);
         Cache::forget("system_setting_{$key}");
     }
-
-    public static function getDefaultSlaHours(): int
-    {
-        return (int) self::get('default_sla_hours', 24);
-    }
 }

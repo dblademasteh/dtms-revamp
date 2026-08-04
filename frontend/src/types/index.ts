@@ -36,7 +36,6 @@ export interface Document {
   originator_id: number
   current_office_id: number
   routing_template_id?: number
-  sla_deadline?: string
   released_at?: string
   is_public: boolean
   originator?: User
@@ -63,7 +62,6 @@ export interface RoutingStep {
   office_id: number
   role: string
   action: string
-  sla_hours: number
 }
 
 export interface DocumentAttachment {

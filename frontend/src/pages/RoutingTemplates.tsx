@@ -15,9 +15,8 @@ import {
   Archive,
   Search,
   CheckCircle2,
-  Send,
-  Clock,
-  GripVertical,
+   Send,
+   GripVertical,
 } from 'lucide-react'
 import { DOCUMENT_TYPES, documentTypeLabel } from '@/constants/documentOptions'
 import ConfirmModal from '@/components/ConfirmModal'
@@ -41,7 +40,7 @@ export default function RoutingTemplates() {
   const [name, setName] = useState('')
   const [docType, setDocType] = useState('')
   const [description, setDescription] = useState('')
-  const [steps, setSteps] = useState<any[]>([{ office_id: '', role: 'approver', action: 'review', sla_hours: 24 }])
+   const [steps, setSteps] = useState<any[]>([{ office_id: '', role: 'approver', action: 'review' }])
   const [deleteTarget, setDeleteTarget] = useState<any>(null)
 
   const { data: templates, isLoading } = useQuery({
@@ -89,7 +88,7 @@ export default function RoutingTemplates() {
     setName('')
     setDocType('')
     setDescription('')
-    setSteps([{ office_id: '', role: 'approver', action: 'review', sla_hours: 24 }])
+    setSteps([{ office_id: '', role: 'approver', action: 'review' }])
   }
 
   const startEdit = (t: any) => {
@@ -101,7 +100,7 @@ export default function RoutingTemplates() {
     setShowForm(true)
   }
 
-  const addStep = () => setSteps([...steps, { office_id: '', role: 'approver', action: 'review', sla_hours: 24 }])
+   const addStep = () => setSteps([...steps, { office_id: '', role: 'approver', action: 'review' }])
   const removeStep = (i: number) => setSteps(steps.filter((_, idx) => idx !== i))
   const updateStep = (i: number, key: string, value: any) => {
     const updated = [...steps]
@@ -258,25 +257,15 @@ export default function RoutingTemplates() {
                           <option key={key} value={key}>{meta.label}</option>
                         ))}
                       </select>
-                      <select
-                        className="input w-28 cursor-pointer"
-                        value={step.action}
-                        onChange={e => updateStep(i, 'action', e.target.value)}
-                      >
-                        {Object.entries(ACTION_META).map(([key, meta]) => (
-                          <option key={key} value={key}>{meta.label}</option>
-                        ))}
-                      </select>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          className="input w-20 !pl-3"
-                          value={step.sla_hours}
-                          onChange={e => updateStep(i, 'sla_hours', Number(e.target.value))}
-                          min="1"
-                        />
-                      </div>
-                      <span className="text-xs text-slate-400">hrs</span>
+                       <select
+                         className="input w-28 cursor-pointer"
+                         value={step.action}
+                         onChange={e => updateStep(i, 'action', e.target.value)}
+                       >
+                         {Object.entries(ACTION_META).map(([key, meta]) => (
+                           <option key={key} value={key}>{meta.label}</option>
+                         ))}
+                       </select>
                       {steps.length > 1 && (
                         <button
                           type="button"
@@ -408,11 +397,9 @@ export default function RoutingTemplates() {
                       <p className="text-xs text-slate-400">No steps defined.</p>
                     )}
                   </div>
-                  <div className="mt-2 flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500">
-                    <Clock className="h-3 w-3" />
-                    {t.steps?.length || 0} step{(t.steps?.length || 0) !== 1 ? 's' : ''} &middot; total{' '}
-                    {t.steps?.reduce((sum: number, s: any) => sum + (Number(s.sla_hours) || 0), 0)}h SLA
-                  </div>
+                    <div className="mt-2 flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500">
+                      {t.steps?.length || 0} step{(t.steps?.length || 0) !== 1 ? 's' : ''}
+                   </div>
                 </div>
               </div>
             )

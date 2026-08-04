@@ -341,7 +341,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/settings', function () {
             return response()->json([
                 'settings' => [
-                    'default_sla_hours' => \App\Models\SystemSetting::getDefaultSlaHours(),
                     'retention_months' => (int) \App\Models\SystemSetting::get('retention_months', 12),
                 ],
             ]);
@@ -349,11 +348,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::put('/settings', function (\Illuminate\Http\Request $request) {
             $request->validate([
-                'default_sla_hours' => 'required|integer|min:1|max:8760',
                 'retention_months' => 'sometimes|integer|min:1|max:240',
             ]);
-
-            \App\Models\SystemSetting::set('default_sla_hours', $request->default_sla_hours);
 
             if ($request->has('retention_months')) {
                 \App\Models\SystemSetting::set('retention_months', $request->retention_months);
@@ -362,7 +358,6 @@ Route::middleware('auth:sanctum')->group(function () {
             return response()->json([
                 'message' => 'Settings updated',
                 'settings' => [
-                    'default_sla_hours' => \App\Models\SystemSetting::getDefaultSlaHours(),
                     'retention_months' => (int) \App\Models\SystemSetting::get('retention_months', 12),
                 ],
             ]);

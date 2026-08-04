@@ -325,7 +325,6 @@ class BfpRegion2Seeder extends Seeder
             'office_id' => $this->offices[$s['office']]->id,
             'role' => $s['role'],
             'action' => $s['action'],
-            'sla_hours' => $s['sla_hours'],
         ], $steps);
 
         RoutingTemplate::create([
@@ -343,32 +342,32 @@ class BfpRegion2Seeder extends Seeder
         $this->template('FSIC Application Routing', 'fsic_application',
             'Fire Safety Inspection Certificate (FSIC) application: Regional Records -> Regional Review -> Regional Sign',
             [
-                ['office' => 'BFP-R2', 'role' => 'records_officer', 'action' => 'receive', 'sla_hours' => 24],
-                ['office' => 'BFP-R2', 'role' => 'approver', 'action' => 'inspect', 'sla_hours' => 72],
-                ['office' => 'BFP-R2', 'role' => 'division_head', 'action' => 'sign', 'sla_hours' => 48],
+                ['office' => 'BFP-R2', 'role' => 'records_officer', 'action' => 'receive'],
+                ['office' => 'BFP-R2', 'role' => 'approver', 'action' => 'inspect'],
+                ['office' => 'BFP-R2', 'role' => 'division_head', 'action' => 'sign'],
             ]);
 
         $this->template('Administrative Memorandum', 'memorandum',
             'Administrative memorandum: Regional Review -> Regional Sign',
             [
-                ['office' => 'BFP-R2', 'role' => 'division_head', 'action' => 'review', 'sla_hours' => 24],
-                ['office' => 'BFP-R2', 'role' => 'division_head', 'action' => 'sign', 'sla_hours' => 48],
+                ['office' => 'BFP-R2', 'role' => 'division_head', 'action' => 'review'],
+                ['office' => 'BFP-R2', 'role' => 'division_head', 'action' => 'sign'],
             ]);
 
         $this->template('Travel Order', 'travel_order',
             'Travel Order: Regional Review -> Regional Approve -> Regional Sign',
             [
-                ['office' => 'BFP-R2', 'role' => 'approver', 'action' => 'review', 'sla_hours' => 24],
-                ['office' => 'BFP-R2', 'role' => 'division_head', 'action' => 'approve', 'sla_hours' => 48],
-                ['office' => 'BFP-R2', 'role' => 'division_head', 'action' => 'sign', 'sla_hours' => 24],
+                ['office' => 'BFP-R2', 'role' => 'approver', 'action' => 'review'],
+                ['office' => 'BFP-R2', 'role' => 'division_head', 'action' => 'approve'],
+                ['office' => 'BFP-R2', 'role' => 'division_head', 'action' => 'sign'],
             ]);
 
         $this->template('Fire Investigation Report', 'fire_investigation_report',
             'Fire Investigation Report: Regional Review -> Regional Endorse -> Regional Approve',
             [
-                ['office' => 'BFP-R2', 'role' => 'approver', 'action' => 'review', 'sla_hours' => 48],
-                ['office' => 'BFP-R2', 'role' => 'division_head', 'action' => 'endorse', 'sla_hours' => 48],
-                ['office' => 'BFP-R2', 'role' => 'division_head', 'action' => 'approve', 'sla_hours' => 48],
+                ['office' => 'BFP-R2', 'role' => 'approver', 'action' => 'review'],
+                ['office' => 'BFP-R2', 'role' => 'division_head', 'action' => 'endorse'],
+                ['office' => 'BFP-R2', 'role' => 'division_head', 'action' => 'approve'],
             ]);
     }
 }
