@@ -90,6 +90,19 @@ export default function Storage() {
     }).then((r) => r.data),
   })
 
+  const handleDelete = (path: string) => {
+    if (!window.confirm(`Are you sure you want to permanently delete this item? This action is irreversible.`)) {
+      return
+    }
+    api.post('/admin/storage/delete', { path })
+      .then((res) => {
+        toast.success(res.data?.message || 'Deleted successfully')
+        browseQuery.refetch()
+        refetch()
+      })
+      .catch((e: any) => toast.error(e.response?.data?.error || 'Failed to delete path'))
+  }
+
   const runAction = (key: string, url: string, successMsg?: string, refreshAll = true) => {
     setBusy(key)
     api.post(url)
@@ -647,22 +660,33 @@ export default function Storage() {
 
                       {/* Directories */}
                       {(browseQuery.data?.directories || []).map((dir: any) => (
-                        <button
+                        <div
                           key={dir.path}
-                          onClick={() => setBrowsingPath(dir.path)}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-left"
+                          className="flex items-center gap-3 px-4 py-2.5 text-xs hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                         >
-                          <FolderOpen className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                          <span className="flex-1 truncate text-slate-800 dark:text-slate-100">{dir.name}</span>
+                          <button
+                            onClick={() => setBrowsingPath(dir.path)}
+                            className="flex-1 flex items-center gap-3 text-left font-bold text-slate-700 dark:text-slate-200 focus:outline-none"
+                          >
+                            <FolderOpen className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                            <span className="truncate text-slate-800 dark:text-slate-100">{dir.name}</span>
+                          </button>
                           <span className="text-[10px] text-slate-400">Folder</span>
-                        </button>
+                          <button
+                            onClick={() => handleDelete(dir.path)}
+                            className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-400 hover:text-red-500 transition-colors"
+                            title="Delete Folder"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       ))}
 
                       {/* Files */}
                       {(browseQuery.data?.files || []).map((file: any) => (
                         <div
                           key={file.path}
-                          className="flex items-center gap-3 px-4 py-3 text-xs hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                          className="flex items-center gap-3 px-4 py-2.5 text-xs hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                         >
                           <FileText className="w-4 h-4 text-slate-400 flex-shrink-0" />
                           <span className="flex-1 font-medium text-slate-700 dark:text-slate-200 truncate">{file.name}</span>
@@ -676,6 +700,13 @@ export default function Storage() {
                           >
                             <ExternalLink className="w-3.5 h-3.5" />
                           </a>
+                          <button
+                            onClick={() => handleDelete(file.path)}
+                            className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-400 hover:text-red-500 transition-colors"
+                            title="Delete File"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       ))}
 

@@ -531,4 +531,39 @@ class StorageController extends Controller
             'files' => $files,
         ]);
     }
+
+    /**
+     * Delete file or directory.
+     */
+    public function deletePath(Request $request)
+    {
+        $path = $request->input('path', '');
+        
+        $path = str_replace(['..', '\\'], ['', '/'], $path);
+        $path = trim($path, '/');
+        
+        if (empty($path)) {
+            return response()->json(['error' => 'Cannot delete root directory'], 400);
+        }
+
+        $disk = Storage::disk('public');
+        
+        if (!$disk->exists($path)) {
+            return response()->json(['error' => 'Path not found'], 404);
+        }
+
+        try {
+            $isDir = is_dir($disk->path($path));
+            if ($isDir) {
+                $disk->deleteDirectory($path);
+                DocumentAttachment::where('file_path', 'like', $path . '/%')->delete();
+            } else {
+                $disk->delete($path);
+                DocumentAttachment::where('file_path', $path)->delete();
+            }
+            return response()->json(['message' => 'Deleted successfully']);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to delete: ' . $e->getMessage()], 500);
+        }
+    }
 }
