@@ -7,6 +7,7 @@ import ModalPortal from '@/components/ModalPortal'
 import { Plus, Edit, Trash2, Building2, X, ChevronRight, ChevronDown, Save, UserCheck, Search } from 'lucide-react'
 import ConfirmModal from '@/components/ConfirmModal'
 import { buildSelectStyles } from '@/utils/selectStyles'
+import SearchableSelect from '@/components/SearchableSelect'
 
 const OFFICE_TYPES = [
   { value: 'regional_office', label: 'Regional Office' },
@@ -321,7 +322,7 @@ export default function Offices() {
         <button
           onClick={() => setTypeFilter('')}
           className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
-            !typeFilter ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+            !typeFilter ? 'bg-primary-600 text-white border-primary-600' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
           }`}
         >
           All
@@ -331,7 +332,7 @@ export default function Offices() {
             key={t.value}
             onClick={() => setTypeFilter(t.value)}
             className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
-              typeFilter === t.value ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+              typeFilter === t.value ? 'bg-primary-600 text-white border-primary-600' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
             }`}
           >
             {t.label}
@@ -425,10 +426,12 @@ export default function Offices() {
                     </div>
                     <div>
                       <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Office Type</label>
-                      <select className="input" value={officeType} onChange={e => setOfficeType(e.target.value)}>
-                        <option value="">Select type...</option>
-                        {OFFICE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                      </select>
+                      <SearchableSelect
+                        options={OFFICE_TYPES}
+                        value={officeType}
+                        onChange={setOfficeType}
+                        placeholder="Select type..."
+                      />
                     </div>
                     <div className="p-4 rounded-xl border-2 border-primary-100 bg-gradient-to-br from-primary-50/50 to-white">
                       <div className="flex items-center gap-2 mb-2">
