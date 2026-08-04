@@ -572,8 +572,8 @@ export default function Offices() {
                   <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Head</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Storage</th>
-                  <th className="relative px-6 py-3 w-24">
-                    <span className="sr-only">Actions</span>
+                  <th className="relative px-6 py-3 text-right">
+                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Action</span>
                   </th>
                 </tr>
               </thead>

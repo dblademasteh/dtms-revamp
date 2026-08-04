@@ -428,7 +428,7 @@ export default function CreateDocument() {
                     <button
                       type="button"
                       onClick={() => { setShowCc(false); setCcSelection([]) }}
-                      className="p-1 text-slate-400 hover:text-danger-600 rounded-md hover:bg-white transition-colors ml-1"
+                      className="p-1 text-slate-400 hover:text-danger-600 rounded-md hover:bg-white dark:hover:bg-slate-800 transition-colors ml-1"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -480,7 +480,7 @@ export default function CreateDocument() {
                     <button
                       type="button"
                       onClick={() => { setShowBcc(false); setBccSelection([]) }}
-                      className="p-1 text-slate-400 hover:text-danger-600 rounded-md hover:bg-white transition-colors ml-1"
+                      className="p-1 text-slate-400 hover:text-danger-600 rounded-md hover:bg-white dark:hover:bg-slate-800 transition-colors ml-1"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>

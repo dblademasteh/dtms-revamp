@@ -161,7 +161,7 @@ export default function Storage() {
             <>
               {/* Summary cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <div className="rounded-xl border border-slate-200 p-4 bg-white">
+                <div className="rounded-xl border border-slate-200 p-4 bg-white dark:bg-slate-900">
                   <div className="flex items-center gap-2 text-slate-500 mb-1">
                     <Files className="w-4 h-4" />
                     <p className="text-xs font-semibold uppercase tracking-wider">Active Storage</p>
@@ -169,7 +169,7 @@ export default function Storage() {
                   <p className="text-xl font-bold text-slate-900">{formatBytes(t.active_bytes)}</p>
                   <p className="text-xs text-slate-500">{t.active_files.toLocaleString()} active files</p>
                 </div>
-                <div className="rounded-xl border border-slate-200 p-4 bg-white">
+                <div className="rounded-xl border border-slate-200 p-4 bg-white dark:bg-slate-900">
                   <div className="flex items-center gap-2 text-slate-500 mb-1">
                     <Archive className="w-4 h-4" />
                     <p className="text-xs font-semibold uppercase tracking-wider">Archived</p>
@@ -177,7 +177,7 @@ export default function Storage() {
                   <p className="text-xl font-bold text-slate-900">{formatBytes(t.archived_bytes)}</p>
                   <p className="text-xs text-slate-500">{t.archived_files.toLocaleString()} files awaiting purge</p>
                 </div>
-                <div className="rounded-xl border border-slate-200 p-4 bg-white">
+                <div className="rounded-xl border border-slate-200 p-4 bg-white dark:bg-slate-900">
                   <div className="flex items-center gap-2 text-slate-500 mb-1">
                     <ShieldAlert className="w-4 h-4" />
                     <p className="text-xs font-semibold uppercase tracking-wider">Reclaimable</p>
@@ -185,7 +185,7 @@ export default function Storage() {
                   <p className="text-xl font-bold text-emerald-600">{formatBytes(reclaim.total_bytes)}</p>
                   <p className="text-xs text-slate-500">{reclaim.total_files.toLocaleString()} files</p>
                 </div>
-                <div className="rounded-xl border border-slate-200 p-4 bg-white">
+                <div className="rounded-xl border border-slate-200 p-4 bg-white dark:bg-slate-900">
                   <div className="flex items-center gap-2 text-slate-500 mb-1">
                     <BarChart3 className="w-4 h-4" />
                     <p className="text-xs font-semibold uppercase tracking-wider">Total on disk</p>

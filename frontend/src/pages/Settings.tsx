@@ -675,7 +675,7 @@ export default function Settings() {
                           <input
                             key={idx}
                             type="text" inputMode="numeric" maxLength={1}
-                            className="w-12 h-12 text-center text-lg font-bold rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                            className="w-12 h-12 text-center text-lg font-bold rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
                             value={digit}
                             onChange={(e) => {
                               if (e.target.value && !/^\d$/.test(e.target.value)) return
@@ -1191,7 +1191,7 @@ function DatabaseManagement() {
                   {(info.tables || []).map((t: any) => (
                     <div
                       key={t.name}
-                      className="flex items-center justify-between px-3 py-2 rounded-lg border border-slate-200 bg-white"
+className="flex items-center justify-between px-3 py-2 rounded-lg border border-slate-200 bg-white dark:bg-slate-800"
                     >
                       <span className="text-sm font-medium text-slate-900">{t.name}</span>
                       <span className="text-xs text-slate-500">{t.rows.toLocaleString()} rows</span>
@@ -1248,7 +1248,7 @@ function DatabaseManagement() {
               </p>
             </div>
             {info?.last_backup ? (
-              <div className="flex items-center justify-between px-3 py-2 rounded-lg border border-slate-200 bg-white">
+              <div className="flex items-center justify-between px-3 py-2 rounded-lg border border-slate-200 bg-white dark:bg-slate-800">
                 <span className="text-sm font-medium text-slate-900">{info.last_backup}</span>
                 <button
                   className="btn btn-ghost btn-sm"
@@ -1359,7 +1359,7 @@ function TwoFactorCard() {
           <div className="space-y-4">
             <p className="text-sm text-slate-500">Scan the QR code with your authenticator app, then enter the 6-digit code to confirm.</p>
             <div className="flex flex-col sm:flex-row gap-4 items-start">
-              <div className="w-[180px] h-[180px] p-2 bg-white rounded-xl border border-slate-200 flex items-center justify-center overflow-hidden" dangerouslySetInnerHTML={{ __html: setup.qr_svg }} />
+              <div className="w-[180px] h-[180px] p-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 flex items-center justify-center overflow-hidden" dangerouslySetInnerHTML={{ __html: setup.qr_svg }} />
               <div className="flex-1 space-y-3 w-full">
                 <div>
                   <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1">Manual Key</p>
@@ -1381,12 +1381,12 @@ function TwoFactorCard() {
         )}
 
         {recovery && (
-          <div className="rounded-xl border border-warning-200 bg-warning-50 p-4 space-y-3">
+          <div className="rounded-xl border border-warning-200 dark:border-warning-700 bg-warning-50 dark:bg-warning-900/30 p-4 space-y-3">
             <p className="text-sm font-semibold text-warning-800">Save these recovery codes</p>
             <p className="text-xs text-warning-700">Each code can be used once if you lose access to your authenticator.</p>
             <div className="grid grid-cols-2 gap-2">
               {recovery.map((c) => (
-                <code key={c} className="text-xs font-mono bg-white border border-warning-200 rounded px-2 py-1.5 text-center text-slate-700 select-all">{c}</code>
+                <code key={c} className="text-xs font-mono bg-white dark:bg-slate-800 border border-warning-200 dark:border-warning-700 rounded px-2 py-1.5 text-center text-slate-700 dark:text-slate-200 select-all">{c}</code>
               ))}
             </div>
             <button className="btn btn-primary btn-sm" onClick={() => { setRecovery(null); statusQuery.refetch() }}>I've saved them</button>
