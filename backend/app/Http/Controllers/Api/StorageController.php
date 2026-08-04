@@ -486,4 +486,49 @@ class StorageController extends Controller
         }
         return round($bytes, 2) . ' ' . $units[$i];
     }
+
+    /**
+     * Directory browser helper.
+     */
+    public function browse(Request $request)
+    {
+        $path = $request->query('path', '');
+        
+        // Clean path to prevent directory traversal
+        $path = str_replace(['..', '\\'], ['', '/'], $path);
+        $path = trim($path, '/');
+        
+        $disk = Storage::disk('public');
+        
+        if ($path && !$disk->exists($path)) {
+            return response()->json(['error' => 'Directory not found'], 404);
+        }
+
+        // List directories inside current path
+        $directories = collect($disk->directories($path))
+            ->map(function ($dir) {
+                return [
+                    'name' => basename($dir),
+                    'path' => $dir,
+                ];
+            });
+
+        // List files inside current path
+        $files = collect($disk->files($path))
+            ->map(function ($file) use ($disk) {
+                return [
+                    'name' => basename($file),
+                    'path' => $file,
+                    'size' => $disk->size($file),
+                    'last_modified' => $disk->lastModified($file),
+                    'url' => $disk->url($file),
+                ];
+            });
+
+        return response()->json([
+            'current_path' => $path,
+            'directories' => $directories,
+            'files' => $files,
+        ]);
+    }
 }

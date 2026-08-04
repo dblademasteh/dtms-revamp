@@ -823,6 +823,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Storage management (admin only)
         Route::prefix('storage')->group(function () {
             Route::get('/summary', [StorageController::class, 'summary']);
+            Route::get('/browse', [StorageController::class, 'browse']);
             Route::post('/cleanup/versions', [StorageController::class, 'cleanupVersions']);
             Route::post('/cleanup/duplicates', [StorageController::class, 'cleanupDuplicates']);
             Route::post('/archive/expired', [StorageController::class, 'archiveExpired']);

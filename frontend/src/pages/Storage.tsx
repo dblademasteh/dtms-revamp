@@ -1,7 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import api from '@/services/api'
 import ConfirmModal from '@/components/ConfirmModal'
+import ModalPortal from '@/components/ModalPortal'
 import {
   HardDrive,
   Archive,
@@ -18,6 +19,9 @@ import {
   Link2,
   Boxes,
   FolderOpen,
+  ArrowLeft,
+  ExternalLink,
+  X,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -54,6 +58,25 @@ export default function Storage() {
   const [archivePage, setArchivePage] = useState(1)
   const [archiveSearch, setArchiveSearch] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
+  const [browsingPath, setBrowsingPath] = useState<string | null>(null)
+
+  const browseQuery = useQuery({
+    queryKey: ['storage-browse', browsingPath],
+    queryFn: () => {
+      if (browsingPath === null) return null
+      return api.get('/admin/storage/browse', { params: { path: browsingPath } }).then((r) => r.data)
+    },
+    enabled: browsingPath !== null,
+  })
+
+  const breadcrumbs = useMemo(() => {
+    if (!browsingPath) return []
+    const parts = browsingPath.split('/')
+    return parts.map((part, index) => {
+      const path = parts.slice(0, index + 1).join('/')
+      return { label: part, path }
+    })
+  }, [browsingPath])
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['storage-summary'],
@@ -240,8 +263,13 @@ export default function Storage() {
                 {(data?.directories || []).map((d: any) => (
                   <tr key={d.name} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
                     <td className="px-4 py-2.5 text-sm font-semibold text-slate-900 flex items-center gap-2">
-                      <FolderOpen className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                      <span>{d.name}</span>
+                      <button
+                        onClick={() => setBrowsingPath(d.name)}
+                        className="hover:text-primary-600 dark:hover:text-primary-400 flex items-center gap-2 text-left focus:outline-none transition-colors"
+                      >
+                        <FolderOpen className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                        <span className="underline decoration-dotted decoration-slate-400 hover:decoration-primary-600">{d.name}</span>
+                      </button>
                     </td>
                     <td className="px-4 py-2.5 text-xs font-mono text-slate-500">
                       storage/app/public/{d.name}
@@ -550,6 +578,131 @@ export default function Storage() {
         onCancel={() => setConfirm(null)}
         danger={confirm?.label === 'Delete' || confirm?.label === 'Purge'}
       />
+
+      {/* Directory Browser Modal */}
+      {browsingPath !== null && (
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setBrowsingPath(null)} />
+            
+            <div className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
+              {/* Header */}
+              <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-100 dark:border-amber-900/50">
+                    <FolderOpen className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Storage Directory Browser</h3>
+                    {/* Breadcrumbs */}
+                    <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      <button onClick={() => setBrowsingPath('')} className="hover:underline hover:text-amber-500">Root</button>
+                      {breadcrumbs.map((b: any) => (
+                        <span key={b.path} className="flex items-center gap-1">
+                          <span>/</span>
+                          <button onClick={() => setBrowsingPath(b.path)} className="hover:underline hover:text-amber-500 max-w-[80px] truncate">{b.label}</button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setBrowsingPath(null)}
+                  className="p-1.5 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 overflow-y-auto flex-1 space-y-4">
+                {browseQuery.isLoading ? (
+                  <div className="py-12 text-center text-sm text-slate-500">
+                    <span className="inline-block w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mb-2" />
+                    <p>Scanning directory files...</p>
+                  </div>
+                ) : browseQuery.isError ? (
+                  <div className="py-12 text-center text-sm text-red-500">
+                    Failed to read storage directory. It may not exist or has been deleted.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Folders & Files combined list */}
+                    <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
+                      {/* Back button if not at root */}
+                      {browsingPath !== '' && (
+                        <button
+                          onClick={() => {
+                            const parts = browsingPath.split('/')
+                            parts.pop()
+                            setBrowsingPath(parts.join('/'))
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-left"
+                        >
+                          <ArrowLeft className="w-4 h-4 text-slate-400" />
+                          <span>Go Up Directory</span>
+                        </button>
+                      )}
+
+                      {/* Directories */}
+                      {(browseQuery.data?.directories || []).map((dir: any) => (
+                        <button
+                          key={dir.path}
+                          onClick={() => setBrowsingPath(dir.path)}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-left"
+                        >
+                          <FolderOpen className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                          <span className="flex-1 truncate text-slate-800 dark:text-slate-100">{dir.name}</span>
+                          <span className="text-[10px] text-slate-400">Folder</span>
+                        </button>
+                      ))}
+
+                      {/* Files */}
+                      {(browseQuery.data?.files || []).map((file: any) => (
+                        <div
+                          key={file.path}
+                          className="flex items-center gap-3 px-4 py-3 text-xs hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                        >
+                          <FileText className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                          <span className="flex-1 font-medium text-slate-700 dark:text-slate-200 truncate">{file.name}</span>
+                          <span className="text-slate-400">{formatBytes(file.size)}</span>
+                          <a
+                            href={file.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 hover:text-amber-500 transition-colors"
+                            title="Open File"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        </div>
+                      ))}
+
+                      {!(browseQuery.data?.directories?.length || browseQuery.data?.files?.length) && (
+                        <div className="py-8 text-center text-xs text-slate-400">
+                          This directory is empty
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setBrowsingPath(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
+                >
+                  Close Browser
+                </button>
+              </div>
+            </div>
+          </div>
+        </ModalPortal>
+      )}
     </div>
   )
 }
