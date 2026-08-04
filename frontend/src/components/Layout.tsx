@@ -180,18 +180,18 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
-      {/* Mobile sidebar */}
+      {/* Mobile & Tablet sidebar drawer */}
       <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`}>
         <div
           className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
           onClick={() => setSidebarOpen(false)}
         />
-        <div className="fixed inset-y-0 left-0 flex flex-col w-64 transform transition-transform">
-          <div className="flex items-center justify-between h-16 px-4 border-b border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900">
-            <span className="text-xl font-extrabold text-slate-900 dark:text-white">DTMS</span>
+        <div className="fixed inset-y-0 left-0 flex flex-col w-64 transform transition-transform bg-white dark:bg-slate-900 shadow-2xl">
+          <div className="absolute top-3.5 right-3.5 z-20">
             <button
               onClick={() => setSidebarOpen(false)}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              title="Close menu"
             >
               <X className="h-5 w-5" />
             </button>
@@ -208,14 +208,24 @@ export default function Layout() {
       {/* Main content */}
       <div className="lg:pl-64">
         {/* Top bar */}
-        <div className="sticky top-0 z-40 flex h-16 items-center gap-x-4 border-b border-slate-200 bg-white/80 backdrop-blur-sm px-4 sm:px-6 lg:px-8">
-          <button
-            type="button"
-            className="lg:hidden p-2 -ml-2 text-slate-500 hover:text-slate-700"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="h-5 w-5" />
-          </button>
+        <div className="sticky top-0 z-40 flex h-16 items-center gap-x-4 border-b border-slate-200/80 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-2.5 lg:hidden">
+            <button
+              type="button"
+              className="p-2 -ml-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Open sidebar navigation"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-xs">
+                <Shield className="w-4 h-4" />
+              </div>
+              <span className="font-extrabold text-slate-900 dark:text-white text-base tracking-tight">DTMS</span>
+            </div>
+          </div>
 
           {/* Search */}
           <div className="hidden sm:flex flex-1 max-w-md">
@@ -224,7 +234,7 @@ export default function Layout() {
               <input
                 type="text"
                 placeholder="Search documents..."
-                className="w-full pl-9 pr-4 py-2 text-sm bg-slate-100 border-0 rounded-lg focus:ring-2 focus:ring-primary-500 focus:bg-white placeholder:text-slate-400 transition-all"
+                className="w-full pl-9 pr-4 py-2 text-sm bg-slate-100 dark:bg-slate-800 border-0 rounded-lg focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 transition-all"
               />
             </div>
           </div>
@@ -236,20 +246,20 @@ export default function Layout() {
             {/* Profile: account number + role, with logout */}
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/40 ring-1 ring-primary-200 dark:ring-primary-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 ring-1 ring-blue-200 dark:ring-blue-700 flex items-center justify-center overflow-hidden flex-shrink-0">
                   {user?.avatar ? (
                     <img src={user.avatar} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-primary-700 dark:text-primary-300 text-sm font-semibold">
+                    <span className="text-blue-700 dark:text-blue-300 text-sm font-semibold">
                       {user?.name?.charAt(0) || 'U'}
                     </span>
                   )}
                 </div>
                 <div className="hidden sm:flex flex-col leading-tight">
-                  <span className="text-sm font-semibold text-slate-900 font-mono">
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white font-mono">
                     {user?.accnt_no || '—'}
                   </span>
-                  <span className="text-xs text-slate-500 capitalize">
+                  <span className="text-xs text-slate-500 dark:text-slate-400 capitalize">
                     {user?.role?.replace('_', ' ')}
                   </span>
                 </div>
@@ -257,7 +267,7 @@ export default function Layout() {
               <button
                 onClick={handleLogout}
                 title="Sign out"
-                className="flex items-center justify-center w-9 h-9 rounded-lg text-slate-500 hover:text-danger-600 hover:bg-danger-50 transition-colors"
+                className="flex items-center justify-center w-9 h-9 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 dark:hover:text-red-400 transition-colors"
               >
                 <LogOut className="h-5 w-5" />
               </button>
