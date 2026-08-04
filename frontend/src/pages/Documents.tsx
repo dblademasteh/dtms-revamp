@@ -1,13 +1,30 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
 import ModalPortal from '@/components/ModalPortal'
-import { Plus, Search, FileText, ChevronLeft, ChevronRight, CheckCircle, XCircle, RotateCcw, Trash2, Building2, Clock, Send, X } from 'lucide-react'
+import {
+  Plus,
+  Search,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle,
+  XCircle,
+  RotateCcw,
+  Trash2,
+  Building2,
+  Clock,
+  Send,
+  X,
+  Copy,
+  Check,
+  AlertCircle,
+  ShieldCheck
+} from 'lucide-react'
 import toast from 'react-hot-toast'
 import { documentTypeLabel, DOCUMENT_TYPES, statusLabel } from '@/constants/documentOptions'
-
 import SearchableSelect from '@/components/SearchableSelect'
 
 export default function Documents() {
@@ -24,6 +41,9 @@ export default function Documents() {
   const [officeFilter, setOfficeFilter] = useState('')
   const [personnelFilter, setPersonnelFilter] = useState('')
   const [page, setPage] = useState(1)
+  const [copiedId, setCopiedId] = useState<number | null>(null)
+
+  // Selection & Bulk Action
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [showBulkModal, setShowBulkModal] = useState(false)
   const [bulkAction, setBulkAction] = useState<'approved' | 'rejected' | 'returned'>('approved')
@@ -53,22 +73,22 @@ export default function Documents() {
     queryFn: () => api.get('/personnel').then((r) => r.data),
   })
 
-  const officeOptions = [
+  const officeOptions = useMemo(() => [
     { value: '', label: 'All Offices' },
     ...(offices?.map((o: any) => ({ value: String(o.id), label: o.name })) || []),
-  ]
+  ], [offices])
 
-  const personnelOptions = personnel?.filter(
+  const personnelOptions = useMemo(() => personnel?.filter(
     (p: any) => !officeFilter || String(p.office_id) === officeFilter
-  ) || []
+  ) || [], [personnel, officeFilter])
 
-  const personnelSelectOptions = [
+  const personnelSelectOptions = useMemo(() => [
     { value: '', label: 'All Personnel' },
     ...personnelOptions.map((p: any) => ({
       value: String(p.id),
       label: `${p.rank ? p.rank + ' ' : ''}${p.full_name || p.name}`,
     })),
-  ]
+  ], [personnelOptions])
 
   const { data, isLoading } = useQuery({
     queryKey: ['documents', search, status, priority, docType, page, mineOnly, forMeOnly, officeFilter, personnelFilter],
@@ -92,28 +112,35 @@ export default function Documents() {
     mutationFn: (payload: any) => api.post('/documents/bulk-route', payload),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['documents'] })
-      toast.success(`${res.data.success} document(s) ${bulkAction}`)
+      toast.success(`${res.data.success || 'Document'} ${bulkAction}`)
       setSelected(new Set())
       setShowBulkModal(false)
       setBulkRemarks('')
     },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Bulk action failed'),
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Action failed'),
   })
 
   const bulkDeleteMutation = useMutation({
     mutationFn: (payload: any) => api.post('/documents/bulk-delete', payload),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['documents'] })
-      toast.success(res.data.message)
+      toast.success(res.data.message || 'Document deleted')
       setSelected(new Set())
     },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Bulk delete failed'),
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Delete failed'),
   })
 
   const documents = data?.data || []
   const totalPages = data?.last_page || 1
+  const totalDocuments = data?.total || documents.length
 
-  // Document query results
+  const copyTracking = (doc: any, e: React.MouseEvent) => {
+    e.stopPropagation()
+    navigator.clipboard.writeText(doc.tracking_number)
+    setCopiedId(doc.id)
+    toast.success(`Copied ${doc.tracking_number}`)
+    setTimeout(() => setCopiedId(null), 2000)
+  }
 
   const handleBulkAction = () => {
     if (!bulkRemarks.trim()) return
@@ -129,7 +156,7 @@ export default function Documents() {
   }
 
   const statusOptions = [
-    { value: '', label: 'All Status' },
+    { value: '', label: 'All Statuses' },
     { value: 'created', label: 'Created' },
     { value: 'received', label: 'Received' },
     { value: 'in_review', label: 'In Review' },
@@ -140,263 +167,367 @@ export default function Documents() {
     { value: 'filed', label: 'Filed' },
   ]
 
-  const statusBadgeClass = (status: string) => {
-    switch (status) {
-      case 'released': return 'badge-success'
-      case 'approved': return 'badge-success'
-      case 'filed': return 'badge-success'
-      case 'received': return 'badge-warning'
-      case 'in_review': return 'badge-primary'
-      case 'rejected': return 'badge-danger'
-      case 'returned': return 'badge-warning'
-      case 'created': return 'badge-neutral'
-      default: return 'badge-neutral'
+  const statusBadgeStyle = (st: string) => {
+    switch (st) {
+      case 'released':
+      case 'approved':
+      case 'filed':
+        return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+      case 'received':
+      case 'in_review':
+        return 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+      case 'rejected':
+        return 'bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-300 border-red-200 dark:border-red-800'
+      case 'returned':
+        return 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+      default:
+        return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700'
     }
   }
 
-  const priorityBadgeClass = (priority: string) => {
-    switch (priority) {
-      case 'urgent': return 'badge-danger'
-      case 'high': return 'badge-warning'
-      default: return 'badge-neutral'
+  const priorityBadgeStyle = (pr: string) => {
+    switch (pr) {
+      case 'urgent':
+        return 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300 border-red-200 dark:border-red-800 font-extrabold animate-pulse'
+      case 'high':
+        return 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800 font-bold'
+      default:
+        return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700'
     }
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Documents</h1>
-          <p className="text-sm text-slate-500 mt-1">Manage and track all documents in the system</p>
+        <div className="space-y-1">
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              Documents Repository
+            </h1>
+            <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+              {totalDocuments} Total
+            </span>
+          </div>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Monitor, route, approve, and track document lifecycles across offices
+          </p>
         </div>
-        <Link to="/documents/new" className="btn btn-primary">
-          <Plus className="w-4 h-4" /> New Document
-        </Link>
+
+        <div className="flex items-center gap-2">
+          <Link
+            to="/documents/new"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition-all hover:scale-[1.02]"
+          >
+            <Plus className="w-4 h-4 stroke-[3]" />
+            <span>New Document</span>
+          </Link>
+        </div>
       </div>
 
-      {/* Filters */}
-      <div className="card">
-        <div className="card-body space-y-3">
-          {/* Row 1: Search & Quick Filters */}
-          <div className="flex flex-col md:flex-row gap-3">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search by tracking # or subject..."
-                className="input pl-9 w-full"
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-              />
-            </div>
-            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-              {user && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => { setMineOnly(!mineOnly); setForMeOnly(false); setPage(1) }}
-                    className={`btn whitespace-nowrap ${mineOnly ? 'btn-primary' : 'btn-secondary'}`}
-                  >
-                    {mineOnly ? 'My Documents ✓' : 'My Documents'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setForMeOnly(!forMeOnly); setMineOnly(false); setPage(1) }}
-                    className={`btn whitespace-nowrap ${forMeOnly ? 'btn-success' : 'btn-secondary'}`}
-                  >
-                    {forMeOnly ? 'For Me (Action Required) ✓' : 'For Me (Action Required)'}
-                  </button>
-                </>
-              )}
-              {hasActiveFilters && (
+      {/* Filter Control Card */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+        {/* Row 1: Search & Quick Tab Pills */}
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          {/* Search Box */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search by tracking number or subject title..."
+              className="w-full pl-10 pr-9 py-2.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white placeholder:text-slate-400"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Quick Filter Tab Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+            <button
+              onClick={() => { setMineOnly(false); setForMeOnly(false); setPage(1) }}
+              className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                !mineOnly && !forMeOnly
+                  ? 'bg-slate-900 text-white dark:bg-blue-600 dark:text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
+            >
+              All Documents
+            </button>
+
+            {user && (
+              <>
                 <button
-                  type="button"
-                  onClick={clearAllFilters}
-                  className="btn btn-ghost btn-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 gap-1 whitespace-nowrap"
-                  title="Clear all filters"
+                  onClick={() => { setMineOnly(!mineOnly); setForMeOnly(false); setPage(1) }}
+                  className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                    mineOnly
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
                 >
-                  <X className="w-3.5 h-3.5" /> Clear Filters
+                  My Documents
                 </button>
-              )}
-            </div>
-          </div>
 
-          {/* Row 2: Searchable selects & category filters */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            <SearchableSelect
-              options={officeOptions}
-              value={officeFilter}
-              onChange={(val) => { setOfficeFilter(val); setPersonnelFilter(''); setPage(1) }}
-              placeholder="All Offices"
-              isClearable
-            />
-            <SearchableSelect
-              options={personnelSelectOptions}
-              value={personnelFilter}
-              onChange={(val) => { setPersonnelFilter(val); setPage(1) }}
-              placeholder="All Personnel"
-              isClearable
-            />
-            <select className="input w-full" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1) }}>
-              {statusOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-            <select className="input w-full" value={priority} onChange={(e) => { setPriority(e.target.value); setPage(1) }}>
-              <option value="">All Priority</option>
-              <option value="low">Low</option>
-              <option value="normal">Normal</option>
-              <option value="high">High</option>
-              <option value="urgent">Urgent</option>
-            </select>
-            <select className="input w-full" value={docType} onChange={(e) => { setDocType(e.target.value); setPage(1) }}>
-              <option value="">All Types</option>
-              {DOCUMENT_TYPES.map((type) => (
-                <option key={type.value} value={type.value}>{type.label}</option>
-              ))}
-            </select>
+                <button
+                  onClick={() => { setForMeOnly(!forMeOnly); setMineOnly(false); setPage(1) }}
+                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                    forMeOnly
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <AlertCircle className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Action Required (For Me)</span>
+                </button>
+              </>
+            )}
+
+            {hasActiveFilters && (
+              <button
+                onClick={clearAllFilters}
+                className="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                title="Clear all active filters"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Reset</span>
+              </button>
+            )}
           </div>
+        </div>
+
+        {/* Row 2: Detailed Dropdown Filters */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <SearchableSelect
+            options={officeOptions}
+            value={officeFilter}
+            onChange={(val) => { setOfficeFilter(val); setPersonnelFilter(''); setPage(1) }}
+            placeholder="All Offices"
+            isClearable
+          />
+
+          <SearchableSelect
+            options={personnelSelectOptions}
+            value={personnelFilter}
+            onChange={(val) => { setPersonnelFilter(val); setPage(1) }}
+            placeholder="All Personnel"
+            isClearable
+          />
+
+          <select
+            className="w-full px-3 py-2 text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-200 cursor-pointer"
+            value={status}
+            onChange={(e) => { setStatus(e.target.value); setPage(1) }}
+          >
+            {statusOptions.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+
+          <select
+            className="w-full px-3 py-2 text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-200 cursor-pointer"
+            value={priority}
+            onChange={(e) => { setPriority(e.target.value); setPage(1) }}
+          >
+            <option value="">All Priorities</option>
+            <option value="low">Low Priority</option>
+            <option value="normal">Normal Priority</option>
+            <option value="high">High Priority</option>
+            <option value="urgent">Urgent Priority</option>
+          </select>
+
+          <select
+            className="w-full px-3 py-2 text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-200 cursor-pointer"
+            value={docType}
+            onChange={(e) => { setDocType(e.target.value); setPage(1) }}
+          >
+            <option value="">All Document Types</option>
+            {DOCUMENT_TYPES.map((type) => (
+              <option key={type.value} value={type.value}>{type.label}</option>
+            ))}
+          </select>
         </div>
       </div>
 
-      {/* Documents Table */}
-      <div className="card overflow-hidden">
+      {/* Documents Data Table Card */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden">
         {isLoading ? (
-          <div className="p-8">
-            <div className="space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex items-center gap-4 animate-pulse">
-                  <div className="h-4 w-24 bg-slate-200 rounded" />
-                  <div className="h-4 flex-1 bg-slate-200 rounded" />
-                  <div className="h-6 w-16 bg-slate-200 rounded" />
-                </div>
-              ))}
-            </div>
+          <div className="p-8 space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex items-center gap-4 animate-pulse">
+                <div className="h-4 w-28 bg-slate-200 dark:bg-slate-800 rounded" />
+                <div className="h-4 flex-1 bg-slate-200 dark:bg-slate-800 rounded" />
+                <div className="h-6 w-20 bg-slate-200 dark:bg-slate-800 rounded" />
+              </div>
+            ))}
           </div>
         ) : documents.length === 0 ? (
-          <div className="text-center py-16">
-            <FileText className="mx-auto h-12 w-12 text-slate-300" />
-            <h3 className="mt-3 text-sm font-semibold text-slate-900">No documents found</h3>
-            <p className="mt-1 text-sm text-slate-500">Get started by creating a new document.</p>
-            <div className="mt-4">
-              <Link to="/documents/new" className="btn btn-primary btn-sm inline-flex">
-                <Plus className="w-4 h-4" /> New Document
-              </Link>
+          <div className="text-center py-16 px-4">
+            <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto mb-4 border border-blue-100 dark:border-blue-900">
+              <FileText className="w-7 h-7" />
             </div>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">No Documents Found</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
+              No registered documents match your current filter parameters. Try clearing search filters or create a new document.
+            </p>
+            {hasActiveFilters && (
+              <button
+                onClick={clearAllFilters}
+                className="mt-4 px-4 py-2 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
+              >
+                Clear All Filters
+              </button>
+            )}
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-xl">
+          <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  <th className="py-4 pl-6 px-4">Document Info</th>
+                <tr className="bg-slate-50/80 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-800 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  <th className="py-4 pl-6 px-4">Document Details</th>
                   <th className="py-4 px-4">Status</th>
-                  <th className="py-4 px-4">Details</th>
+                  <th className="py-4 px-4">Type &amp; Priority</th>
                   <th className="py-4 px-4">Current Location</th>
-                  <th className="py-4 pr-6 px-4 text-right">Action</th>
+                  <th className="py-4 pr-6 px-4 text-right">Quick Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
                 {documents.map((doc: any) => (
                   <tr
                     key={doc.id}
                     onClick={() => navigate(`/documents/${doc.id}`)}
-                    className="cursor-pointer transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/50"
+                    className="group cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors"
                   >
-                    <td className="py-4 pl-6 px-4 min-w-[280px] max-w-sm">
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-slate-900 dark:text-slate-100 truncate mb-1" title={doc.subject}>
+                    {/* Document Title & Tracking Number */}
+                    <td className="py-4 pl-6 px-4 min-w-[280px] max-w-md">
+                      <div className="space-y-1.5">
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug">
                           {doc.subject}
-                        </span>
+                        </h4>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-[11px] font-bold tracking-wide text-primary-700 dark:text-primary-300 bg-primary-100 dark:bg-primary-900/40 px-2 py-0.5 rounded border border-primary-200 dark:border-primary-700/60 shadow-sm">
-                            {doc.tracking_number}
-                          </span>
+                          <button
+                            onClick={(e) => copyTracking(doc, e)}
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-800/60 font-mono text-[11px] font-bold text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
+                            title="Click to copy tracking code"
+                          >
+                            <span>{doc.tracking_number}</span>
+                            {copiedId === doc.id ? (
+                              <Check className="w-3 h-3 text-emerald-500" />
+                            ) : (
+                              <Copy className="w-3 h-3 text-slate-400" />
+                            )}
+                          </button>
                         </div>
                       </div>
                     </td>
+
+                    {/* Status Badge */}
                     <td className="py-4 px-4 whitespace-nowrap">
-                      <span className={`badge shadow-sm ${statusBadgeClass(doc.status)}`}>{statusLabel(doc.status)}</span>
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border font-semibold ${statusBadgeStyle(doc.status)}`}>
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        {statusLabel(doc.status)}
+                      </span>
                     </td>
+
+                    {/* Type & Priority */}
                     <td className="py-4 px-4 whitespace-nowrap">
-                      <div className="flex flex-col gap-1.5 items-start">
-                        <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded shadow-sm border border-slate-200 dark:border-slate-600 uppercase tracking-wide">
+                      <div className="flex flex-col items-start gap-1">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700">
                           {documentTypeLabel(doc.document_type)}
                         </span>
-                        <span className={`badge text-[10px] shadow-sm ${priorityBadgeClass(doc.priority)}`}>{doc.priority}</span>
+                        <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full border ${priorityBadgeStyle(doc.priority)}`}>
+                          {doc.priority || 'normal'}
+                        </span>
                       </div>
                     </td>
+
+                    {/* Current Location */}
                     <td className="py-4 px-4 whitespace-nowrap">
-                      <div className="flex flex-col">
-                        <span className="text-[13px] font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-                          <Building2 className="w-4 h-4 text-slate-400" />
-                          {doc.current_office?.name || '—'}
-                        </span>
-                        <span className="text-xs text-slate-500 mt-1 flex items-center gap-1.5 font-medium">
+                      <div className="space-y-1 text-xs">
+                        <div className="flex items-center gap-1.5 font-semibold text-slate-800 dark:text-slate-200">
+                          <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                          <span className="truncate max-w-[180px]">{doc.current_office?.name || 'HQ Station'}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-slate-400">
                           <Clock className="w-3.5 h-3.5" />
-                          {new Date(doc.created_at).toLocaleDateString()}
-                        </span>
+                          <span>{new Date(doc.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        </div>
                       </div>
                     </td>
-                    <td className="py-4 pr-6 px-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+
+                    {/* Quick Action Controls */}
+                    <td className="py-4 pr-6 px-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1.5">
                         {doc.status === 'created' && (
                           <button
                             type="button"
                             title="Send Document"
                             onClick={() => navigate(`/documents/${doc.id}`)}
-                            className="btn btn-primary btn-sm gap-1 px-2.5 py-1 text-xs"
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs"
                           >
                             <Send className="w-3.5 h-3.5" /> Send
                           </button>
                         )}
+
                         {['received', 'in_review'].includes(doc.status) && (
                           <>
                             <button
                               type="button"
-                              title="Approve"
+                              title="Approve Document"
                               onClick={() => { setSelected(new Set([doc.id])); setBulkAction('approved'); setShowBulkModal(true) }}
-                              className="btn btn-success btn-sm gap-1 px-2.5 py-1 text-xs"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs"
                             >
                               <CheckCircle className="w-3.5 h-3.5" /> Approve
                             </button>
+
                             <button
                               type="button"
-                              title="Decline"
+                              title="Decline Document"
                               onClick={() => { setSelected(new Set([doc.id])); setBulkAction('rejected'); setShowBulkModal(true) }}
-                              className="btn btn-danger btn-sm gap-1 px-2.5 py-1 text-xs"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-xs"
                             >
                               <XCircle className="w-3.5 h-3.5" /> Decline
                             </button>
+
                             <button
                               type="button"
-                              title="Return"
+                              title="Return Document"
                               onClick={() => { setSelected(new Set([doc.id])); setBulkAction('returned'); setShowBulkModal(true) }}
-                              className="btn btn-secondary btn-sm gap-1 px-2.5 py-1 text-xs"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs"
                             >
                               <RotateCcw className="w-3.5 h-3.5" /> Return
                             </button>
                           </>
                         )}
+
                         {doc.status === 'returned' && (
                           <button
                             type="button"
                             title="Resubmit Document"
                             onClick={() => navigate(`/documents/${doc.id}`)}
-                            className="btn btn-warning btn-sm gap-1 px-2.5 py-1 text-xs text-slate-900"
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-xs"
                           >
                             <RotateCcw className="w-3.5 h-3.5" /> Resubmit
                           </button>
                         )}
+
                         <button
                           type="button"
-                          title="Delete"
+                          title="Delete Document"
                           onClick={() => {
-                            if (window.confirm('Are you sure you want to delete this document?')) {
+                            if (window.confirm('Are you sure you want to delete this document record?')) {
                               bulkDeleteMutation.mutate({ document_ids: [doc.id] })
                             }
                           }}
-                          className="btn btn-danger-outline btn-sm p-1.5 text-xs"
+                          className="p-1.5 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -407,17 +538,26 @@ export default function Documents() {
           </div>
         )}
 
+        {/* Pagination Bar */}
         {totalPages > 1 && (
-          <div className="px-4 py-3 border-t border-slate-200 flex items-center justify-between">
-            <p className="text-sm text-slate-500">
-              Page <span className="font-medium text-slate-700">{page}</span> of{' '}
-              <span className="font-medium text-slate-700">{totalPages}</span>
+          <div className="px-6 py-4 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+              Page <span className="font-bold text-slate-900 dark:text-white">{page}</span> of{' '}
+              <span className="font-bold text-slate-900 dark:text-white">{totalPages}</span>
             </p>
-            <div className="flex items-center gap-1">
-              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="btn btn-secondary btn-sm disabled:opacity-40">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs disabled:opacity-40 transition-colors"
+              >
                 <ChevronLeft className="w-4 h-4" /> Previous
               </button>
-              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="btn btn-secondary btn-sm disabled:opacity-40">
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs disabled:opacity-40 transition-colors"
+              >
                 Next <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -428,38 +568,70 @@ export default function Documents() {
       {/* Action Remarks Modal */}
       {showBulkModal && (
         <ModalPortal>
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowBulkModal(false)} />
-            <div className="relative bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-md mx-4">
-            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 capitalize">
-                {bulkAction === 'rejected' ? 'Decline' : bulkAction === 'approved' ? 'Approve' : 'Return'} Document
-              </h3>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setShowBulkModal(false)} />
+            <div className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95 duration-200">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 px-6 pt-6 pb-6 relative text-white">
+                <button
+                  type="button"
+                  onClick={() => setShowBulkModal(false)}
+                  className="absolute top-4 right-4 p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-400">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white capitalize">
+                      {bulkAction === 'rejected' ? 'Decline' : bulkAction === 'approved' ? 'Approve' : 'Return'} Document
+                    </h3>
+                    <p className="text-xs text-slate-300">Provide official action remarks for audit logging</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 space-y-3">
+                <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                  Remarks &amp; Notes <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  className="w-full px-3.5 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white min-h-[90px] resize-none"
+                  value={bulkRemarks}
+                  onChange={(e) => setBulkRemarks(e.target.value)}
+                  placeholder="Provide details or remarks for this action..."
+                  autoFocus
+                />
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowBulkModal(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleBulkAction}
+                  disabled={!bulkRemarks.trim() || bulkMutation.isPending}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-md shadow-blue-500/20 disabled:opacity-50"
+                >
+                  {bulkMutation.isPending ? (
+                    <><span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Processing...</>
+                  ) : (
+                    <>Confirm Action</>
+                  )}
+                </button>
+              </div>
             </div>
-            <div className="px-6 py-4">
-              <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-1.5">Remarks (required)</label>
-              <textarea
-                className="input min-h-[80px]"
-                value={bulkRemarks}
-                onChange={(e) => setBulkRemarks(e.target.value)}
-                placeholder="Enter remarks..."
-              />
-            </div>
-            <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
-              <button onClick={() => setShowBulkModal(false)} className="btn btn-secondary btn-sm">Cancel</button>
-              <button
-                onClick={handleBulkAction}
-                disabled={!bulkRemarks.trim() || bulkMutation.isPending}
-                className="btn btn-primary btn-sm"
-              >
-                {bulkMutation.isPending ? 'Processing...' : 'Confirm'}
-              </button>
-            </div>
-          </div>
           </div>
         </ModalPortal>
       )}
-
     </div>
   )
 }
