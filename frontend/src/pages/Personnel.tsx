@@ -151,19 +151,19 @@ export default function Personnel() {
           label="Total Personnel"
           value={(personnel ?? []).length}
           icon={<UsersIcon className="w-5 h-5" />}
-          color="bg-primary-50 text-primary-600"
+          color="bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400"
         />
         <StatCard
           label="Distinct Units"
           value={new Set((personnel ?? []).map((u: any) => u.unit_assignment).filter(Boolean)).size}
           icon={<Grid3X3 className="w-5 h-5" />}
-          color="bg-cyan-50 text-cyan-600"
+          color="bg-cyan-50 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400"
         />
         <StatCard
           label="Without Office"
           value={(personnel ?? []).filter((u: any) => !u.office_id).length}
           icon={<UserX className="w-5 h-5" />}
-          color="bg-amber-50 text-amber-600"
+          color="bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400"
         />
         <StatCard
           label="Officers"
@@ -172,7 +172,7 @@ export default function Personnel() {
               .includes((u.rank || '').toUpperCase())
           ).length}
           icon={<Award className="w-5 h-5" />}
-          color="bg-green-50 text-green-600"
+          color="bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400"
         />
       </div>
 

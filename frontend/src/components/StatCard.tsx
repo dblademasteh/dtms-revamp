@@ -18,8 +18,8 @@ export default function StatCard({
           {icon}
         </div>
         <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-slate-500">{label}</p>
-          <p className="text-2xl font-bold text-slate-900 mt-0.5">{value}</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">{label}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-0.5">{value}</p>
         </div>
       </div>
     </div>

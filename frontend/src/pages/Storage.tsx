@@ -91,16 +91,20 @@ export default function Storage() {
   })
 
   const handleDelete = (path: string) => {
-    if (!window.confirm(`Are you sure you want to permanently delete this item? This action is irreversible.`)) {
-      return
-    }
-    api.post('/admin/storage/delete', { path })
-      .then((res) => {
-        toast.success(res.data?.message || 'Deleted successfully')
-        browseQuery.refetch()
-        refetch()
-      })
-      .catch((e: any) => toast.error(e.response?.data?.error || 'Failed to delete path'))
+    setConfirm({
+      title: 'Permanently Delete Item',
+      message: `Are you sure you want to permanently delete "${path}"? This action is irreversible and will clean up database reference logs.`,
+      label: 'Delete',
+      action: () => {
+        api.post('/admin/storage/delete', { path })
+          .then((res) => {
+            toast.success(res.data?.message || 'Deleted successfully')
+            browseQuery.refetch()
+            refetch()
+          })
+          .catch((e: any) => toast.error(e.response?.data?.error || 'Failed to delete path'))
+      }
+    })
   }
 
   const runAction = (key: string, url: string, successMsg?: string, refreshAll = true) => {
