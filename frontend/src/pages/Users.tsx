@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/services/api'
 import toast from 'react-hot-toast'
-import { Search, X, UserPlus, Users as UsersIcon, UserCheck, UserX, Shield, Trash2 } from 'lucide-react'
+import { Search, X, UserPlus, Users as UsersIcon, UserCheck, UserX, Shield, Trash2, Building2, Edit3 } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import Select from 'react-select'
 import ModalPortal from '@/components/ModalPortal'
@@ -31,7 +31,7 @@ export default function Users() {
   const queryClient = useQueryClient()
   const ranks = useRanks()
   const [search, setSearch] = useState('')
-  const [accountFilter, setAccountFilter] = useState<'all' | 'personnel' | 'office'>('all')
+  const [activeTab, setActiveTab] = useState<'personnel' | 'office'>('personnel')
   const [editingUser, setEditingUser] = useState<any>(null)
   const [editRole, setEditRole] = useState('')
   const [editStatus, setEditStatus] = useState('')
@@ -104,16 +104,37 @@ export default function Users() {
     },
   })
 
-  const filtered = users?.filter((u: any) => {
-    const matchesSearch =
-      (u.full_name || u.name)?.toLowerCase().includes(search.toLowerCase()) ||
-      u.email?.toLowerCase().includes(search.toLowerCase()) ||
-      u.accnt_no?.toLowerCase().includes(search.toLowerCase())
-    if (!matchesSearch) return false
-    if (accountFilter === 'office') return u.role === 'office_station'
-    if (accountFilter === 'personnel') return u.role !== 'office_station'
-    return true
-  }) || []
+  const personnelList = useMemo(() => {
+    return (users || []).filter((u: any) => u.role !== 'office_station')
+  }, [users])
+
+  const officeList = useMemo(() => {
+    return (users || []).filter((u: any) => u.role === 'office_station')
+  }, [users])
+
+  const filteredPersonnel = useMemo(() => {
+    const q = search.toLowerCase()
+    return personnelList.filter((u: any) =>
+      !search ||
+      (u.full_name || u.name)?.toLowerCase().includes(q) ||
+      u.email?.toLowerCase().includes(q) ||
+      u.accnt_no?.toLowerCase().includes(q) ||
+      u.designation?.toLowerCase().includes(q) ||
+      u.rank?.toLowerCase().includes(q)
+    )
+  }, [personnelList, search])
+
+  const filteredOffice = useMemo(() => {
+    const q = search.toLowerCase()
+    return officeList.filter((u: any) =>
+      !search ||
+      (u.full_name || u.name)?.toLowerCase().includes(q) ||
+      u.email?.toLowerCase().includes(q) ||
+      u.accnt_no?.toLowerCase().includes(q) ||
+      u.office?.name?.toLowerCase().includes(q) ||
+      u.office?.code?.toLowerCase().includes(q)
+    )
+  }, [officeList, search])
 
   const getRoleBadge = (role: string) => ROLES.find(r => r.value === role)?.color || 'bg-slate-50 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
   const getRoleLabel = (role: string) => ROLES.find(r => r.value === role)?.label || role
@@ -210,40 +231,60 @@ export default function Users() {
         />
       </div>
 
-      {/* Search */}
-      <div className="card">
-        <div className="card-body">
-          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-            <div className="relative max-w-md flex-1 w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search by name, email, or account number..."
-                className="input pl-9"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <div className="flex gap-1">
-              {[
-                { value: 'all', label: 'All' },
-                { value: 'personnel', label: 'Personnel' },
-                { value: 'office', label: 'Office' },
-              ].map(f => (
-                <button
-                  key={f.value}
-                  type="button"
-                  onClick={() => setAccountFilter(f.value as any)}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
-                    accountFilter === f.value
-                      ? 'border-primary-500 bg-primary-50 text-primary-700 dark:border-primary-400 dark:bg-primary-900/30 dark:text-primary-300'
-                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400'
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
+      {/* Tab Controls & Search Header */}
+      <div className="card p-4 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          {/* Tabs */}
+          <div className="flex border-b border-slate-200 dark:border-slate-800 gap-4 sm:gap-6">
+            <button
+              onClick={() => setActiveTab('personnel')}
+              className={`flex items-center gap-2 pb-3 text-xs sm:text-sm font-bold border-b-2 transition-all ${
+                activeTab === 'personnel'
+                  ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+              }`}
+            >
+              <UsersIcon className="w-4 h-4" />
+              <span>Personnel Accounts</span>
+              <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                {filteredPersonnel.length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('office')}
+              className={`flex items-center gap-2 pb-3 text-xs sm:text-sm font-bold border-b-2 transition-all ${
+                activeTab === 'office'
+                  ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+              }`}
+            >
+              <Building2 className="w-4 h-4" />
+              <span>Office / Station Accounts</span>
+              <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                {filteredOffice.length}
+              </span>
+            </button>
+          </div>
+
+          {/* Search Box */}
+          <div className="relative max-w-md w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder={activeTab === 'personnel' ? "Search personnel by name, rank, email..." : "Search office by name, code, email..."}
+              className="input pl-9 text-xs sm:text-sm"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -263,7 +304,8 @@ export default function Users() {
               </div>
             ))}
           </div>
-        ) : (
+        ) : activeTab === 'personnel' ? (
+          /* Personnel Table */
           <div className="overflow-x-auto">
             <table className="table">
               <thead>
@@ -273,47 +315,147 @@ export default function Users() {
                   <th>Email</th>
                   <th>Designation</th>
                   <th>Account No</th>
+                  <th>Assigned Office</th>
                   <th>Role</th>
                   <th>Status</th>
+                  <th className="text-right">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((u: any) => (
-                  <tr key={u.id} className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50" onClick={() => startEdit(u)}>
-                    <td>
-                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{u.rank || '—'}</span>
-                    </td>
-                    <td>
-                      <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{u.full_name}</span>
-                    </td>
-                    <td>
-                      <span className="text-xs text-slate-500 dark:text-slate-400">{u.email || '—'}</span>
-                    </td>
-                    <td>
-                      <span className="text-xs text-slate-500 dark:text-slate-400">{u.designation || '—'}</span>
-                    </td>
-                    <td>
-                      <span className="text-sm font-mono text-slate-600 dark:text-slate-400">{u.accnt_no || '—'}</span>
-                    </td>
-                    <td>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className={`badge ${getRoleBadge(u.role)}`}>
-                          {getRoleLabel(u.role)}
-                        </span>
-                        {u.can_view_all_documents && (
-                          <span className="badge bg-indigo-100 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-800 text-[10px]" title="Granted permission to view all system documents">
-                            View All Docs
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`badge ${getStatusBadge(u.status)}`}>
-                        {getStatusLabel(u.status)}
-                      </span>
+                {filteredPersonnel.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="text-center py-8 text-slate-500">
+                      No personnel accounts found.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredPersonnel.map((u: any) => (
+                    <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                      <td>
+                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{u.rank || '—'}</span>
+                      </td>
+                      <td>
+                        <span className="text-sm font-bold text-slate-900 dark:text-slate-100">{u.full_name || u.name}</span>
+                      </td>
+                      <td>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">{u.email || '—'}</span>
+                      </td>
+                      <td>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">{u.designation || '—'}</span>
+                      </td>
+                      <td>
+                        <span className="text-sm font-mono text-slate-600 dark:text-slate-400">{u.accnt_no || '—'}</span>
+                      </td>
+                      <td>
+                        <span className="text-xs text-slate-600 dark:text-slate-400">{u.office?.name || '—'}</span>
+                      </td>
+                      <td>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`badge ${getRoleBadge(u.role)}`}>
+                            {getRoleLabel(u.role)}
+                          </span>
+                          {u.can_view_all_documents && (
+                            <span className="badge bg-indigo-100 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-800 text-[10px]" title="Granted permission to view all system documents">
+                              View All Docs
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`badge ${getStatusBadge(u.status)}`}>
+                          {getStatusLabel(u.status)}
+                        </span>
+                      </td>
+                      <td className="text-right">
+                        <button
+                          onClick={() => startEdit(u)}
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50 transition-colors"
+                          title="Edit User"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          /* Office Accounts Table */
+          <div className="overflow-x-auto">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Office / Station Name</th>
+                  <th>Station Code</th>
+                  <th>Account No</th>
+                  <th>Email</th>
+                  <th>Permissions</th>
+                  <th>Status</th>
+                  <th className="text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredOffice.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center py-8 text-slate-500">
+                      No office station accounts found.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredOffice.map((u: any) => (
+                    <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                      <td>
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg bg-cyan-50 dark:bg-cyan-950/50 text-cyan-600 dark:text-cyan-400 flex items-center justify-center flex-shrink-0 border border-cyan-200 dark:border-cyan-800">
+                            <Building2 className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="text-sm font-bold text-slate-900 dark:text-slate-100">{u.full_name || u.name}</span>
+                            {u.office?.name && (
+                              <p className="text-xs text-slate-500 dark:text-slate-400">{u.office.name}</p>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="text-xs font-mono font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                          {u.office?.code || '—'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="text-sm font-mono text-slate-600 dark:text-slate-400">{u.accnt_no || '—'}</span>
+                      </td>
+                      <td>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">{u.email || '—'}</span>
+                      </td>
+                      <td>
+                        {u.can_view_all_documents ? (
+                          <span className="badge bg-indigo-100 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-800 text-[10px]">
+                            View All Docs
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-400">Standard</span>
+                        )}
+                      </td>
+                      <td>
+                        <span className={`badge ${getStatusBadge(u.status)}`}>
+                          {getStatusLabel(u.status)}
+                        </span>
+                      </td>
+                      <td className="text-right">
+                        <button
+                          onClick={() => startEdit(u)}
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50 transition-colors"
+                          title="Edit Office Account"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
