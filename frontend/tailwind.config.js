@@ -5,6 +5,20 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  safelist: [
+    // StatCard icon container - light mode
+    'bg-primary-50', 'text-primary-600',
+    'bg-cyan-50', 'text-cyan-600',
+    'bg-amber-50', 'text-amber-600',
+    'bg-green-50', 'text-green-600',
+    // StatCard icon container - dark mode
+    'dark:bg-primary-900/30', 'dark:text-primary-400',
+    'dark:bg-cyan-900/30', 'dark:text-cyan-400',
+    'dark:bg-amber-900/30', 'dark:text-amber-400',
+    'dark:bg-green-900/30', 'dark:text-green-400',
+    // StatCard text - dark mode
+    'dark:text-slate-100', 'dark:text-slate-400',
+  ],
   theme: {
     fontFamily: {
       sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
