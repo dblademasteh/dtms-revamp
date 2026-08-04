@@ -118,6 +118,31 @@ export default function Personnel() {
     setTargetOfficeId(String(u.office_id || ''))
   }
 
+  const roleBadge = (role?: string) => {
+    switch (role) {
+      case 'superadmin': return 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800'
+      case 'officer': return 'bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-900/30 dark:text-violet-400 dark:border-violet-800'
+      case 'non_officer': return 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800'
+      case 'fcos': return 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800'
+      case 'office_station': return 'bg-cyan-50 text-cyan-700 border border-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-400 dark:border-cyan-800'
+      default: return 'bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
+    }
+  }
+
+  const roleLabel = (role?: string) => {
+    switch (role) {
+      case 'superadmin': return 'Super Admin'
+      case 'officer': return 'Officer'
+      case 'non_officer': return 'Non-Officer'
+      case 'fcos': return 'FCOS'
+      case 'office_station': return 'Office/Station'
+      default: return role?.replace('_', ' ') || '—'
+    }
+  }
+
+  const initials = (u: any) =>
+    ((u.first_name?.[0] || '') + (u.last_name?.[0] || '') || u.name?.[0] || '?').toUpperCase()
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -220,33 +245,31 @@ export default function Personnel() {
           <div className="p-8 space-y-4">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="flex items-center gap-4 animate-pulse">
-                <div className="h-4 w-16 bg-slate-200 rounded" />
-                <div className="h-4 w-28 bg-slate-200 rounded" />
-                <div className="h-4 w-24 bg-slate-200 rounded" />
-                <div className="h-4 w-20 bg-slate-200 rounded" />
-                <div className="h-4 flex-1 bg-slate-200 rounded" />
-                <div className="h-4 flex-1 bg-slate-200 rounded" />
-                <div className="h-4 w-40 bg-slate-200 rounded" />
+                <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-800" />
+                <div className="h-4 w-32 bg-slate-200 dark:bg-slate-800 rounded" />
+                <div className="h-4 flex-1 bg-slate-200 dark:bg-slate-800 rounded" />
+                <div className="h-4 w-40 bg-slate-200 dark:bg-slate-800 rounded" />
+                <div className="h-4 w-24 bg-slate-200 dark:bg-slate-800 rounded" />
+                <div className="h-4 w-48 bg-slate-200 dark:bg-slate-800 rounded" />
               </div>
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-12">
-            <UsersIcon className="mx-auto h-10 w-10 text-slate-300" />
-            <p className="mt-2 text-sm text-slate-400">No personnel found</p>
+          <div className="flex flex-col items-center py-16 px-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
+              <UsersIcon className="h-6 w-6 text-slate-400 dark:text-slate-500" />
+            </div>
+            <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">No personnel found</p>
+            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Try adjusting your search or filters.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="table">
               <thead>
                 <tr>
-                  <th>Rank</th>
-                  <th>First Name</th>
-                  <th>Middle Name</th>
-                  <th>Last Name</th>
-                  <th>Suffix</th>
-                  <th>Office</th>
+                  <th>Personnel</th>
                   <th>Designation</th>
+                  <th>Office</th>
                   <th>Role</th>
                   <th>Email</th>
                 </tr>
@@ -256,33 +279,56 @@ export default function Personnel() {
                   <tr
                     key={u.id}
                     onClick={() => openDetail(u)}
-                    className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                    className="cursor-pointer hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
                   >
-                    <td className="whitespace-nowrap text-sm font-medium text-slate-700 dark:text-slate-300">
-                      {u.rank || '—'}
+                    <td className="whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary-50 text-primary-700 ring-1 ring-primary-100 dark:bg-primary-900/40 dark:text-primary-300 dark:ring-primary-800">
+                          <span className="text-xs font-bold">{initials(u)}</span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            {[u.last_name, u.first_name].filter(Boolean).join(', ') || '—'}
+                            {u.suffix ? ` ${u.suffix}` : ''}
+                          </p>
+                          <div className="mt-0.5 flex items-center gap-1.5">
+                            {u.rank && (
+                              <span className="inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                {u.rank}
+                              </span>
+                            )}
+                            {u.unit_assignment && (
+                              <span className="truncate text-[10px] text-slate-400 dark:text-slate-500">
+                                {u.unit_assignment}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </td>
-                    <td className="whitespace-nowrap text-sm text-slate-900 dark:text-slate-200">
-                      {u.first_name || '—'}
-                    </td>
-                    <td className="whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
-                      {u.middle_name || '—'}
-                    </td>
-                    <td className="whitespace-nowrap text-sm text-slate-900 dark:text-slate-200">
-                      {u.last_name || '—'}
-                    </td>
-                    <td className="whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
-                      {u.suffix || '—'}
-                    </td>
-                    <td className="whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">
-                      {u.office?.name || '—'}
-                    </td>
-                    <td className="text-sm text-slate-600 dark:text-slate-300">
+                    <td className="max-w-[180px] truncate text-sm text-slate-600 dark:text-slate-300">
                       {u.designation || '—'}
                     </td>
-                    <td className="whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">
-                      {u.role ? u.role.replace('_', ' ') : '—'}
+                    <td className="whitespace-nowrap">
+                      {u.office?.name ? (
+                        <span className="inline-flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300">
+                          <Building2 className="h-3.5 w-3.5 text-slate-400" />
+                          {u.office.name}
+                        </span>
+                      ) : (
+                        <span className="badge badge-warning">No Office</span>
+                      )}
                     </td>
-                    <td className="whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+                    <td className="whitespace-nowrap">
+                      {u.role ? (
+                        <span className={`badge ${roleBadge(u.role)}`}>
+                          {roleLabel(u.role)}
+                        </span>
+                      ) : (
+                        <span className="badge badge-neutral">—</span>
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap font-mono text-xs text-slate-500 dark:text-slate-400">
                       {u.email || '—'}
                     </td>
                   </tr>

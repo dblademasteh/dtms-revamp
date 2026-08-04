@@ -184,55 +184,81 @@ export default function Offices() {
     const hasChildren = office.children?.length > 0
     const isExpanded = searchQuery ? true : expanded[office.id] !== false
 
+    const headInitials = office.head
+      ? ((office.head.full_name || office.head.name || '') || '').split(/\s+/).filter(Boolean).slice(0, 2).map((s: string) => s[0]).join('').toUpperCase() || '?'
+      : '?'
+
     return (
       <>
-        <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+        <tr className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
           <td className="py-3" style={{ paddingLeft: level * 28 + 12 }}>
             <div className="flex items-center gap-2">
               {hasChildren ? (
-                <button onClick={() => toggleExpand(office.id)} className="text-slate-400 hover:text-slate-600 p-0.5">
+                <button onClick={() => toggleExpand(office.id)} className="flex-shrink-0 rounded-md p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
                   {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                 </button>
-              ) : <div className="w-5" />}
-              <Building2 className="w-4 h-4 text-slate-400 flex-shrink-0" />
-              <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{cleanOfficeName(office.name)}</span>
+              ) : <div className="w-5 flex-shrink-0" />}
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600 ring-1 ring-primary-100 dark:bg-primary-900/40 dark:text-primary-300 dark:ring-primary-800">
+                <Building2 className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  {cleanOfficeName(office.name)}
+                </p>
+                {office.description && (
+                  <p className="max-w-md truncate text-[11px] text-slate-400 dark:text-slate-500">{office.description}</p>
+                )}
+              </div>
             </div>
           </td>
-          <td>
+          <td className="whitespace-nowrap">
             {office.unit_code ? (
-              <span className="px-2 py-0.5 text-xs font-semibold rounded-md bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 font-mono">
+              <span className="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                 {office.unit_code}
               </span>
             ) : <span className="text-xs text-slate-400">—</span>}
           </td>
-          <td>
-            {office.office_type && (
+          <td className="whitespace-nowrap">
+            {office.office_type ? (
               <span className={`badge text-xs ${OFFICE_TYPE_BADGE[office.office_type] || OFFICE_TYPE_BADGE.others}`}>
                 {officeTypeLabel(office.office_type)}
               </span>
+            ) : (
+              <span className="badge badge-neutral">—</span>
             )}
           </td>
-          <td>
+          <td className="whitespace-nowrap">
             {office.head ? (
-              <div className="flex items-center gap-1.5">
-                <UserCheck className="w-3.5 h-3.5 text-primary-500 flex-shrink-0" />
-                <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                  {[office.head.rank, office.head.full_name || office.head.name].filter(Boolean).join(' ')}
-                </span>
-                {(() => {
-                  const badge = getRankBadge(office.head.rank)
-                  return badge && (
-                    <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded-full ${badge.className}`}>
-                      {badge.label}
-                    </span>
-                  )
-                })()}
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700">
+                  <span className="text-[11px] font-bold">{headInitials}</span>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                    {[office.head.full_name || office.head.name].filter(Boolean).join(' ')}
+                  </p>
+                  <div className="mt-0.5 flex items-center gap-1">
+                    {office.head.rank && (
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                        {office.head.rank}
+                      </span>
+                    )}
+                    {(() => {
+                      const badge = getRankBadge(office.head.rank)
+                      return badge && (
+                        <span className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold ${badge.className}`}>
+                          {badge.label}
+                        </span>
+                      )
+                    })()}
+                  </div>
+                </div>
               </div>
             ) : <span className="text-xs text-slate-400">—</span>}
           </td>
-          <td>
+          <td className="whitespace-nowrap">
             <span className={`badge text-xs ${office.status === 'active' ? 'badge-success' : 'badge-neutral'}`}>
-              {office.status}
+              {office.status === 'active' ? 'Active' : 'Inactive'}
             </span>
           </td>
           <td>
@@ -512,8 +538,25 @@ export default function Offices() {
           <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">Organization Hierarchy</h2>
         </div>
         {isLoading ? (
-          <div className="p-8 space-y-3">
-            {[...Array(5)].map((_, i) => <div key={i} className="h-10 bg-slate-100 rounded-lg animate-pulse" />)}
+          <div className="p-8 space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex items-center gap-4 animate-pulse">
+                <div className="h-8 w-8 rounded-lg bg-slate-100 dark:bg-slate-800" />
+                <div className="h-4 w-56 bg-slate-100 dark:bg-slate-800 rounded" />
+                <div className="h-4 w-20 bg-slate-100 dark:bg-slate-800 rounded" />
+                <div className="h-4 flex-1 bg-slate-100 dark:bg-slate-800 rounded" />
+                <div className="h-4 w-16 bg-slate-100 dark:bg-slate-800 rounded" />
+                <div className="h-4 w-28 bg-slate-100 dark:bg-slate-800 rounded" />
+              </div>
+            ))}
+          </div>
+        ) : !filterOffices(offices || [], typeFilter, searchQuery).length ? (
+          <div className="flex flex-col items-center py-16 px-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
+              <Building2 className="h-6 w-6 text-slate-400 dark:text-slate-500" />
+            </div>
+            <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">No offices found</p>
+            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Try adjusting your search or type filter.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
