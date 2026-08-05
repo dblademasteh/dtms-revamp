@@ -11,12 +11,14 @@ use App\Http\Controllers\Api\SuggestionController;
 use App\Http\Controllers\Api\StorageController;
 use App\Http\Controllers\Api\DropdownOptionController;
 
-// Public routes
-Route::post('/auth/login', [AuthController::class, 'login']);
-Route::post('/auth/login-pincode', [AuthController::class, 'loginViaPincode']);
-Route::post('/auth/2fa/verify', [AuthController::class, 'verify2fa']);
-Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
-Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
+// Public routes (throttled to mitigate brute-force attacks)
+Route::middleware(['throttle:auth-ip', 'throttle:auth'])->group(function () {
+    Route::post('/auth/login', [AuthController::class, 'login']);
+    Route::post('/auth/login-pincode', [AuthController::class, 'loginViaPincode']);
+    Route::post('/auth/2fa/verify', [AuthController::class, 'verify2fa']);
+    Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
+    Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
+});
 
 // Public tracking lookup
 Route::get('/track/{trackingNumber}', [DocumentController::class, 'trackByNumber']);

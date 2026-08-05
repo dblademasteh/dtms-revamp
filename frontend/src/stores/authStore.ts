@@ -154,7 +154,6 @@ export const useAuthStore = create<AuthState>()(
         token: state.token,
         user: state.user,
         isAuthenticated: state.isAuthenticated,
-        twoFaToken: state.twoFaToken,
       }),
       // Normalize avatar on rehydration so stale absolute URLs (e.g. http://localhost/storage/...)
       // stored in localStorage are converted to root-relative paths that work through the Vite proxy.

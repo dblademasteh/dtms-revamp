@@ -32,6 +32,7 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showPincodeModal, setShowPincodeModal] = useState(false)
+  const [shaking, setShaking] = useState(false)
   const login = useAuthStore((state) => state.login)
   const verify2fa = useAuthStore((state) => state.verify2fa)
   const twoFaToken = useAuthStore((state) => state.twoFaToken)
@@ -51,6 +52,8 @@ export default function Login() {
       navigate('/')
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Login failed')
+      setShaking(true)
+      window.setTimeout(() => setShaking(false), 500)
     } finally {
       setIsLoading(false)
     }
@@ -115,17 +118,12 @@ export default function Login() {
               <div className="text-[10px] text-slate-400 font-medium">Document Tracking &amp; Management</div>
             </div>
           </div>
-
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-blue-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>v2.5 System Online</span>
-          </div>
         </div>
 
         {/* Main Content Hero */}
         <div className="relative z-10 my-auto max-w-lg space-y-8">
           <div className="space-y-3">
-            <h1 className="text-3xl xl:text-4xl font-extrabold leading-tight tracking-tight text-white">
+            <h1 className="text-3xl xl:text-4xl font-extrabold leading-tight tracking-tight text-white text-balance">
               Track, route, and account for every document.
             </h1>
             <p className="text-sm text-slate-300 leading-relaxed">
@@ -153,7 +151,7 @@ export default function Login() {
         </div>
 
         {/* Footer info */}
-        <div className="relative z-10 text-xs text-slate-500 flex items-center justify-between border-t border-white/10 pt-6">
+        <div className="relative z-10 text-xs text-slate-400 flex items-center justify-between border-t border-white/10 pt-6">
           <span>© {new Date().getFullYear()} Document Tracking &amp; Management System</span>
           <span className="flex items-center gap-1 text-emerald-400 font-semibold">
             <CheckCircle2 className="w-3.5 h-3.5" />
@@ -195,7 +193,7 @@ export default function Login() {
               }}
             />
           ) : (
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={handleSubmit(onSubmit)} className={shaking ? 'space-y-4 animate-shake' : 'space-y-4'}>
               {/* Account Number Field */}
               <div className="space-y-1.5">
                 <label htmlFor="accnt_no" className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
@@ -245,6 +243,7 @@ export default function Login() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5"
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -304,7 +303,7 @@ export default function Login() {
           {/* System Status Footer */}
           <div className="pt-4 border-t border-slate-200/80 dark:border-slate-800/80 flex items-center justify-center">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
               <span>All Systems Operational</span>
             </div>
           </div>
@@ -342,6 +341,18 @@ function PincodeModal({ onClose }: { onClose: () => void }) {
     }
   }
 
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 4)
+    if (!pasted) return
+    e.preventDefault()
+    const next = [...pincode]
+    pasted.split('').forEach((d, i) => {
+      if (i < 4) next[i] = d
+    })
+    setPincode(next)
+    inputRefs.current[Math.min(pasted.length, 3)]?.focus()
+  }
+
   const submitPincode = async () => {
     if (!accntNo.trim()) {
       toast.error('Enter your account number')
@@ -376,6 +387,7 @@ function PincodeModal({ onClose }: { onClose: () => void }) {
             <button
               type="button"
               onClick={onClose}
+              aria-label="Close"
               className="absolute top-4 right-4 p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
             >
               <X className="w-4 h-4" />
@@ -399,6 +411,7 @@ function PincodeModal({ onClose }: { onClose: () => void }) {
               </label>
               <input
                 type="text"
+                autoComplete="off"
                 className="w-full px-3.5 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white font-mono"
                 placeholder="e.g. P12345"
                 value={accntNo}
@@ -409,17 +422,19 @@ function PincodeModal({ onClose }: { onClose: () => void }) {
               <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5 text-center">
                 4-Digit PIN Code
               </label>
-              <div className="flex gap-2.5 justify-center pt-1">
+              <div className="flex gap-2.5 justify-center pt-1" onPaste={handlePaste}>
                 {pincode.map((digit, idx) => (
                   <input
                     key={idx}
                     ref={(el) => { inputRefs.current[idx] = el }}
                     type="text"
                     inputMode="numeric"
+                    autoComplete="one-time-code"
                     maxLength={1}
                     value={digit}
                     onChange={(e) => handleDigit(idx, e.target.value)}
                     onKeyDown={(e) => handleKeyDown(idx, e)}
+                    aria-label={`PIN digit ${idx + 1}`}
                     className="w-12 h-14 text-center text-xl font-mono font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white outline-none transition-all"
                     autoFocus={idx === 0}
                   />
