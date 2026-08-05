@@ -16,19 +16,7 @@ import {
   Plus,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
-
-const OFFICE_TYPES = [
-  { value: 'regional_office', label: 'Regional Office' },
-  { value: 'provincial_office', label: 'Provincial Office' },
-  { value: 'fire_station', label: 'Fire Station' },
-  { value: 'division', label: 'Division' },
-  { value: 'unit', label: 'Unit' },
-  { value: 'others', label: 'Others' },
-]
-
-const TYPE_LABELS: Record<string, string> = Object.fromEntries(
-  OFFICE_TYPES.map((t) => [t.value, t.label])
-)
+import { useDropdownGroup } from '@/hooks/useDropdownOptions'
 
 function normalizeLogo(office: any): string | null {
   if (!office?.logo) return null
@@ -37,6 +25,7 @@ function normalizeLogo(office: any): string | null {
 
 export default function OfficeProfile() {
   const queryClient = useQueryClient()
+  const officeTypes = useDropdownGroup('office_types')
   const [name, setName] = useState('')
   const [unitCode, setUnitCode] = useState('')
   const [description, setDescription] = useState('')
@@ -196,7 +185,9 @@ export default function OfficeProfile() {
     saveMutation.mutate({ name, unit_code: unitCode, description, office_type: officeType, head_user_id: headUserId || null })
   }
 
-  const typeLabel = office?.office_type ? TYPE_LABELS[office.office_type] || office.office_type : ''
+  const typeLabel = office?.office_type
+    ? officeTypes.find((t) => t.value === office.office_type)?.label || office.office_type
+    : ''
 
   if (officeQuery.isLoading) {
     return (
@@ -209,14 +200,6 @@ export default function OfficeProfile() {
   if (officeQuery.isError || !office) {
     return (
       <div className="space-y-6 max-w-3xl mx-auto">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Set Up Your Station</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Your station has no office profile yet. Claim an existing office or create your own
-            station profile.
-          </p>
-        </div>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <button
             type="button"
@@ -332,12 +315,12 @@ export default function OfficeProfile() {
                     <span className="label-text">Office type</span>
                   </label>
                   <select
-                    className="select select-bordered w-full"
+                    className="input"
                     value={officeType}
                     onChange={(e) => setOfficeType(e.target.value)}
                   >
                     <option value="">Select type</option>
-                    {OFFICE_TYPES.map((t) => (
+                    {officeTypes.map((t) => (
                       <option key={t.value} value={t.value}>
                         {t.label}
                       </option>
@@ -350,7 +333,7 @@ export default function OfficeProfile() {
                   <span className="label-text">Under office (optional)</span>
                 </label>
                 <select
-                  className="select select-bordered w-full"
+                  className="input"
                   value={parentId}
                   onChange={(e) => setParentId(e.target.value ? Number(e.target.value) : '')}
                 >
@@ -388,13 +371,6 @@ export default function OfficeProfile() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Office Profile</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Your office's identity, contact information, and members
-        </p>
-      </div>
-
       {/* Header banner with logo */}
       <div className="card overflow-hidden">
         <div className="h-28 bg-gradient-to-r from-navy-900 to-navy-700 relative">
@@ -506,7 +482,7 @@ export default function OfficeProfile() {
               <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Office Type</label>
               <select className="input" value={officeType} onChange={(e) => setOfficeType(e.target.value)}>
                 <option value="">Select type...</option>
-                {OFFICE_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                {officeTypes.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
             </div>
           </div>

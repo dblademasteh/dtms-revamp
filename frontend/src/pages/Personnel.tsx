@@ -164,13 +164,7 @@ export default function Personnel() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Personnel</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Directory of all personnel across offices
-          </p>
-        </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-4">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowCreatePersonnel(true)}
@@ -308,21 +302,10 @@ export default function Personnel() {
                       <div className="flex items-center gap-3">
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                            {[u.last_name, u.first_name].filter(Boolean).join(', ') || '—'}
+                            {u.rank && <span className="mr-1.5 text-primary-700 dark:text-primary-400">{u.rank}</span>}
+                            {[u.first_name, u.middle_name, u.last_name].filter(Boolean).join(' ') || '—'}
                             {u.suffix ? ` ${u.suffix}` : ''}
                           </p>
-                          <div className="mt-0.5 flex items-center gap-1.5">
-                            {u.rank && (
-                              <span className="inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                                {u.rank}
-                              </span>
-                            )}
-                            {u.unit_assignment && (
-                              <span className="truncate text-[10px] text-slate-400 dark:text-slate-500">
-                                {u.unit_assignment}
-                              </span>
-                            )}
-                          </div>
                         </div>
                       </div>
                     </td>

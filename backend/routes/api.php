@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\PersonnelController;
 use App\Http\Controllers\Api\TwoFactorController;
 use App\Http\Controllers\Api\SuggestionController;
 use App\Http\Controllers\Api\StorageController;
+use App\Http\Controllers\Api\DropdownOptionController;
 
 // Public routes
 Route::post('/auth/login', [AuthController::class, 'login']);
@@ -74,6 +75,9 @@ Route::get('/ranks', function () {
 
     return response()->json($ranks ?: $defaultRanks);
 });
+
+// Public dropdown options endpoint (shared with ranks)
+Route::get('/dropdown-options', [DropdownOptionController::class, 'index']);
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -471,6 +475,12 @@ Route::middleware('auth:sanctum')->group(function () {
             \App\Models\SystemSetting::set('custom_ranks', null);
             return response()->json(['message' => 'Ranks reset to default BFP ranks']);
         });
+
+        // Dropdown options management (admin only)
+        Route::post('/dropdown-options', [DropdownOptionController::class, 'store']);
+        Route::put('/dropdown-options/{option}', [DropdownOptionController::class, 'update']);
+        Route::delete('/dropdown-options/{option}', [DropdownOptionController::class, 'destroy']);
+        Route::post('/dropdown-options/{group}/reset', [DropdownOptionController::class, 'reset']);
 
         // Users (admin only) — only accounts with an account number
         Route::get('/users', function () {

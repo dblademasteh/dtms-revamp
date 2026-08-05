@@ -79,13 +79,7 @@ export default function ActivityLog() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Activity Log</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            System-wide audit trail of all document actions
-          </p>
-        </div>
-        <button onClick={handleExport} className="btn btn-primary btn-sm flex-shrink-0">
+        <button onClick={handleExport} className="btn btn-primary btn-sm flex-shrink-0 sm:ml-auto">
           <Download className="w-4 h-4" /> Export CSV
         </button>
       </div>

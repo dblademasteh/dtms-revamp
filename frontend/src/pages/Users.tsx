@@ -180,13 +180,7 @@ export default function Users() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">User Management</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Manage system users and their roles
-          </p>
-        </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-4">
         <div className="flex gap-2">
           <button
             onClick={() => setShowOfficeAccount(true)}
@@ -500,7 +494,7 @@ export default function Users() {
                   <select
                     value={editRank}
                     onChange={(e) => setEditRank(e.target.value)}
-                    className="w-full px-3.5 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                    className="input cursor-pointer"
                   >
                     <option value="">No Rank / Select Rank...</option>
                     {ranks.map((r) => (

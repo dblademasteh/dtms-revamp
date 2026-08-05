@@ -396,14 +396,6 @@ export default function Settings() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Manage your account and system preferences
-        </p>
-      </div>
-
       {/* Tabs */}
       <div className="flex flex-wrap gap-1 border-b border-slate-200">
         {tabs.map((t) => (

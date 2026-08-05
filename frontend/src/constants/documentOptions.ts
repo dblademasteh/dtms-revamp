@@ -1,3 +1,12 @@
+import { useDropdownStore } from '@/stores/dropdownStore'
+
+export type Option = { value: string; label: string; meta?: Record<string, unknown> | null }
+
+function liveOptions(group: string): Option[] | undefined {
+  const loaded = useDropdownStore.getState().groups[group]
+  return loaded && loaded.length ? loaded : undefined
+}
+
 export const BFP_RANKS = [
   { value: 'COMMR', label: 'COMMR - Commissioner' },
   { value: 'DIR', label: 'DIR - Director' },
@@ -49,7 +58,8 @@ export const CLASSIFICATIONS = [
 ]
 
 export function documentTypeLabel(value?: string): string {
-  return DOCUMENT_TYPES.find((t) => t.value === value)?.label ?? value ?? 'Unknown'
+  const list = liveOptions('document_types') ?? DOCUMENT_TYPES
+  return list.find((t) => t.value === value)?.label ?? value ?? 'Unknown'
 }
 
 export const DOCUMENT_STATUSES = [
@@ -64,11 +74,13 @@ export const DOCUMENT_STATUSES = [
 ]
 
 export function statusLabel(value?: string): string {
-  return DOCUMENT_STATUSES.find((s) => s.value === value)?.label ?? value?.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase()) ?? value ?? 'Unknown'
+  const list = liveOptions('document_statuses') ?? DOCUMENT_STATUSES
+  return list.find((s) => s.value === value)?.label ?? value?.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase()) ?? value ?? 'Unknown'
 }
 
 export function classificationLabel(value?: string): string {
-  return CLASSIFICATIONS.find((c) => c.value === value)?.label ?? value ?? 'Official'
+  const list = liveOptions('classifications') ?? CLASSIFICATIONS
+  return list.find((c) => c.value === value)?.label ?? value ?? 'Official'
 }
 
 export function classificationBadgeClass(value?: string): string {
@@ -148,7 +160,8 @@ export const MODES_OF_TRANSMITTAL = [
 ]
 
 export function transmittalLabel(value?: string): string {
-  return MODES_OF_TRANSMITTAL.find((m) => m.value === value)?.label ?? 'Not Specified'
+  const list = liveOptions('modes_of_transmittal') ?? MODES_OF_TRANSMITTAL
+  return list.find((m) => m.value === value)?.label ?? 'Not Specified'
 }
 
 // Action requested of the recipient (standard government routing-slip actions)
@@ -168,7 +181,8 @@ export const ACTION_REQUESTED = [
 ]
 
 export function actionRequestedLabel(value?: string): string {
-  return ACTION_REQUESTED.find((a) => a.value === value)?.label ?? value ?? '—'
+  const list = liveOptions('action_requested') ?? ACTION_REQUESTED
+  return list.find((a) => a.value === value)?.label ?? value ?? '—'
 }
 
 // Government routing dispositions, grouped by the underlying transition
@@ -194,6 +208,8 @@ export const ROUTING_DISPOSITIONS: Record<
 }
 
 export function dispositionLabel(value?: string): string {
+  const live = liveOptions('routing_dispositions')
+  if (live) return live.find((d) => d.value === value)?.label ?? value ?? '—'
   const all = [
     ...ROUTING_DISPOSITIONS.approve,
     ...ROUTING_DISPOSITIONS.reject,
@@ -201,4 +217,53 @@ export function dispositionLabel(value?: string): string {
     ...ROUTING_DISPOSITIONS.file,
   ]
   return all.find((d) => d.value === value)?.label ?? value ?? '—'
+}
+
+export const OFFICE_TYPES: Option[] = [
+  { value: 'regional_office', label: 'Regional Office' },
+  { value: 'provincial_office', label: 'Provincial Office' },
+  { value: 'fire_station', label: 'Fire Station' },
+  { value: 'division', label: 'Division' },
+  { value: 'unit', label: 'Unit' },
+  { value: 'others', label: 'Others' },
+]
+
+export const PRIORITY_OPTIONS: Option[] = [
+  { value: 'low', label: 'Low', meta: { desc: 'Standard processing' } },
+  { value: 'normal', label: 'Normal', meta: { desc: 'Default priority' } },
+  { value: 'high', label: 'High', meta: { desc: 'Expedited processing' } },
+  { value: 'urgent', label: 'Urgent', meta: { desc: 'Immediate attention' } },
+]
+
+export const SUGGESTION_CATEGORIES: Option[] = [
+  { value: 'feature', label: 'Feature' },
+  { value: 'improvement', label: 'Improvement' },
+  { value: 'bug', label: 'Bug' },
+  { value: 'other', label: 'Other' },
+]
+
+export const SUGGESTION_STATUSES: Option[] = [
+  { value: 'open', label: 'Open' },
+  { value: 'under_review', label: 'Under Review' },
+  { value: 'planned', label: 'Planned' },
+  { value: 'implemented', label: 'Implemented' },
+  { value: 'closed', label: 'Closed' },
+]
+
+export const DEFAULT_GROUPS: Record<string, Option[]> = {
+  document_types: DOCUMENT_TYPES,
+  classifications: CLASSIFICATIONS,
+  modes_of_transmittal: MODES_OF_TRANSMITTAL,
+  action_requested: ACTION_REQUESTED,
+  routing_dispositions: [
+    ...ROUTING_DISPOSITIONS.approve.map((d) => ({ ...d, meta: { group: 'approve' } })),
+    ...ROUTING_DISPOSITIONS.reject.map((d) => ({ ...d, meta: { group: 'reject' } })),
+    ...ROUTING_DISPOSITIONS.return.map((d) => ({ ...d, meta: { group: 'return' } })),
+    ...ROUTING_DISPOSITIONS.file.map((d) => ({ ...d, meta: { group: 'file' } })),
+  ],
+  document_statuses: DOCUMENT_STATUSES,
+  office_types: OFFICE_TYPES,
+  priorities: PRIORITY_OPTIONS,
+  suggestion_categories: SUGGESTION_CATEGORIES,
+  suggestion_statuses: SUGGESTION_STATUSES,
 }

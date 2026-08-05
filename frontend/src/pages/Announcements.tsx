@@ -22,7 +22,8 @@ import {
 import { useState, useMemo } from 'react'
 import toast from 'react-hot-toast'
 import ModalPortal from '@/components/ModalPortal'
-import { DOCUMENT_TYPES, documentTypeLabel } from '@/constants/documentOptions'
+import { documentTypeLabel } from '@/constants/documentOptions'
+import { useDropdownGroup } from '@/hooks/useDropdownOptions'
 
 const getDocTypeBadgeStyle = (type: string) => {
   switch (type?.toLowerCase()) {
@@ -41,6 +42,7 @@ const getDocTypeBadgeStyle = (type: string) => {
 
 export default function Announcements() {
   const queryClient = useQueryClient()
+  const documentTypes = useDropdownGroup('document_types')
   const [searchTerm, setSearchTerm] = useState('')
   const [filter, setFilter] = useState<'all' | 'today' | 'urgent' | 'compliance'>('all')
   const [docTypeFilter, setDocTypeFilter] = useState('')
@@ -163,17 +165,9 @@ export default function Announcements() {
         <div className="absolute bottom-0 left-1/3 -mb-10 w-60 h-60 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
         
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100/70 dark:bg-white/10 backdrop-blur-md border border-blue-200/50 dark:border-white/15 text-xs font-semibold text-blue-800 dark:text-blue-200">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 dark:bg-white/40 animate-pulse" />
-              <span>Agency Broadcast Center</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-              Bulletin &amp; Announcements
-            </h1>
-            <p className="text-slate-600 dark:text-slate-300 text-sm max-w-xl leading-relaxed">
-              Stay informed with official agency memorandums, compliance policies, urgent advisories, and executive orders published for all staff.
-            </p>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100/70 dark:bg-white/10 backdrop-blur-md border border-blue-200/50 dark:border-white/15 text-xs font-semibold text-blue-800 dark:text-blue-200 w-fit">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 dark:bg-white/40 animate-pulse" />
+            <span>Agency Broadcast Center</span>
           </div>
 
           <div className="flex items-center gap-3">
@@ -257,12 +251,12 @@ export default function Announcements() {
           {/* Document Type Dropdown */}
           <div className="relative min-w-[140px]">
             <select
-              className="w-full pl-3 pr-8 py-2 text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-200 cursor-pointer"
+              className="input cursor-pointer"
               value={docTypeFilter}
               onChange={(e) => setDocTypeFilter(e.target.value)}
             >
               <option value="">All Document Types</option>
-              {DOCUMENT_TYPES.map(t => (
+              {documentTypes.map(t => (
                 <option key={t.value} value={t.value}>{t.label}</option>
               ))}
             </select>
@@ -561,11 +555,11 @@ export default function Announcements() {
                     Document Classification
                   </label>
                   <select
-                    className="w-full px-3.5 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                    className="input cursor-pointer"
                     value={docType}
                     onChange={(e) => setDocType(e.target.value)}
                   >
-                    {DOCUMENT_TYPES.map((t) => (
+                    {documentTypes.map((t) => (
                       <option key={t.value} value={t.value}>{t.label}</option>
                     ))}
                   </select>

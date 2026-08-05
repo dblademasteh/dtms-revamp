@@ -18,11 +18,13 @@ import {
   Lightbulb,
   HardDrive,
   Mail,
-  MapPin
+  MapPin,
+  ChevronsUpDown
 } from 'lucide-react'
 import { useState } from 'react'
 import NotificationBell from '@/components/NotificationBell'
 import ConfirmModal from '@/components/ConfirmModal'
+import SuggestionsWidget from '@/components/SuggestionsWidget'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -30,7 +32,6 @@ const navigation = [
   { name: 'Track', href: '/track', icon: MapPin },
   { name: 'Announcements', href: '/announcements', icon: Megaphone },
   { name: 'Reports', href: '/reports', icon: BarChart3 },
-  { name: 'Suggestions', href: '/suggestions', icon: Lightbulb },
   { name: 'Mailbox', href: '/mailbox', icon: Mail },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]
@@ -57,6 +58,38 @@ export default function Layout() {
     if (href === '/') return location.pathname === '/'
     return location.pathname.startsWith(href)
   }
+
+  const getPageMeta = (pathname: string) => {
+    if (pathname.startsWith('/documents/new')) {
+      return { title: 'New Document', description: 'Create and route a new document' }
+    }
+    if (pathname.startsWith('/documents/')) {
+      if (pathname.endsWith('/edit')) {
+        return { title: 'Edit Document', description: 'Update document details and routing' }
+      }
+      return { title: 'Document Details', description: 'View document information and routing history' }
+    }
+    const meta: Record<string, { title: string; description: string }> = {
+      '/': { title: 'Dashboard', description: 'Overview of documents, tasks, and activity' },
+      '/documents': { title: 'Documents', description: 'Manage and track your documents' },
+      '/announcements': { title: 'Announcements', description: 'Browse announcements and circulars' },
+      '/reports': { title: 'Reports', description: 'Generate and view reports' },
+      '/personnel': { title: 'Personnel', description: 'Manage personnel records' },
+      '/mailbox': { title: 'Mailbox', description: 'Incoming and outgoing correspondence' },
+      '/office-profile': { title: 'Office Profile', description: 'Manage your office information' },
+      '/admin/users': { title: 'Users', description: 'Manage user accounts and roles' },
+      '/admin/templates': { title: 'Routing Templates', description: 'Manage routing templates' },
+      '/admin/offices': { title: 'Offices', description: 'Manage offices and units' },
+      '/admin/storage': { title: 'Storage', description: 'Storage usage and management' },
+      '/admin/activity': { title: 'Activity Log', description: 'Audit trail of system activity' },
+      '/admin/suggestions': { title: 'Suggestions', description: 'Review and respond to user suggestions' },
+      '/admin/dropdowns': { title: 'Dropdown Options', description: 'Manage dropdown lists' },
+      '/settings': { title: 'Settings', description: 'Account and system preferences' },
+    }
+    return meta[pathname] || { title: 'DTMS', description: 'Document Tracking & Management System' }
+  }
+
+  const pageMeta = getPageMeta(location.pathname)
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full bg-white dark:bg-slate-900 border-r border-slate-200/80 dark:border-slate-800 transition-colors duration-200">
@@ -176,6 +209,26 @@ export default function Layout() {
               <History className="w-5 h-5 flex-shrink-0" />
               Activity Log
             </Link>
+            <Link
+              to="/admin/suggestions"
+              className={`nav-item ${
+                isActive('/admin/suggestions') ? 'nav-item-active' : 'nav-item-inactive'
+              }`}
+              onClick={() => setSidebarOpen(false)}
+            >
+              <Lightbulb className="w-5 h-5 flex-shrink-0" />
+              Suggestions
+            </Link>
+            <Link
+              to="/admin/dropdowns"
+              className={`nav-item ${
+                isActive('/admin/dropdowns') ? 'nav-item-active' : 'nav-item-inactive'
+              }`}
+              onClick={() => setSidebarOpen(false)}
+            >
+              <ChevronsUpDown className="w-5 h-5 flex-shrink-0" />
+              Dropdown Options
+            </Link>
           </>
         )}
       </nav>
@@ -231,19 +284,24 @@ export default function Layout() {
             </div>
           </div>
 
-          {/* Search */}
-          <div className="hidden sm:flex flex-1 max-w-md">
-            <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search documents..."
-                className="w-full pl-9 pr-4 py-2 text-sm bg-slate-100 dark:bg-slate-800 border-0 rounded-lg focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 transition-all"
-              />
-            </div>
+          <div className="min-w-0 flex-1 hidden lg:block mr-4">
+            <h1 className="text-lg font-bold text-slate-900 dark:text-white leading-tight truncate">{pageMeta.title}</h1>
+            <p className="text-[13px] text-slate-500 dark:text-slate-400 leading-tight truncate">{pageMeta.description}</p>
           </div>
 
-          <div className="flex items-center gap-x-2 ml-auto">
+          <div className="flex items-center gap-x-3 ml-auto">
+            {/* Search */}
+            <div className="hidden sm:block w-64 md:w-80">
+              <div className="relative w-full">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search documents..."
+                  className="w-full pl-9 pr-4 py-2 text-sm bg-slate-100 dark:bg-slate-800 border-0 rounded-lg focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 transition-all"
+                />
+              </div>
+            </div>
+
             {/* Notifications */}
             <NotificationBell />
 
@@ -294,6 +352,8 @@ export default function Layout() {
         onCancel={() => setShowLogoutConfirm(false)}
         danger={true}
       />
+
+      {user?.role !== 'superadmin' && <SuggestionsWidget />}
     </div>
   )
 }

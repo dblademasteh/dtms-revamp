@@ -8,15 +8,9 @@ import { Plus, Edit, Trash2, Building2, X, ChevronRight, ChevronDown, Save, User
 import ConfirmModal from '@/components/ConfirmModal'
 import { buildSelectStyles } from '@/utils/selectStyles'
 import SearchableSelect from '@/components/SearchableSelect'
-
-const OFFICE_TYPES = [
-  { value: 'regional_office', label: 'Regional Office' },
-  { value: 'provincial_office', label: 'Provincial Office' },
-  { value: 'fire_station', label: 'Fire Station' },
-  { value: 'division', label: 'Division' },
-  { value: 'unit', label: 'Unit' },
-  { value: 'others', label: 'Others' },
-]
+import { useDropdownGroup } from '@/hooks/useDropdownOptions'
+import { OFFICE_TYPES } from '@/constants/documentOptions'
+import { useDropdownStore } from '@/stores/dropdownStore'
 
 const OFFICE_TYPE_BADGE: Record<string, string> = {
   regional_office: 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 border border-primary-200 dark:border-primary-700/60',
@@ -27,8 +21,11 @@ const OFFICE_TYPE_BADGE: Record<string, string> = {
   others: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700',
 }
 
-const officeTypeLabel = (v?: string) =>
-  OFFICE_TYPES.find(t => t.value === v)?.label ?? v ?? 'Office'
+const officeTypeLabel = (v?: string) => {
+  const loaded = useDropdownStore.getState().groups.office_types
+  const list = loaded && loaded.length ? loaded : OFFICE_TYPES
+  return list.find(t => t.value === v)?.label ?? v ?? 'Office'
+}
 
 const OFFICER_RANKS = ['FSSUPT', 'FSUPT', 'FSINSP', 'FINSP', 'FCINSP']
 
@@ -79,6 +76,7 @@ const filterOffices = (nodes: any[], type: string, query: string): any[] => {
 
 export default function Offices() {
   const queryClient = useQueryClient()
+  const officeTypes = useDropdownGroup('office_types')
   const [showForm, setShowForm] = useState(false)
   const [editingOffice, setEditingOffice] = useState<any>(null)
   const [name, setName] = useState('')
@@ -291,11 +289,7 @@ export default function Offices() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Offices</h1>
-          <p className="text-sm text-slate-500 mt-1">Manage organizational structure</p>
-        </div>
+      <div className="flex items-center justify-end">
         <button onClick={() => { resetForm(); setShowForm(true) }} className="btn btn-primary btn-sm">
           <Plus className="w-4 h-4" /> New Office
         </button>
@@ -320,7 +314,7 @@ export default function Offices() {
         >
           All
         </button>
-        {OFFICE_TYPES.map(t => (
+        {officeTypes.map(t => (
           <button
             key={t.value}
             onClick={() => setTypeFilter(t.value)}
@@ -420,7 +414,7 @@ export default function Offices() {
                     <div>
                       <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Office Type</label>
                       <SearchableSelect
-                        options={OFFICE_TYPES}
+                        options={officeTypes}
                         value={officeType}
                         onChange={setOfficeType}
                         placeholder="Select type..."

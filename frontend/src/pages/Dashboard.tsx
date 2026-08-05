@@ -103,11 +103,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-        <p className="text-sm text-slate-500 mt-1">Welcome back! Here's an overview of your documents.</p>
-      </div>
-
       {user?.role === 'office_station' && !user?.office_id && !user?.office && (
         <div className="card p-4 flex flex-col sm:flex-row sm:items-center gap-3 border-l-4 border-l-amber-500">
           <div className="flex items-center gap-3 flex-1">

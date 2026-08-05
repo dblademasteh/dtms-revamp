@@ -128,3 +128,13 @@ export interface PaginatedResponse<T> {
   per_page: number
   total: number
 }
+
+export interface DropdownOption {
+  id: number
+  group: string
+  value: string
+  label: string
+  sort_order: number
+  meta?: Record<string, unknown> | null
+  is_active: boolean
+}

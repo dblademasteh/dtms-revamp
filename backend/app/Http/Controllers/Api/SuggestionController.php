@@ -46,8 +46,12 @@ class SuggestionController extends Controller
         ], 201);
     }
 
-    public function show(Suggestion $suggestion)
+    public function show(Request $request, Suggestion $suggestion)
     {
+        if (!$request->user()->isAdmin() && $suggestion->user_id !== $request->user()->id) {
+            abort(403, 'You can only view your own suggestions.');
+        }
+
         return response()->json($suggestion->load('user:id,name'));
     }
 

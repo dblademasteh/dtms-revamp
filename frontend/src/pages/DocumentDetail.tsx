@@ -50,6 +50,7 @@ import {
   ROUTING_DISPOSITIONS,
 } from '@/constants/documentOptions'
 import RoutingSlipModal from '@/components/RoutingSlipModal'
+import { useDropdownGroup } from '@/hooks/useDropdownOptions'
 
 const personLabel = (p: any) =>
   p ? [p.rank, p.full_name || p.name].filter(Boolean).join(' ') : '—'
@@ -62,6 +63,7 @@ export default function DocumentDetail() {
   const queryClient = useQueryClient()
   const { user } = useAuthStore()
   const isSuperadmin = useAuthStore((s) => s.isSuperadmin)()
+  const dispositions = useDropdownGroup('routing_dispositions')
   const [action, setAction] = useState<'approve' | 'reject' | 'return' | 'resubmit' | 'file' | 'send' | null>(null)
   const [disposition, setDisposition] = useState('approved')
   const [remarks, setRemarks] = useState('')
@@ -284,7 +286,13 @@ export default function DocumentDetail() {
 
   const selectAction = (a: 'approve' | 'reject' | 'return' | 'resubmit' | 'file' | 'send') => {
     setAction(a)
-    setDisposition(a === 'resubmit' ? 'resubmitted' : a === 'send' ? 'routed' : ROUTING_DISPOSITIONS[a][0].value)
+    setDisposition(
+      a === 'resubmit'
+        ? 'resubmitted'
+        : a === 'send'
+          ? 'routed'
+          : (dispositions.find((d) => d.meta?.group === a)?.value ?? ROUTING_DISPOSITIONS[a][0].value)
+    )
     if (a === 'approve') {
       // Forward target is optional on approval
       setRecipientSelection([])
@@ -1145,7 +1153,7 @@ className="flex items-center justify-between w-full text-left"
                             Disposition
                           </label>
                           <div className="grid grid-cols-3 gap-2">
-                            {ROUTING_DISPOSITIONS.approve.map((d) => {
+                            {dispositions.filter((d) => d.meta?.group === 'approve').map((d) => {
                               const isSelected = disposition === d.value
                               return (
                                 <button
@@ -1177,7 +1185,7 @@ className="flex items-center justify-between w-full text-left"
                             value={disposition}
                             onChange={(e) => setDisposition(e.target.value)}
                           >
-                            {ROUTING_DISPOSITIONS[action as 'reject' | 'return'].map((d) => (
+                            {dispositions.filter((d) => d.meta?.group === (action as 'reject' | 'return')).map((d) => (
                               <option key={d.value} value={d.value}>{d.label}</option>
                             ))}
                           </select>

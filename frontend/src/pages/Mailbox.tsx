@@ -567,7 +567,6 @@ function MailboxView({ mailbox, initialUnread, onOpenSettings }: { mailbox: Mail
             <Mail className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <h1 className="text-xl font-bold text-slate-900 truncate">My Mailbox</h1>
             <p className="text-xs text-slate-500 truncate">
               {mailbox.email}
               {mailbox.last_synced_at && (

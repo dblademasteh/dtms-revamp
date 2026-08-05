@@ -24,13 +24,16 @@ import {
   ShieldCheck
 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { documentTypeLabel, DOCUMENT_TYPES, statusLabel } from '@/constants/documentOptions'
+import { documentTypeLabel, statusLabel } from '@/constants/documentOptions'
+import { useDropdownGroup } from '@/hooks/useDropdownOptions'
 import SearchableSelect from '@/components/SearchableSelect'
 
 export default function Documents() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const { user } = useAuthStore()
+  const documentTypes = useDropdownGroup('document_types')
+  const priorities = useDropdownGroup('priorities')
   const [searchParams] = useSearchParams()
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState(searchParams.get('status') || '')
@@ -132,7 +135,6 @@ export default function Documents() {
 
   const documents = data?.data || []
   const totalPages = data?.last_page || 1
-  const totalDocuments = data?.total || documents.length
 
   const copyTracking = (doc: any, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -199,30 +201,14 @@ export default function Documents() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Documents Repository
-            </h1>
-            <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-              {totalDocuments} Total
-            </span>
-          </div>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Monitor, route, approve, and track document lifecycles across offices
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Link
-            to="/documents/new"
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition-all hover:scale-[1.02]"
-          >
-            <Plus className="w-4 h-4 stroke-[3]" />
-            <span>New Document</span>
-          </Link>
-        </div>
+      <div className="flex items-center justify-end">
+        <Link
+          to="/documents/new"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition-all hover:scale-[1.02]"
+        >
+          <Plus className="w-4 h-4 stroke-[3]" />
+          <span>New Document</span>
+        </Link>
       </div>
 
       {/* Filter Control Card */}
@@ -321,7 +307,7 @@ export default function Documents() {
           />
 
           <select
-            className="w-full px-3 py-2 text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-200 cursor-pointer"
+            className="input cursor-pointer"
             value={status}
             onChange={(e) => { setStatus(e.target.value); setPage(1) }}
           >
@@ -331,24 +317,23 @@ export default function Documents() {
           </select>
 
           <select
-            className="w-full px-3 py-2 text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-200 cursor-pointer"
+            className="input cursor-pointer"
             value={priority}
             onChange={(e) => { setPriority(e.target.value); setPage(1) }}
           >
             <option value="">All Priorities</option>
-            <option value="low">Low Priority</option>
-            <option value="normal">Normal Priority</option>
-            <option value="high">High Priority</option>
-            <option value="urgent">Urgent Priority</option>
+            {priorities.map((p) => (
+              <option key={p.value} value={p.value}>{p.label}</option>
+            ))}
           </select>
 
           <select
-            className="w-full px-3 py-2 text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-200 cursor-pointer"
+            className="input cursor-pointer"
             value={docType}
             onChange={(e) => { setDocType(e.target.value); setPage(1) }}
           >
             <option value="">All Document Types</option>
-            {DOCUMENT_TYPES.map((type) => (
+            {documentTypes.map((type) => (
               <option key={type.value} value={type.value}>{type.label}</option>
             ))}
           </select>

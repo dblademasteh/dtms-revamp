@@ -4,7 +4,6 @@ import api from '@/services/api'
 import ConfirmModal from '@/components/ConfirmModal'
 import ModalPortal from '@/components/ModalPortal'
 import {
-  HardDrive,
   Archive,
   Trash2,
   RefreshCw,
@@ -141,13 +140,9 @@ export default function Storage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="card">
-        <div className="card-header flex items-center gap-2">
-          <HardDrive className="w-4 h-4 text-slate-500" />
-          <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
-            Storage Management
-          </h2>
+        <div className="card-header flex items-center gap-2 justify-end">
           <button
-            className="btn btn-ghost btn-sm ml-auto"
+            className="btn btn-ghost btn-sm"
             onClick={() => refetch()}
             disabled={isFetching}
           >

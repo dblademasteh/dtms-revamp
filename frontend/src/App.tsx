@@ -20,14 +20,16 @@ import ActivityLog from '@/pages/ActivityLog'
 import Personnel from '@/pages/Personnel'
 import Storage from '@/pages/Storage'
 import Announcements from '@/pages/Announcements'
-import Suggestions from '@/pages/Suggestions'
+import AdminSuggestions from '@/pages/AdminSuggestions'
 import Mailbox from '@/pages/Mailbox'
 import OfficeProfile from '@/pages/OfficeProfile'
 import NotFound from '@/pages/NotFound'
+import Dropdowns from '@/pages/admin/Dropdowns'
 import Layout from '@/components/Layout'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import PrivacyNotice from '@/components/PrivacyNotice'
 import { useRealtime } from '@/hooks/useRealtime'
+import { useDropdownOptions } from '@/hooks/useDropdownOptions'
 
 import { useEffect } from 'react'
 
@@ -62,6 +64,11 @@ function RealtimeBridge() {
   return null
 }
 
+function DropdownOptionsLoader() {
+  useDropdownOptions()
+  return null
+}
+
 function App() {
   useEffect(() => {
     // 1. Theme
@@ -91,6 +98,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <RealtimeBridge />
+      <DropdownOptionsLoader />
       <ErrorBoundary>
         <BrowserRouter>
           <Routes>
@@ -114,7 +122,6 @@ function App() {
               <Route path="announcements" element={<Announcements />} />
               <Route path="reports" element={<Reports />} />
               <Route path="personnel" element={<AdminRoute><Personnel /></AdminRoute>} />
-              <Route path="suggestions" element={<Suggestions />} />
               <Route path="mailbox" element={<Mailbox />} />
               <Route path="office-profile" element={<OfficeProfile />} />
               <Route path="admin/users" element={<Users />} />
@@ -122,6 +129,8 @@ function App() {
               <Route path="admin/offices" element={<Offices />} />
               <Route path="admin/storage" element={<AdminRoute><Storage /></AdminRoute>} />
               <Route path="admin/activity" element={<AdminRoute><ActivityLog /></AdminRoute>} />
+              <Route path="admin/suggestions" element={<AdminRoute><AdminSuggestions /></AdminRoute>} />
+              <Route path="admin/dropdowns" element={<AdminRoute><Dropdowns /></AdminRoute>} />
               <Route path="settings" element={<Settings />} />
             </Route>
             <Route path="*" element={<NotFound />} />

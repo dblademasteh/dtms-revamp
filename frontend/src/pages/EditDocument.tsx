@@ -7,18 +7,15 @@ import {
   ArrowLeft,
   Save,
 } from 'lucide-react'
-import { DOCUMENT_TYPES, CLASSIFICATIONS, MODES_OF_TRANSMITTAL } from '@/constants/documentOptions'
-
-const PRIORITY_OPTIONS = [
-  { value: 'low', label: 'Low', desc: 'Standard processing' },
-  { value: 'normal', label: 'Normal', desc: 'Default priority' },
-  { value: 'high', label: 'High', desc: 'Expedited processing' },
-  { value: 'urgent', label: 'Urgent', desc: 'Immediate attention' },
-]
+import { useDropdownGroup } from '@/hooks/useDropdownOptions'
 
 export default function EditDocument() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const documentTypes = useDropdownGroup('document_types')
+  const classifications = useDropdownGroup('classifications')
+  const modes = useDropdownGroup('modes_of_transmittal')
+  const priorities = useDropdownGroup('priorities')
   const [subject, setSubject] = useState('')
   const [documentType, setDocumentType] = useState('')
   const [priority, setPriority] = useState('normal')
@@ -94,12 +91,11 @@ export default function EditDocument() {
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Edit Document</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            {document?.tracking_number}
-          </p>
-        </div>
+        {document?.tracking_number && (
+          <span className="font-mono text-xs font-bold tracking-wide text-primary-700 dark:text-primary-300 bg-primary-100 dark:bg-primary-900/40 px-2.5 py-1 rounded border border-primary-200 dark:border-primary-700/60 inline-block">
+            {document.tracking_number}
+          </span>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -123,7 +119,7 @@ export default function EditDocument() {
                   required
                 >
                   <option value="">Select type...</option>
-                  {DOCUMENT_TYPES.map(type => (
+                  {documentTypes.map(type => (
                     <option key={type.value} value={type.value}>{type.label}</option>
                   ))}
                 </select>
@@ -148,7 +144,7 @@ export default function EditDocument() {
                   value={classification}
                   onChange={(e) => setClassification(e.target.value)}
                 >
-                  {CLASSIFICATIONS.map((c) => (
+                  {classifications.map((c) => (
                     <option key={c.value} value={c.value}>{c.label}</option>
                   ))}
                 </select>
@@ -162,7 +158,7 @@ export default function EditDocument() {
                   value={modeOfTransmittal}
                   onChange={(e) => setModeOfTransmittal(e.target.value)}
                 >
-                  {MODES_OF_TRANSMITTAL.map((m) => (
+                  {modes.map((m) => (
                     <option key={m.value} value={m.value}>{m.label}</option>
                   ))}
                 </select>
@@ -188,7 +184,7 @@ export default function EditDocument() {
                 Priority <span className="text-danger-500">*</span>
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {PRIORITY_OPTIONS.map(opt => (
+                {priorities.map(opt => (
                   <button
                     key={opt.value}
                     type="button"
@@ -204,7 +200,7 @@ export default function EditDocument() {
                     }`}>
                       {opt.label}
                     </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{opt.desc}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{String(opt.meta?.desc ?? '')}</p>
                   </button>
                 ))}
               </div>

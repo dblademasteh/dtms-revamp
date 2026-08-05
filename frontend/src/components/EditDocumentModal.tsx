@@ -4,38 +4,31 @@ import api from '@/services/api'
 import toast from 'react-hot-toast'
 import { X, Save } from 'lucide-react'
 import ModalPortal from '@/components/ModalPortal'
-import { DOCUMENT_TYPES, CLASSIFICATIONS, MODES_OF_TRANSMITTAL } from '@/constants/documentOptions'
+import { useDropdownGroup } from '@/hooks/useDropdownOptions'
 
-const PRIORITY_OPTIONS = [
-  {
-    value: 'low',
-    label: 'Low',
-    desc: 'Standard processing',
+const PRIORITY_STYLES: Record<string, { badgeClass: string; activeStyle: string }> = {
+  low: {
     badgeClass: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
     activeStyle: 'border-slate-500 bg-slate-50 dark:bg-slate-800/60 ring-2 ring-slate-400/30',
   },
-  {
-    value: 'normal',
-    label: 'Normal',
-    desc: 'Default priority',
+  normal: {
     badgeClass: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-800',
     activeStyle: 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 ring-2 ring-blue-400/30',
   },
-  {
-    value: 'high',
-    label: 'High',
-    desc: 'Expedited processing',
+  high: {
     badgeClass: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800',
     activeStyle: 'border-amber-500 bg-amber-50 dark:bg-amber-900/30 ring-2 ring-amber-400/30',
   },
-  {
-    value: 'urgent',
-    label: 'Urgent',
-    desc: 'Immediate attention',
+  urgent: {
     badgeClass: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800',
     activeStyle: 'border-red-500 bg-red-50 dark:bg-red-900/30 ring-2 ring-red-400/30',
   },
-]
+}
+
+const DEFAULT_PRIORITY_STYLE = {
+  badgeClass: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+  activeStyle: 'border-slate-500 bg-slate-50 dark:bg-slate-800/60 ring-2 ring-slate-400/30',
+}
 
 export default function EditDocumentModal({
   document,
@@ -46,6 +39,10 @@ export default function EditDocumentModal({
 }) {
   const queryClient = useQueryClient()
   const id = document.id
+  const documentTypes = useDropdownGroup('document_types')
+  const classifications = useDropdownGroup('classifications')
+  const modes = useDropdownGroup('modes_of_transmittal')
+  const priorities = useDropdownGroup('priorities')
   const [subject, setSubject] = useState('')
   const [documentType, setDocumentType] = useState('')
   const [priority, setPriority] = useState('normal')
@@ -124,7 +121,7 @@ export default function EditDocumentModal({
                   required
                 >
                   <option value="">Select type...</option>
-                  {DOCUMENT_TYPES.map((type: any) => (
+                  {documentTypes.map((type: any) => (
                     <option key={type.value} value={type.value}>{type.label}</option>
                   ))}
                 </select>
@@ -138,7 +135,7 @@ export default function EditDocumentModal({
                   value={classification}
                   onChange={(e) => setClassification(e.target.value)}
                 >
-                  {CLASSIFICATIONS.map((c: any) => (
+                  {classifications.map((c: any) => (
                     <option key={c.value} value={c.value}>{c.label}</option>
                   ))}
                 </select>
@@ -152,7 +149,7 @@ export default function EditDocumentModal({
                   value={modeOfTransmittal}
                   onChange={(e) => setModeOfTransmittal(e.target.value)}
                 >
-                  {MODES_OF_TRANSMITTAL.map((m: any) => (
+                  {modes.map((m: any) => (
                     <option key={m.value} value={m.value}>{m.label}</option>
                   ))}
                 </select>
@@ -178,25 +175,28 @@ export default function EditDocumentModal({
                 Priority <span className="text-danger-500">*</span>
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                {PRIORITY_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setPriority(opt.value)}
-                    className={`p-3 rounded-xl border-2 text-left transition-all ${
-                      priority === opt.value
-                        ? opt.activeStyle
-                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-1 mb-1">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold border uppercase tracking-wider ${opt.badgeClass}`}>
-                        {opt.label}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{opt.desc}</p>
-                  </button>
-                ))}
+                {priorities.map((opt) => {
+                  const style = PRIORITY_STYLES[opt.value] ?? DEFAULT_PRIORITY_STYLE
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setPriority(opt.value)}
+                      className={`p-3 rounded-xl border-2 text-left transition-all ${
+                        priority === opt.value
+                          ? style.activeStyle
+                          : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-1 mb-1">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold border uppercase tracking-wider ${style.badgeClass}`}>
+                          {opt.label}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{String(opt.meta?.desc ?? '')}</p>
+                    </button>
+                  )
+                })}
               </div>
             </div>
 

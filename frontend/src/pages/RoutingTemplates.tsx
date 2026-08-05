@@ -18,9 +18,10 @@ import {
    Send,
    GripVertical,
 } from 'lucide-react'
-import { DOCUMENT_TYPES, documentTypeLabel } from '@/constants/documentOptions'
+import { documentTypeLabel } from '@/constants/documentOptions'
 import ConfirmModal from '@/components/ConfirmModal'
 import SearchableSelect from '@/components/SearchableSelect'
+import { useDropdownGroup } from '@/hooks/useDropdownOptions'
 
 const ROLE_META: Record<string, { label: string; icon: typeof UserCheck }> = {
   approver: { label: 'Approver', icon: UserCheck },
@@ -36,6 +37,7 @@ const ACTION_META: Record<string, { label: string; icon: typeof Search; color: s
 
 export default function RoutingTemplates() {
   const queryClient = useQueryClient()
+  const documentTypes = useDropdownGroup('document_types')
   const [showForm, setShowForm] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState<any>(null)
   const [name, setName] = useState('')
@@ -135,19 +137,8 @@ export default function RoutingTemplates() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-50 ring-1 ring-primary-100 dark:bg-primary-900/40 dark:ring-primary-800">
-            <Workflow className="h-5 w-5 text-primary-600 dark:text-primary-400" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Routing Templates</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-              Define reusable document routing workflows
-            </p>
-          </div>
-        </div>
-        <button onClick={() => { resetForm(); setShowForm(true) }} className="btn btn-primary btn-sm flex-shrink-0">
+      <div className="flex items-center justify-between">
+        <button onClick={() => { resetForm(); setShowForm(true) }} className="btn btn-primary btn-sm flex-shrink-0 ml-auto">
           <Plus className="w-4 h-4" /> New Template
         </button>
       </div>
@@ -173,7 +164,7 @@ export default function RoutingTemplates() {
                 <div>
                   <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Document Type</label>
                    <SearchableSelect
-                     options={DOCUMENT_TYPES.map(type => ({ value: type.value, label: type.label }))}
+                     options={documentTypes.map(type => ({ value: type.value, label: type.label }))}
                      value={docType}
                      onChange={setDocType}
                      placeholder="Select type..."

@@ -15,21 +15,20 @@ import {
   Building2,
   Users,
 } from 'lucide-react'
-import {
-  DOCUMENT_TYPES,
-  MODES_OF_TRANSMITTAL,
-  ACTION_REQUESTED,
-} from '@/constants/documentOptions'
 import MultiSelect, { type Option } from '@/components/MultiSelect'
+import { useDropdownGroup } from '@/hooks/useDropdownOptions'
 
 
 
 export default function CreateDocument() {
   const navigate = useNavigate()
+  const documentTypes = useDropdownGroup('document_types')
+  const modes = useDropdownGroup('modes_of_transmittal')
+  const actionOptions = useDropdownGroup('action_requested')
   const [subject, setSubject] = useState('')
   const [documentType, setDocumentType] = useState<Option[]>([])
   const [modeOfTransmittal, setModeOfTransmittal] = useState<Option[]>(
-    MODES_OF_TRANSMITTAL.filter((m) => m.value === 'internal')
+    modes.filter((m) => m.value === 'internal')
   )
   const [actionRequested, setActionRequested] = useState<Option[]>([])
   const [description, setDescription] = useState('')
@@ -187,12 +186,6 @@ export default function CreateDocument() {
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">New Document</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Create and route a new document
-          </p>
-        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -211,7 +204,7 @@ export default function CreateDocument() {
                   Document Type <span className="text-danger-500">*</span>
                 </label>
                 <MultiSelect
-                  options={DOCUMENT_TYPES}
+                  options={documentTypes}
                   value={documentType}
                   onChange={setDocumentType}
                   placeholder="Select type..."
@@ -291,7 +284,7 @@ export default function CreateDocument() {
                   Action Requested
                 </label>
                 <MultiSelect
-                  options={ACTION_REQUESTED}
+                  options={actionOptions}
                   value={actionRequested}
                   onChange={setActionRequested}
                   placeholder="Select action..."
@@ -303,7 +296,7 @@ export default function CreateDocument() {
                   Mode of Transmittal
                 </label>
                 <MultiSelect
-                  options={MODES_OF_TRANSMITTAL}
+                  options={modes}
                   value={modeOfTransmittal}
                   onChange={setModeOfTransmittal}
                   placeholder="Select mode..."
