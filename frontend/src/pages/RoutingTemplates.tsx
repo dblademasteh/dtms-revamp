@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/services/api'
 import toast from 'react-hot-toast'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   Plus,
   Edit,
@@ -109,7 +109,7 @@ export default function RoutingTemplates() {
     setSteps(updated)
   }
 
-  const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const dragIndexRef = useRef<number | null>(null)
   const [overIndex, setOverIndex] = useState<number | null>(null)
 
   const reorderSteps = (from: number, to: number) => {
@@ -201,21 +201,24 @@ export default function RoutingTemplates() {
                       key={i}
                       onDragOver={(e) => {
                         e.preventDefault()
-                        if (dragIndex !== null && dragIndex !== i) setOverIndex(i)
+                        if (dragIndexRef.current !== null && dragIndexRef.current !== i) setOverIndex(i)
                       }}
-                      onDragLeave={() => setOverIndex((prev) => (prev === i ? null : prev))}
+                      onDragLeave={(e) => {
+                        if (e.relatedTarget && e.currentTarget.contains(e.relatedTarget as Node)) return
+                        setOverIndex((prev) => (prev === i ? null : prev))
+                      }}
                       onDrop={(e) => {
                         e.preventDefault()
-                        if (dragIndex !== null) reorderSteps(dragIndex, i)
-                        setDragIndex(null)
+                        if (dragIndexRef.current !== null) reorderSteps(dragIndexRef.current, i)
+                        dragIndexRef.current = null
                         setOverIndex(null)
                       }}
                       onDragEnd={() => {
-                        setDragIndex(null)
+                        dragIndexRef.current = null
                         setOverIndex(null)
                       }}
                       className={`flex items-center gap-3 rounded-xl border p-3 transition-all duration-150 ${
-                        dragIndex === i
+                        dragIndexRef.current === i
                           ? 'border-primary-400 bg-primary-50 opacity-60 shadow-sm dark:border-primary-600 dark:bg-primary-900/30'
                           : overIndex === i
                             ? 'border-primary-400 bg-primary-50/70 ring-2 ring-primary-200 dark:border-primary-600 dark:bg-primary-900/20 dark:ring-primary-800'
@@ -225,7 +228,7 @@ export default function RoutingTemplates() {
                       <span
                         draggable
                         onDragStart={(e) => {
-                          setDragIndex(i)
+                          dragIndexRef.current = i
                           e.dataTransfer.effectAllowed = 'move'
                           e.dataTransfer.setData('text/plain', String(i))
                         }}
@@ -234,7 +237,16 @@ export default function RoutingTemplates() {
                       >
                         {i + 1}
                       </span>
-                      <span className="hidden flex-shrink-0 cursor-grab text-slate-300 hover:text-slate-500 active:cursor-grabbing sm:block dark:text-slate-600 dark:hover:text-slate-400">
+                      <span
+                        draggable
+                        onDragStart={(e) => {
+                          dragIndexRef.current = i
+                          e.dataTransfer.effectAllowed = 'move'
+                          e.dataTransfer.setData('text/plain', String(i))
+                        }}
+                        title="Drag to reorder"
+                        className="hidden flex-shrink-0 cursor-grab text-slate-300 hover:text-slate-500 active:cursor-grabbing sm:block dark:text-slate-600 dark:hover:text-slate-400"
+                      >
                         <GripVertical className="h-4 w-4" />
                       </span>
                        <div className="relative flex-1">
