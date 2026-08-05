@@ -117,11 +117,9 @@ class PersonnelController extends Controller
             ];
 
             // Map the roster's unit assignment to an office so personnel belong
-            // to an assignable unit for routing purposes.
-            $officeId = $this->officeResolver->resolveForUnitId($unitAssignment);
-            if ($officeId) {
-                $record['office_id'] = $officeId;
-            }
+            // to an assignable unit for routing purposes. Always set the key
+            // (null when unresolved) so bulk insert rows share the same columns.
+            $record['office_id'] = $this->officeResolver->resolveForUnitId($unitAssignment);
 
             $records[$key] = $record;
         }

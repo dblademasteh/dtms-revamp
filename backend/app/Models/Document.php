@@ -15,6 +15,7 @@ class Document extends Model
 
     protected $fillable = [
         'tracking_number',
+        'document_no',
         'document_type',
         'subject',
         'description',
@@ -155,6 +156,9 @@ class Document extends Model
             if (empty($document->tracking_number)) {
                 $document->tracking_number = self::generateTrackingNumber();
             }
+            if (empty($document->document_no)) {
+                $document->document_no = self::generateDocumentNumber();
+            }
         });
     }
 
@@ -251,5 +255,51 @@ class Document extends Model
         }
 
         return sprintf('%s-%s-%s', $prefix, $year, $code);
+    }
+
+    /**
+     * Generate the next sequential document/control number in the global
+     * per-year series (e.g. DTS-2026-00001). Numbers are never reused; a
+     * failed insert may leave gaps, which is intentional for auditability.
+     */
+    public static function generateDocumentNumber(): string
+    {
+        return \Illuminate\Support\Facades\DB::transaction(function () {
+            $year = (int) date('Y');
+
+            $sequence = \Illuminate\Support\Facades\DB::table('document_number_sequences')
+                ->where('year', $year)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$sequence) {
+                try {
+                    \Illuminate\Support\Facades\DB::table('document_number_sequences')->insert([
+                        'year' => $year,
+                        'last_number' => 1,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                    $number = 1;
+                } catch (\Exception $e) {
+                    // Raced with another transaction inserting the year row.
+                    $sequence = \Illuminate\Support\Facades\DB::table('document_number_sequences')
+                        ->where('year', $year)
+                        ->lockForUpdate()
+                        ->first();
+                    $number = $sequence->last_number + 1;
+                    \Illuminate\Support\Facades\DB::table('document_number_sequences')
+                        ->where('year', $year)
+                        ->update(['last_number' => $number, 'updated_at' => now()]);
+                }
+            } else {
+                $number = $sequence->last_number + 1;
+                \Illuminate\Support\Facades\DB::table('document_number_sequences')
+                    ->where('year', $year)
+                    ->update(['last_number' => $number, 'updated_at' => now()]);
+            }
+
+            return sprintf('DTS-%s-%05d', $year, $number);
+        });
     }
 }

@@ -28,6 +28,7 @@ export interface Office {
 export interface Document {
   id: number
   tracking_number: string
+  document_no?: string
   document_type: string
   subject: string
   description?: string

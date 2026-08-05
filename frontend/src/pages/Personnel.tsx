@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/services/api'
 import toast from 'react-hot-toast'
-import { Search, Users as UsersIcon, Building2, X, UserPlus, Trash2, AlertTriangle, Grid3X3, UserX, Award } from 'lucide-react'
+import { Search, Users as UsersIcon, Building2, X, UserPlus, Trash2, AlertTriangle, Grid3X3, UserX, Award, Upload, FileSpreadsheet, CheckCircle2, AlertCircle } from 'lucide-react'
 import { useState } from 'react'
 import StatCard from '@/components/StatCard'
 import ModalPortal from '@/components/ModalPortal'
@@ -23,6 +23,9 @@ export default function Personnel() {
     item_no: '', accnt_no: '', unit_assignment: '', designation: '', email: '',
   })
   const [showClearConfirm, setShowClearConfirm] = useState(false)
+  const [showImport, setShowImport] = useState(false)
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importResult, setImportResult] = useState<any>(null)
 
   const { data: personnel, isLoading } = useQuery({
     queryKey: ['personnel'],
@@ -71,6 +74,24 @@ export default function Personnel() {
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Create failed')
+    },
+  })
+
+  const importMutation = useMutation({
+    mutationFn: (file: File) => {
+      const formData = new FormData()
+      formData.append('file', file)
+      return api.post('/personnel/import', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }).then((res) => res.data)
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['personnel'] })
+      setImportResult(data)
+      toast.success(data?.message || 'Import complete')
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Import failed')
     },
   })
 
@@ -140,9 +161,6 @@ export default function Personnel() {
     }
   }
 
-  const initials = (u: any) =>
-    ((u.first_name?.[0] || '') + (u.last_name?.[0] || '') || u.name?.[0] || '?').toUpperCase()
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -159,6 +177,12 @@ export default function Personnel() {
             className="btn btn-primary btn-sm"
           >
             <UserPlus className="w-4 h-4" /> Create Personnel
+          </button>
+          <button
+            onClick={() => { setShowImport(true); setImportResult(null); setImportFile(null) }}
+            className="btn btn-outline btn-sm"
+          >
+            <Upload className="w-4 h-4" /> Import CSV
           </button>
           <button
             onClick={() => setShowClearConfirm(true)}
@@ -245,7 +269,6 @@ export default function Personnel() {
           <div className="p-8 space-y-4">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="flex items-center gap-4 animate-pulse">
-                <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-800" />
                 <div className="h-4 w-32 bg-slate-200 dark:bg-slate-800 rounded" />
                 <div className="h-4 flex-1 bg-slate-200 dark:bg-slate-800 rounded" />
                 <div className="h-4 w-40 bg-slate-200 dark:bg-slate-800 rounded" />
@@ -283,9 +306,6 @@ export default function Personnel() {
                   >
                     <td className="whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary-50 text-primary-700 ring-1 ring-primary-100 dark:bg-primary-900/40 dark:text-primary-300 dark:ring-primary-800">
-                          <span className="text-xs font-bold">{initials(u)}</span>
-                        </div>
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                             {[u.last_name, u.first_name].filter(Boolean).join(', ') || '—'}
@@ -526,6 +546,105 @@ export default function Personnel() {
                 >
                   {createPersonnelMutation.isPending ? 'Creating...' : 'Create Personnel'}
                 </button>
+              </div>
+            </div>
+          </div>
+        </ModalPortal>
+      )}
+
+      {/* Import CSV Modal */}
+      {showImport && (
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowImport(false)} />
+            <div className="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              <div className="bg-gradient-to-br from-primary-600 to-primary-800 px-6 pt-6 pb-8 relative overflow-hidden">
+                <FileSpreadsheet className="absolute right-4 bottom-4 w-20 h-20 text-white/10" />
+                <button onClick={() => setShowImport(false)} className="absolute top-4 right-4 p-1 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+                <h3 className="text-lg font-bold text-white">Import Personnel</h3>
+                <p className="text-sm text-primary-200 mt-1">Bulk-upload personnel from a roster CSV</p>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-4">
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Expected CSV columns</p>
+                  <code className="text-[11px] leading-5 text-slate-600 dark:text-slate-300 font-mono">
+                    rank, last_name, first_name, middle_name, item_no,<br />
+                    accnt_no, unit_assignment, designation, email
+                  </code>
+                </div>
+
+                {importResult ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="w-4 h-4" />
+                      Import finished
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 py-2">
+                        <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{importResult.created ?? 0}</p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">Created</p>
+                      </div>
+                      <div className="rounded-lg bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 py-2">
+                        <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{importResult.updated ?? 0}</p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">Updated</p>
+                      </div>
+                      <div className="rounded-lg bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 py-2">
+                        <p className="text-xl font-bold text-amber-600 dark:text-amber-400">{importResult.skipped ?? 0}</p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">Skipped</p>
+                      </div>
+                    </div>
+                    {importResult.errors?.length > 0 && (
+                      <div className="rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 p-3 max-h-32 overflow-y-auto">
+                        {importResult.errors.slice(0, 10).map((e: string, i: number) => (
+                          <p key={i} className="flex items-start gap-1.5 text-xs text-red-600 dark:text-red-400 mb-1">
+                            <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />{String(e)}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <label
+                    className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 cursor-pointer transition-colors ${
+                      importFile
+                        ? 'border-primary-400 bg-primary-50/50 dark:bg-primary-900/20'
+                        : 'border-slate-300 dark:border-slate-600 hover:border-primary-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                    }`}
+                  >
+                    <input
+                      type="file"
+                      accept=".csv,.txt"
+                      className="hidden"
+                      onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                    />
+                    <Upload className="w-8 h-8 mb-2 text-slate-400" />
+                    {importFile ? (
+                      <>
+                        <p className="text-sm font-semibold text-primary-600 dark:text-primary-400">{importFile.name}</p>
+                        <p className="text-xs text-slate-400 mt-1">{(importFile.size / 1024).toFixed(1)} KB — click to change</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">Click to choose a CSV file</p>
+                        <p className="text-xs text-slate-400 mt-1">.csv or .txt, max 10 MB</p>
+                      </>
+                    )}
+                  </label>
+                )}
+              </div>
+              <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3 bg-slate-50 dark:bg-slate-800/60">
+                <button onClick={() => setShowImport(false)} className="btn btn-ghost btn-sm">Close</button>
+                {!importResult && (
+                  <button
+                    onClick={() => importFile && importMutation.mutate(importFile)}
+                    disabled={!importFile || importMutation.isPending}
+                    className="btn btn-primary btn-sm"
+                  >
+                    {importMutation.isPending ? 'Importing...' : 'Import'}
+                  </button>
+                )}
               </div>
             </div>
           </div>
