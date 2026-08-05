@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -79,6 +80,18 @@ class User extends Authenticatable
             return $this->first_name . $middle . ' ' . $this->last_name . $suffix;
         }
         return $this->name ?? 'Unknown';
+    }
+
+    /**
+     * Normalize the officer rank to uppercase everywhere (e.g. FINSP, FO3).
+     * The setter also normalizes on write so mixed-case ranks never persist.
+     */
+    protected function rank(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => is_string($value) ? strtoupper($value) : $value,
+            set: fn ($value) => is_string($value) ? strtoupper(trim($value)) : $value,
+        );
     }
 
     protected static function booted(): void

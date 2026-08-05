@@ -337,7 +337,7 @@ export default function AdminSuggestions() {
                 <div className="flex items-center justify-between mt-5 pt-3 border-t border-slate-100 dark:border-slate-800/60">
                   <div className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 font-medium">
                     <Users className="w-3.5 h-3.5" />
-                    <span>{suggestion.user?.name || 'Anonymous User'}</span>
+                    <span>{[suggestion.user?.rank, suggestion.user?.full_name || suggestion.user?.name].filter(Boolean).join(' ') || 'Anonymous User'}</span>
                   </div>
 
                   {isSuperadmin && (

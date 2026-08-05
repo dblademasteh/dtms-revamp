@@ -23,6 +23,7 @@ import Announcements from '@/pages/Announcements'
 import AdminSuggestions from '@/pages/AdminSuggestions'
 import Mailbox from '@/pages/Mailbox'
 import OfficeProfile from '@/pages/OfficeProfile'
+import Help from '@/pages/Help'
 import NotFound from '@/pages/NotFound'
 import Dropdowns from '@/pages/admin/Dropdowns'
 import Layout from '@/components/Layout'
@@ -132,6 +133,7 @@ function App() {
               <Route path="admin/suggestions" element={<AdminRoute><AdminSuggestions /></AdminRoute>} />
               <Route path="admin/dropdowns" element={<AdminRoute><Dropdowns /></AdminRoute>} />
               <Route path="settings" element={<Settings />} />
+              <Route path="help" element={<Help />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

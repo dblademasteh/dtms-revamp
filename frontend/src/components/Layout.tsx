@@ -19,12 +19,13 @@ import {
   HardDrive,
   Mail,
   MapPin,
-  ChevronsUpDown
+  ChevronsUpDown,
+  LifeBuoy
 } from 'lucide-react'
 import { useState } from 'react'
 import NotificationBell from '@/components/NotificationBell'
 import ConfirmModal from '@/components/ConfirmModal'
-import SuggestionsWidget from '@/components/SuggestionsWidget'
+import HelpWidget from '@/components/HelpWidget'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -34,6 +35,7 @@ const navigation = [
   { name: 'Reports', href: '/reports', icon: BarChart3 },
   { name: 'Mailbox', href: '/mailbox', icon: Mail },
   { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Help', href: '/help', icon: LifeBuoy },
 ]
 
 export default function Layout() {
@@ -85,6 +87,7 @@ export default function Layout() {
       '/admin/suggestions': { title: 'Suggestions', description: 'Review and respond to user suggestions' },
       '/admin/dropdowns': { title: 'Dropdown Options', description: 'Manage dropdown lists' },
       '/settings': { title: 'Settings', description: 'Account and system preferences' },
+      '/help': { title: 'Help Center', description: 'Guides, FAQ, and support' },
     }
     return meta[pathname] || { title: 'DTMS', description: 'Document Tracking & Management System' }
   }
@@ -353,7 +356,7 @@ export default function Layout() {
         danger={true}
       />
 
-      {user?.role !== 'superadmin' && <SuggestionsWidget />}
+      {user?.role !== 'superadmin' && <HelpWidget />}
     </div>
   )
 }

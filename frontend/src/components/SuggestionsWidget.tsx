@@ -60,7 +60,7 @@ const STATUS_META: Record<string, { label: string; icon: any; color: string }> =
   closed: { label: 'Closed', icon: X, color: 'text-slate-500 dark:text-slate-400' },
 }
 
-export default function SuggestionsWidget() {
+export default function SuggestionsWidget({ embedded = false, active = false }: { embedded?: boolean; active?: boolean }) {
   const queryClient = useQueryClient()
   const categories = useDropdownGroup('suggestion_categories')
   const [open, setOpen] = useState(false)
@@ -72,7 +72,7 @@ export default function SuggestionsWidget() {
   const { data } = useQuery({
     queryKey: ['suggestions', 'widget'],
     queryFn: () => api.get('/suggestions', { params: { per_page: 100 } }).then((res) => res.data),
-    enabled: open,
+    enabled: open || (embedded && active),
   })
 
   const allSuggestions: Suggestion[] = (data as any)?.data || []
@@ -106,40 +106,9 @@ export default function SuggestionsWidget() {
     submitMutation.mutate({ title: title.trim(), description: description.trim(), category })
   }
 
-  return (
+  const body = (
     <>
-      {/* Floating button */}
-      <button
-        onClick={() => setOpen(true)}
-        title="Suggestions"
-        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30 transition-all hover:scale-110 hover:shadow-xl active:scale-95"
-      >
-        <Lightbulb className="h-6 w-6" />
-      </button>
-
-      {/* Panel */}
-      {open && (
-        <>
-          <div className="fixed inset-0 z-50 bg-slate-900/20 backdrop-blur-[2px]" onClick={() => setOpen(false)} />
-          <div className="fixed bottom-24 right-6 z-50 flex w-[calc(100vw-3rem)] max-w-sm flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
-            {/* Header */}
-            <div className="flex items-center gap-3 bg-gradient-to-r from-amber-500 to-orange-600 px-4 py-3.5 text-white">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15">
-                <Lightbulb className="h-5 w-5" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-bold leading-tight">Suggestions</p>
-                <p className="text-[11px] text-amber-100 leading-tight">Share feedback with administrators</p>
-              </div>
-              <button
-                onClick={() => setOpen(false)}
-                className="rounded-lg p-1.5 text-amber-100 hover:bg-white/10 hover:text-white transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            {/* Tabs */}
+      {/* Tabs */}
             <div className="flex items-center gap-1 border-b border-slate-100 px-3 pt-3 dark:border-slate-800">
               {([
                 { key: 'submit', label: 'Submit' },
@@ -257,7 +226,9 @@ export default function SuggestionsWidget() {
                             </span>
                           </div>
                           <p className="mt-1.5 text-xs font-bold text-slate-800 dark:text-slate-100">{s.title}</p>
-                          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{s.user?.name}</p>
+                          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                            {[s.user?.rank, s.user?.full_name || s.user?.name].filter(Boolean).join(' ')}
+                          </p>
                           {s.admin_response && (
                             <p className="mt-1.5 flex items-start gap-1.5 rounded-lg border-l-2 border-amber-500 bg-white px-2 py-1.5 text-[11px] text-slate-600 dark:bg-slate-900 dark:text-slate-300">
                               <MessageSquare className="mt-0.5 h-3 w-3 flex-shrink-0 text-amber-500" />
@@ -271,6 +242,47 @@ export default function SuggestionsWidget() {
                 </div>
               )}
             </div>
+    </>
+  )
+
+  if (embedded) {
+    return <div className="flex min-h-0 flex-col">{body}</div>
+  }
+
+  return (
+    <>
+      {/* Floating button */}
+      <button
+        onClick={() => setOpen(true)}
+        title="Suggestions"
+        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30 transition-all hover:scale-110 hover:shadow-xl active:scale-95"
+      >
+        <Lightbulb className="h-6 w-6" />
+      </button>
+
+      {/* Panel */}
+      {open && (
+        <>
+          <div className="fixed inset-0 z-50 bg-slate-900/20 backdrop-blur-[2px]" onClick={() => setOpen(false)} />
+          <div className="fixed bottom-24 right-6 z-50 flex w-[calc(100vw-3rem)] max-w-sm flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+            {/* Header */}
+            <div className="flex items-center gap-3 bg-gradient-to-r from-amber-500 to-orange-600 px-4 py-3.5 text-white">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15">
+                <Lightbulb className="h-5 w-5" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold leading-tight">Suggestions</p>
+                <p className="text-[11px] text-amber-100 leading-tight">Share feedback with administrators</p>
+              </div>
+              <button
+                onClick={() => setOpen(false)}
+                className="rounded-lg p-1.5 text-amber-100 hover:bg-white/10 hover:text-white transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {body}
           </div>
         </>
       )}

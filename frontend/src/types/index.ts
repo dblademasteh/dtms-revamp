@@ -116,7 +116,7 @@ export interface Suggestion {
   category: 'feature' | 'improvement' | 'bug' | 'other'
   status: 'open' | 'under_review' | 'planned' | 'implemented' | 'closed'
   admin_response?: string
-  user?: { id: number; name: string }
+  user?: { id: number; name: string; rank?: string | null; full_name?: string }
   created_at: string
   updated_at: string
 }

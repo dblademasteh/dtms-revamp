@@ -10,7 +10,7 @@ class SuggestionController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Suggestion::with('user:id,name');
+        $query = Suggestion::with('user:id,name,rank,first_name,last_name,middle_name,suffix');
 
         if ($request->has('status')) {
             $query->where('status', $request->status);
@@ -42,7 +42,7 @@ class SuggestionController extends Controller
 
         return response()->json([
             'message' => 'Suggestion submitted successfully',
-            'suggestion' => $suggestion->load('user:id,name'),
+            'suggestion' => $suggestion->load('user:id,name,rank,first_name,last_name,middle_name,suffix'),
         ], 201);
     }
 
@@ -52,7 +52,7 @@ class SuggestionController extends Controller
             abort(403, 'You can only view your own suggestions.');
         }
 
-        return response()->json($suggestion->load('user:id,name'));
+        return response()->json($suggestion->load('user:id,name,rank,first_name,last_name,middle_name,suffix'));
     }
 
     public function update(Request $request, Suggestion $suggestion)
@@ -66,7 +66,7 @@ class SuggestionController extends Controller
 
         return response()->json([
             'message' => 'Suggestion updated',
-            'suggestion' => $suggestion->refresh()->load('user:id,name'),
+            'suggestion' => $suggestion->refresh()->load('user:id,name,rank,first_name,last_name,middle_name,suffix'),
         ]);
     }
 
