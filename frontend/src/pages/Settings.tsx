@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import api from '@/services/api'
@@ -7,7 +7,8 @@ import toast from 'react-hot-toast'
 import { useState } from 'react'
 import Select from 'react-select'
 import { buildSelectStyles } from '@/utils/selectStyles'
-import { useRanks, RankOption } from '@/hooks/useRanks'
+import { useRanks } from '@/hooks/useRanks'
+import { useDropdownGroup } from '@/hooks/useDropdownOptions'
 import {
   User,
   Lock,
@@ -23,8 +24,6 @@ import {
   ChevronDown,
   KeyRound,
   Building2,
-  Award,
-  Trash2,
 } from 'lucide-react'
 
 function formatBytes(bytes: number): string {
@@ -38,6 +37,7 @@ function formatBytes(bytes: number): string {
 export default function Settings() {
   const { user, setUser } = useAuthStore()
   const ranks = useRanks()
+  const designations = useDropdownGroup('designations')
   const isSuperadmin = user?.role === 'superadmin'
   const [activeTab, setActiveTab] = useState('profile')
 
@@ -396,6 +396,13 @@ export default function Settings() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
+      {/* Designation suggestions (pick-or-type datalist) */}
+      <datalist id="designation-options">
+        {designations.map((d) => (
+          <option key={d.value} value={d.label} />
+        ))}
+      </datalist>
+
       {/* Tabs */}
       <div className="flex flex-wrap gap-1 border-b border-slate-200">
         {tabs.map((t) => (
@@ -561,7 +568,7 @@ export default function Settings() {
                     </div>
                     <div>
                       <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Designation</label>
-                      <input className="input !py-1.5 !text-sm" value={designation} onChange={(e) => setDesignation(e.target.value)} placeholder="e.g. System Administrator" />
+                      <input className="input !py-1.5 !text-sm" list="designation-options" value={designation} onChange={(e) => setDesignation(e.target.value)} placeholder="e.g. System Administrator" />
                     </div>
                   </div>
 
@@ -1046,9 +1053,6 @@ export default function Settings() {
              </div>
            </div>
 
-          {/* Rank Management Section */}
-          <RankManagementSection />
-
           <div className="card">
             <div className="card-header flex items-center gap-2">
               <SettingsIcon className="w-4 h-4 text-slate-500" />
@@ -1384,185 +1388,6 @@ function TwoFactorCard() {
             <button className="btn btn-primary btn-sm" onClick={() => { setRecovery(null); statusQuery.refetch() }}>I've saved them</button>
           </div>
         )}
-      </div>
-    </div>
-  )
-}
-
-function RankManagementSection() {
-  const queryClient = useQueryClient()
-  const ranks = useRanks()
-  const [newCode, setNewCode] = useState('')
-  const [newLabel, setNewLabel] = useState('')
-  const [editingValue, setEditingValue] = useState<string | null>(null)
-
-  const addMutation = useMutation({
-    mutationFn: (data: { value: string; label: string; original_value?: string | null }) => api.post('/admin/ranks', data),
-    onSuccess: (res) => {
-      if (res.data?.ranks) {
-        queryClient.setQueryData(['ranks'], res.data.ranks)
-      }
-      queryClient.invalidateQueries({ queryKey: ['ranks'] })
-      toast.success(editingValue ? 'Rank updated' : 'Rank added')
-      setNewCode('')
-      setNewLabel('')
-      setEditingValue(null)
-    },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Failed to save rank'),
-  })
-
-  const deleteMutation = useMutation({
-    mutationFn: (value: string) => api.delete(`/admin/ranks/${value}`),
-    onSuccess: (res) => {
-      if (res.data?.ranks) {
-        queryClient.setQueryData(['ranks'], res.data.ranks)
-      }
-      queryClient.invalidateQueries({ queryKey: ['ranks'] })
-      toast.success('Rank removed')
-    },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Failed to delete rank'),
-  })
-
-  const resetMutation = useMutation({
-    mutationFn: () => api.post('/admin/ranks/reset'),
-    onSuccess: (res) => {
-      if (res.data?.ranks) {
-        queryClient.setQueryData(['ranks'], res.data.ranks)
-      }
-      queryClient.invalidateQueries({ queryKey: ['ranks'] })
-      toast.success('Ranks reset to default BFP ranks')
-    },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Failed to reset ranks'),
-  })
-
-  const handleAddOrUpdate = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newCode.trim() || !newLabel.trim()) {
-      toast.error('Please enter rank code and label')
-      return
-    }
-    addMutation.mutate({
-      value: newCode.trim().toUpperCase(),
-      label: newLabel.trim(),
-      original_value: editingValue,
-    })
-  }
-
-  const startEdit = (r: RankOption) => {
-    setEditingValue(r.value)
-    setNewCode(r.value)
-    setNewLabel(r.label)
-  }
-
-  return (
-    <div className="card">
-      <div className="card-header flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Award className="w-4 h-4 text-primary-500" />
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
-            Rank Management
-          </h2>
-        </div>
-        <button
-          type="button"
-          onClick={() => resetMutation.mutate()}
-          disabled={resetMutation.isPending}
-          className="btn btn-ghost btn-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 gap-1 text-xs"
-          title="Reset ranks to standard BFP defaults"
-        >
-          <RotateCcw className="w-3.5 h-3.5" /> Reset Defaults
-        </button>
-      </div>
-      <div className="card-body space-y-6">
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          Add, edit rank codes & titles, or remove ranks. Added and updated ranks automatically populate all rank dropdowns across the application.
-        </p>
-
-        {/* Add / Edit Form */}
-        <form onSubmit={handleAddOrUpdate} className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 space-y-3">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-            {editingValue ? `Edit Rank (${editingValue})` : 'Add New Rank'}
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Rank Code / Abbr</label>
-              <input
-                type="text"
-                className="input input-sm text-sm uppercase font-mono"
-                placeholder="e.g. FDIR"
-                value={newCode}
-                onChange={(e) => setNewCode(e.target.value)}
-                required
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Rank Title / Display Label</label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  className="input input-sm text-sm flex-1"
-                  placeholder="e.g. FDIR - Fire Director"
-                  value={newLabel}
-                  onChange={(e) => setNewLabel(e.target.value)}
-                  required
-                />
-                <button type="submit" disabled={addMutation.isPending} className="btn btn-primary btn-sm whitespace-nowrap">
-                  {editingValue ? 'Update Rank' : 'Add Rank'}
-                </button>
-                {editingValue && (
-                  <button
-                    type="button"
-                    onClick={() => { setEditingValue(null); setNewCode(''); setNewLabel('') }}
-                    className="btn btn-secondary btn-sm"
-                  >
-                    Cancel
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </form>
-
-        {/* Ranks Table */}
-        <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-xl max-h-96">
-          <table className="table w-full text-left text-sm">
-            <thead className="bg-slate-50 dark:bg-slate-800 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700 sticky top-0">
-              <tr>
-                <th className="px-4 py-2.5 w-32">Rank Code</th>
-                <th className="px-4 py-2.5">Display Title</th>
-                <th className="px-4 py-2.5 text-right w-24">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {ranks.map((r) => (
-                <tr key={r.value} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
-                  <td className="px-4 py-2.5 font-mono font-bold text-xs text-primary-600 dark:text-primary-400">{r.value}</td>
-                  <td className="px-4 py-2.5 text-slate-800 dark:text-slate-200 font-medium">{r.label}</td>
-                  <td className="px-4 py-2.5 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        type="button"
-                        onClick={() => startEdit(r)}
-                        className="btn btn-ghost btn-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
-                        title="Edit Rank"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => deleteMutation.mutate(r.value)}
-                        className="btn btn-ghost btn-xs text-danger-500 hover:text-danger-700"
-                        title="Delete Rank"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
       </div>
     </div>
   )

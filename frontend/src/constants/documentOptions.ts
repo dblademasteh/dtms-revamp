@@ -28,6 +28,24 @@ export const BFP_RANKS = [
   { value: 'NUP', label: 'NUP - Non-Uniformed Personnel' },
 ]
 
+export const DESIGNATIONS: Option[] = [
+  { value: 'Officer-in-Charge (OIC)', label: 'Officer-in-Charge (OIC)' },
+  { value: 'Chief', label: 'Chief' },
+  { value: 'Administrative Officer', label: 'Administrative Officer' },
+  { value: 'Administrative Aide', label: 'Administrative Aide' },
+  { value: 'Accountant', label: 'Accountant' },
+  { value: 'Budget Officer', label: 'Budget Officer' },
+  { value: 'Supply Officer', label: 'Supply Officer' },
+  { value: 'Human Resource Management Officer', label: 'Human Resource Management Officer' },
+  { value: 'Information Technology Officer', label: 'Information Technology Officer' },
+  { value: 'Public Information Officer', label: 'Public Information Officer' },
+  { value: 'Fire Marshal', label: 'Fire Marshal' },
+  { value: 'Fire Fighter', label: 'Fire Fighter' },
+  { value: 'Secretary', label: 'Secretary' },
+  { value: 'Driver', label: 'Driver' },
+  { value: 'Utility Worker', label: 'Utility Worker' },
+]
+
 export const DOCUMENT_TYPES = [
   { value: 'memorandum', label: 'Memorandum' },
   { value: 'memorandum_circular', label: 'Memorandum Circular' },
@@ -263,6 +281,8 @@ export const DEFAULT_GROUPS: Record<string, Option[]> = {
   ],
   document_statuses: DOCUMENT_STATUSES,
   office_types: OFFICE_TYPES,
+  ranks: BFP_RANKS,
+  designations: DESIGNATIONS,
   priorities: PRIORITY_OPTIONS,
   suggestion_categories: SUGGESTION_CATEGORIES,
   suggestion_statuses: SUGGESTION_STATUSES,

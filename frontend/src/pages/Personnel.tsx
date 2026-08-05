@@ -8,10 +8,12 @@ import ModalPortal from '@/components/ModalPortal'
 import Select from 'react-select'
 import { buildSelectStyles } from '@/utils/selectStyles'
 import { useRanks } from '@/hooks/useRanks'
+import { useDropdownGroup } from '@/hooks/useDropdownOptions'
 
 export default function Personnel() {
   const queryClient = useQueryClient()
   const ranks = useRanks()
+  const designations = useDropdownGroup('designations')
   const [search, setSearch] = useState('')
   const [officeFilter, setOfficeFilter] = useState('')
   const [selected, setSelected] = useState<any>(null)
@@ -163,6 +165,13 @@ export default function Personnel() {
 
   return (
     <div className="space-y-6">
+      {/* Designation suggestions (pick-or-type datalist shared by edit & add forms) */}
+      <datalist id="designation-options">
+        {designations.map((d) => (
+          <option key={d.value} value={d.label} />
+        ))}
+      </datalist>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-4">
         <div className="flex items-center gap-2">
@@ -396,7 +405,7 @@ export default function Personnel() {
                   </div>
                   <div>
                     <label className="block text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-1">Designation</label>
-                    <input type="text" className="input input-sm text-sm w-full" value={editForm.designation} onChange={(e) => setEditForm({ ...editForm, designation: e.target.value })} />
+                    <input type="text" list="designation-options" className="input input-sm text-sm w-full" value={editForm.designation} onChange={(e) => setEditForm({ ...editForm, designation: e.target.value })} placeholder="Type or pick..." />
                   </div>
                   <div>
                     <label className="block text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-1">Office</label>
@@ -510,7 +519,7 @@ export default function Personnel() {
                   </div>
                   <div className="col-span-2">
                     <label className="block text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-1">Designation</label>
-                    <input type="text" className="input input-sm text-sm w-full" value={newPersonnel.designation} onChange={(e) => setNewPersonnel({ ...newPersonnel, designation: e.target.value })} />
+                    <input type="text" list="designation-options" className="input input-sm text-sm w-full" value={newPersonnel.designation} onChange={(e) => setNewPersonnel({ ...newPersonnel, designation: e.target.value })} placeholder="Type or pick..." />
                   </div>
                 </div>
               </div>

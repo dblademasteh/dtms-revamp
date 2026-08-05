@@ -16,6 +16,7 @@ import {
   Users,
 } from 'lucide-react'
 import MultiSelect, { type Option } from '@/components/MultiSelect'
+import SearchableSelect from '@/components/SearchableSelect'
 import { useDropdownGroup } from '@/hooks/useDropdownOptions'
 
 
@@ -25,12 +26,12 @@ export default function CreateDocument() {
   const documentTypes = useDropdownGroup('document_types')
   const modes = useDropdownGroup('modes_of_transmittal')
   const actionOptions = useDropdownGroup('action_requested')
+  const priorities = useDropdownGroup('priorities')
   const [subject, setSubject] = useState('')
-  const [documentType, setDocumentType] = useState<Option[]>([])
-  const [modeOfTransmittal, setModeOfTransmittal] = useState<Option[]>(
-    modes.filter((m) => m.value === 'internal')
-  )
+  const [documentType, setDocumentType] = useState('')
+  const [modeOfTransmittal, setModeOfTransmittal] = useState('internal')
   const [actionRequested, setActionRequested] = useState<Option[]>([])
+  const [priority, setPriority] = useState('normal')
   const [description, setDescription] = useState('')
   const [ccSelection, setCcSelection] = useState<Option[]>([])
   const [bccSelection, setBccSelection] = useState<Option[]>([])
@@ -39,7 +40,7 @@ export default function CreateDocument() {
   const [showCc, setShowCc] = useState(false)
   const [showBcc, setShowBcc] = useState(false)
   const [recipientMode, setRecipientMode] = useState<'office' | 'personnel'>('office')
-  const [recipientSelection, setRecipientSelection] = useState<Option[]>([])
+  const [recipientSelection, setRecipientSelection] = useState('')
   const [files, setFiles] = useState<File[]>([])
   const [isDragging, setIsDragging] = useState(false)
 
@@ -94,18 +95,19 @@ export default function CreateDocument() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!subject || documentType.length === 0 || recipientSelection.length === 0) {
+    if (!subject || !documentType || !recipientSelection) {
       toast.error('Please fill in all required fields')
       return
     }
 
     const formData = new FormData()
-    formData.append('document_type', documentType[0].value)
+    formData.append('document_type', documentType)
     formData.append('subject', subject)
-    if (modeOfTransmittal[0]) formData.append('mode_of_transmittal', modeOfTransmittal[0].value)
+    if (modeOfTransmittal) formData.append('mode_of_transmittal', modeOfTransmittal)
     if (actionRequested[0]) formData.append('action_requested', actionRequested[0].value)
+    formData.append('priority', priority || 'normal')
     formData.append('recipient_type', recipientMode)
-    formData.append('recipient_id', recipientSelection[0].value)
+    formData.append('recipient_id', recipientSelection)
     ccSelection.forEach(o => formData.append('cc_list[]', `${ccMode}:${o.value}`))
     bccSelection.forEach(o => formData.append('bcc_list[]', `${bccMode}:${o.value}`))
     if (description) formData.append('description', description)
@@ -174,7 +176,7 @@ export default function CreateDocument() {
     return `BFP-${new Date().getFullYear()}-${code}`
   })
   const dateToday = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
-  const timeNow = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  const timeNow = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -203,7 +205,7 @@ export default function CreateDocument() {
                 <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
                   Document Type <span className="text-danger-500">*</span>
                 </label>
-                <MultiSelect
+                <SearchableSelect
                   options={documentTypes}
                   value={documentType}
                   onChange={setDocumentType}
@@ -266,6 +268,33 @@ export default function CreateDocument() {
             </div>
 
             <div>
+              <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Priority <span className="text-danger-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {priorities.map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setPriority(opt.value)}
+                    className={`p-3 rounded-lg border-2 text-left transition-all ${
+                      priority === opt.value
+                        ? 'border-primary-500 dark:border-primary-600 bg-primary-50 dark:bg-primary-900/30'
+                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 bg-white dark:bg-slate-800'
+                    }`}
+                  >
+                    <p className={`text-sm font-medium ${
+                      priority === opt.value ? 'text-primary-700 dark:text-primary-300' : 'text-slate-900 dark:text-slate-100'
+                    }`}>
+                      {opt.label}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{String(opt.meta?.desc ?? '')}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
               <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
                 Description
               </label>
@@ -295,7 +324,7 @@ export default function CreateDocument() {
                 <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
                   Mode of Transmittal
                 </label>
-                <MultiSelect
+                <SearchableSelect
                   options={modes}
                   value={modeOfTransmittal}
                   onChange={setModeOfTransmittal}
@@ -317,12 +346,12 @@ export default function CreateDocument() {
           <div className="card-body space-y-6">
             {/* To Field */}
             <div>
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 mb-2">
                 <label className="text-[13px] font-semibold text-slate-700">To</label>
-                <div className="flex items-center gap-1">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <button
                     type="button"
-                    onClick={() => { setRecipientMode('office'); setRecipientSelection([]) }}
+                    onClick={() => { setRecipientMode('office'); setRecipientSelection('') }}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
                       recipientMode === 'office'
                         ? 'bg-blue-50 text-blue-700 ring-2 ring-blue-200'
@@ -334,7 +363,7 @@ export default function CreateDocument() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setRecipientMode('personnel'); setRecipientSelection([]) }}
+                    onClick={() => { setRecipientMode('personnel'); setRecipientSelection('') }}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
                       recipientMode === 'personnel'
                         ? 'bg-emerald-50 text-emerald-700 ring-2 ring-emerald-200'
@@ -374,7 +403,7 @@ export default function CreateDocument() {
                   )}
                 </div>
                 <div className="pl-10">
-                  <MultiSelect
+                  <SearchableSelect
                     options={(recipientMode === 'personnel' ? personnelOptions : officeOptions).filter(
                       (o) =>
                         !ccSelection.some((c) => c.value === o.value) &&
@@ -430,7 +459,7 @@ export default function CreateDocument() {
                 <MultiSelect
                   options={(ccMode === 'personnel' ? personnelOptions : officeOptions).filter(
                     (o) =>
-                      !recipientSelection.some((t) => t.value === o.value) &&
+                      String(o.value) !== recipientSelection &&
                       !bccSelection.some((b) => b.value === o.value)
                   )}
                   value={ccSelection}
@@ -482,7 +511,7 @@ export default function CreateDocument() {
                 <MultiSelect
                   options={(bccMode === 'personnel' ? personnelOptions : officeOptions).filter(
                     (o) =>
-                      !recipientSelection.some((t) => t.value === o.value) &&
+                      String(o.value) !== recipientSelection &&
                       !ccSelection.some((c) => c.value === o.value)
                   )}
                   value={bccSelection}

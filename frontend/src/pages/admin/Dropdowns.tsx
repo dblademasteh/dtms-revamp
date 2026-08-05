@@ -14,6 +14,8 @@ const GROUP_META: { key: string; label: string; hint: string }[] = [
   { key: 'routing_dispositions', label: 'Routing Dispositions', hint: 'Disposition actions when routing documents' },
   { key: 'document_statuses', label: 'Document Statuses', hint: 'Document lifecycle statuses' },
   { key: 'office_types', label: 'Office Types', hint: 'Office classification types' },
+  { key: 'ranks', label: 'Ranks', hint: 'Personnel / user rank codes and titles (BFP)' },
+  { key: 'designations', label: 'Designations', hint: 'Personnel / user role or position titles (pick-or-type)' },
   { key: 'priorities', label: 'Priorities', hint: 'Document priority levels' },
   { key: 'suggestion_categories', label: 'Suggestion Categories', hint: 'Feedback categories in the suggestions widget' },
   { key: 'suggestion_statuses', label: 'Suggestion Statuses', hint: 'Feedback statuses in the suggestions widget' },

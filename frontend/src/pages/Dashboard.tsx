@@ -121,7 +121,7 @@ export default function Dashboard() {
       )}
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
         {statCards.map((stat) => (
           <Link key={stat.name} to={stat.link} className={`stat-card border-l-4 ${stat.border} hover:shadow-md transition-shadow`}>
             <div className={`stat-icon ${stat.color}`}>
@@ -198,42 +198,36 @@ export default function Dashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-        <Link to="/reports" className="card p-5 hover:shadow-md transition-shadow cursor-pointer">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-primary-600 dark:text-primary-400" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-900">Reports</p>
-              <p className="text-xs text-slate-500">View analytics & reports</p>
-            </div>
-            <ArrowRight className="w-4 h-4 text-slate-400 ml-auto" />
+      <div className="grid grid-cols-3 gap-2.5 sm:gap-5">
+        <Link to="/reports" className="card p-3 sm:p-5 hover:shadow-md transition-shadow cursor-pointer flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 sm:gap-3 text-center sm:text-left">
+          <div className="w-10 h-10 rounded-lg bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
+            <TrendingUp className="w-5 h-5 text-primary-600 dark:text-primary-400" />
           </div>
+          <div className="min-w-0">
+            <p className="text-xs sm:text-sm font-semibold text-slate-900 leading-tight">Reports</p>
+            <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5 hidden sm:block">View analytics &amp; reports</p>
+          </div>
+          <ArrowRight className="w-4 h-4 text-slate-400 ml-auto hidden sm:block flex-shrink-0" />
         </Link>
-        <Link to="/documents/new" className="card p-5 hover:shadow-md transition-shadow cursor-pointer">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/30 flex items-center justify-center">
-              <FileText className="w-5 h-5 text-green-600 dark:text-green-400" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-900">New Document</p>
-              <p className="text-xs text-slate-500">Create a new document</p>
-            </div>
-            <ArrowRight className="w-4 h-4 text-slate-400 ml-auto" />
+        <Link to="/documents/new" className="card p-3 sm:p-5 hover:shadow-md transition-shadow cursor-pointer flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 sm:gap-3 text-center sm:text-left">
+          <div className="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
+            <FileText className="w-5 h-5 text-green-600 dark:text-green-400" />
           </div>
+          <div className="min-w-0">
+            <p className="text-xs sm:text-sm font-semibold text-slate-900 leading-tight">New Document</p>
+            <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5 hidden sm:block">Create a new document</p>
+          </div>
+          <ArrowRight className="w-4 h-4 text-slate-400 ml-auto hidden sm:block flex-shrink-0" />
         </Link>
-        <Link to="/track" className="card p-5 hover:shadow-md transition-shadow cursor-pointer">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
-              <BarChart3 className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-900">Track Document</p>
-              <p className="text-xs text-slate-500">Look up by tracking number</p>
-            </div>
-            <ArrowRight className="w-4 h-4 text-slate-400 ml-auto" />
+        <Link to="/track" className="card p-3 sm:p-5 hover:shadow-md transition-shadow cursor-pointer flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 sm:gap-3 text-center sm:text-left">
+          <div className="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
+            <BarChart3 className="w-5 h-5 text-amber-600 dark:text-amber-400" />
           </div>
+          <div className="min-w-0">
+            <p className="text-xs sm:text-sm font-semibold text-slate-900 leading-tight">Track Document</p>
+            <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5 hidden sm:block">Look up by tracking number</p>
+          </div>
+          <ArrowRight className="w-4 h-4 text-slate-400 ml-auto hidden sm:block flex-shrink-0" />
         </Link>
       </div>
 
