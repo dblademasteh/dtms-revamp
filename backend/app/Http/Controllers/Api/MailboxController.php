@@ -203,7 +203,7 @@ class MailboxController extends Controller
         }
 
         $messages = $query->orderBy('received_at', 'desc')
-            ->paginate($request->get('per_page', 25));
+            ->paginate(min((int) $request->get('per_page', 25), 100));
 
         $unread = $mailbox->messages()->where('folder', 'INBOX')->where('is_seen', false)->count();
 

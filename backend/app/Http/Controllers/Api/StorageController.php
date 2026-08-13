@@ -271,7 +271,7 @@ class StorageController extends Controller
             });
         }
 
-        return response()->json($query->paginate($request->get('per_page', 25)));
+        return response()->json($query->paginate(min((int) $request->get('per_page', 25), 100)));
     }
 
     public function restoreArchived(Request $request, DocumentAttachment $attachment)

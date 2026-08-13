@@ -9,6 +9,7 @@ use App\Models\RoutingHistory;
 use App\Models\AuditTrail;
 use App\Models\DocumentAttachment;
 use App\Models\DocumentComment;
+use App\Models\DocumentAcknowledgment;
 use App\Enums\DocumentStatus;
 use App\Events\DocumentStatusChanged;
 use App\Events\NotificationCreated;
@@ -26,6 +27,11 @@ class DocumentController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
+
+        if ($request->filled('search') && strlen(trim($request->search)) > 1) {
+            return $this->searchIndex($request);
+        }
+
         $query = Document::with(['originator', 'currentOffice', 'routingTemplate']);
 
         // Permission Gating:
@@ -111,9 +117,147 @@ class DocumentController extends Controller
         }
 
         $documents = $query->orderBy('created_at', 'desc')
-                         ->paginate($request->get('per_page', 15));
+                         ->paginate(min((int) $request->get('per_page', 15), 100));
 
         return response()->json($documents);
+    }
+
+    /**
+     * Full-text search via Meilisearch, scoped to the same permission gate
+     * as the regular listing (originator / current office / recipient / public).
+     */
+    private function searchIndex(Request $request)
+    {
+        $user = $request->user();
+        $roleValue = is_object($user->role) ? $user->role->value : $user->role;
+        $hasGlobalPermission = !empty($user->can_view_all_documents) || in_array($roleValue, ['superadmin', 'fcos']);
+
+        $clauses = [];
+
+        if (!$hasGlobalPermission) {
+            $userId = $user->id;
+            $officeId = $user->office_id;
+            $parts = ["originator_id = {$userId}"];
+            if ($officeId) {
+                $parts[] = "office_id = {$officeId}";
+                $parts[] = '(recipient_type = "office" AND recipient_id = ' . $officeId . ')';
+            }
+            $parts[] = '(recipient_type = "personnel" AND recipient_id = ' . $userId . ')';
+            $parts[] = 'is_public = true';
+            $clauses[] = '(' . implode(' OR ', $parts) . ')';
+        }
+
+        if ($request->has('status')) {
+            $clauses[] = 'status = ' . self::filterValue($request->status);
+        }
+
+        if ($request->has('document_type')) {
+            $clauses[] = 'document_type = ' . self::filterValue(self::documentTypeLabel($request->document_type));
+        }
+
+        if ($request->has('priority')) {
+            $clauses[] = 'priority = ' . self::filterValue($request->priority);
+        }
+
+        if ($request->has('classification')) {
+            $clauses[] = 'classification = ' . self::filterValue(self::classificationLabel($request->classification));
+        }
+
+        if ($request->has('office_id')) {
+            $clauses[] = 'office_id = ' . (int) $request->office_id;
+        }
+
+        if ($request->has('personnel_id')) {
+            $clauses[] = 'originator_id = ' . (int) $request->personnel_id;
+        }
+
+        if ($request->boolean('mine')) {
+            $clauses[] = 'originator_id = ' . $user->id;
+        }
+
+        if ($request->boolean('for_me')) {
+            $userId = $user->id;
+            $officeId = $user->office_id;
+            $target = ['(recipient_type = "personnel" AND recipient_id = ' . $userId . ')'];
+            if ($officeId) {
+                $target[] = '(recipient_type = "office" AND recipient_id = ' . $officeId . ')';
+            }
+            $clauses[] = '((' . implode(' OR ', $target) . ') AND status != "created")';
+        }
+
+        if ($request->has('is_public')) {
+            $clauses[] = 'is_public = ' . (filter_var($request->is_public, FILTER_VALIDATE_BOOLEAN) ? 'true' : 'false');
+        }
+
+        if ($request->has('from_date')) {
+            $clauses[] = 'created_at >= ' . (int) strtotime($request->from_date);
+        }
+
+        if ($request->has('to_date')) {
+            $clauses[] = 'created_at <= ' . (int) strtotime($request->to_date);
+        }
+
+        $filter = $clauses ? implode(' AND ', $clauses) : null;
+
+        $builder = Document::search(trim($request->search))
+            ->options(['filter' => $filter]);
+
+        $documents = $builder->paginate(min((int) $request->get('per_page', 15), 100));
+
+        return response()->json($documents);
+    }
+
+    private static function filterValue(string $value): string
+    {
+        $escaped = str_replace(['\\', '"'], ['\\\\', '\\"'], $value);
+        return '"' . $escaped . '"';
+    }
+
+    /**
+     * Create pending acknowledgement records for the document's recipients
+     * (personnel / office / cc / bcc) whenever acknowledgment is required.
+     */
+    private function syncAcknowledgements(Document $document, Request $request): void
+    {
+        $requireAck = $document->require_ack || $request->boolean('require_ack');
+
+        if (!$requireAck) {
+            return;
+        }
+
+        $targets = [];
+
+        if ($document->recipient_type === 'personnel' && $document->recipient_id) {
+            $targets['user:' . $document->recipient_id] = ['user_id' => $document->recipient_id, 'office_id' => null];
+        } elseif ($document->recipient_type === 'office' && $document->recipient_id) {
+            $targets['office:' . $document->recipient_id] = ['user_id' => null, 'office_id' => $document->recipient_id];
+        }
+
+        foreach (array_merge($document->cc_list ?? [], $document->bcc_list ?? []) as $entry) {
+            $type = $entry['type'] ?? null;
+            $id = (int) ($entry['id'] ?? 0);
+            if ($type === 'personnel' && $id) {
+                $targets['user:' . $id] = ['user_id' => $id, 'office_id' => null];
+            } elseif ($type === 'office' && $id) {
+                $targets['office:' . $id] = ['user_id' => null, 'office_id' => $id];
+            }
+        }
+
+        foreach ($targets as $target) {
+            $exists = DocumentAcknowledgment::where('document_id', $document->id)
+                ->where('user_id', $target['user_id'])
+                ->where('office_id', $target['office_id'])
+                ->exists();
+
+            if (!$exists) {
+                DocumentAcknowledgment::create([
+                    'document_id' => $document->id,
+                    'user_id' => $target['user_id'],
+                    'office_id' => $target['office_id'],
+                    'required' => true,
+                ]);
+            }
+        }
     }
 
     public function store(Request $request)
@@ -128,11 +272,22 @@ class DocumentController extends Controller
             'action_requested' => 'nullable|string|max:100',
             'routing_template_id' => 'nullable|exists:routing_templates,id',
             'recipient_type' => 'nullable|in:office,personnel',
-            'recipient_id' => 'nullable|integer',
+            'recipient_id' => ['nullable', 'integer', function ($attribute, $value, $fail) use ($request) {
+                if (!$value) return;
+                $type = $request->input('recipient_type');
+                if ($type === 'personnel' && !\App\Models\User::whereKey($value)->exists()) {
+                    $fail('The selected recipient does not exist.');
+                } elseif ($type === 'office' && !\App\Models\Office::whereKey($value)->exists()) {
+                    $fail('The selected recipient does not exist.');
+                }
+            }],
             'cc_list' => 'nullable|array',
             'cc_list.*' => 'string',
             'bcc_list' => 'nullable|array',
             'bcc_list.*' => 'string',
+            'require_ack' => 'nullable|boolean',
+            'due_at' => 'nullable|date',
+            'sla_days' => 'nullable|integer|min:1',
             'attachments' => 'nullable|array',
             'attachments.*' => 'file|max:10240',
         ]);
@@ -174,6 +329,9 @@ class DocumentController extends Controller
                 'recipient_id' => $request->recipient_id,
                 'cc_list' => $ccList,
                 'bcc_list' => $bccList,
+                'require_ack' => $request->boolean('require_ack'),
+                'due_at' => $request->filled('due_at') ? $request->due_at : null,
+                'sla_days' => $request->sla_days,
             ]);
 
             if ($request->hasFile('attachments')) {
@@ -205,6 +363,8 @@ class DocumentController extends Controller
                 'user_agent' => $request->userAgent(),
             ]);
 
+            $this->syncAcknowledgements($document, $request);
+
             DB::commit();
 
             DocumentStatusChanged::dispatch(
@@ -235,6 +395,22 @@ class DocumentController extends Controller
 
     public function show(\Illuminate\Http\Request $request, Document $document)
     {
+        $user = $request->user();
+
+        $roleValue = is_object($user->role) ? $user->role->value : $user->role;
+        $canView = $user->isAdmin()
+            || !empty($user->can_view_all_documents)
+            || in_array($roleValue, ['superadmin', 'fcos'], true)
+            || $document->originator_id === $user->id
+            || $document->current_office_id === $user->office_id
+            || ($document->recipient_id === $user->id && $document->recipient_type === 'personnel')
+            || ($document->recipient_id === $user->office_id && $document->recipient_type === 'office')
+            || (bool) $document->is_public;
+
+        if (!$canView) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
         $with = [
             'originator.office',
             'currentOffice',
@@ -287,8 +463,42 @@ class DocumentController extends Controller
         return response()->json($document);
     }
 
+    public function exportPdf(\Illuminate\Http\Request $request, Document $document)
+    {
+        $user = $request->user();
+
+        $roleValue = is_object($user->role) ? $user->role->value : $user->role;
+        $canView = $user->isAdmin()
+            || !empty($user->can_view_all_documents)
+            || in_array($roleValue, ['superadmin', 'fcos'], true)
+            || $document->originator_id === $user->id
+            || $document->current_office_id === $user->office_id
+            || ($document->recipient_id === $user->id && $document->recipient_type === 'personnel')
+            || ($document->recipient_id === $user->office_id && $document->recipient_type === 'office')
+            || (bool) $document->is_public;
+
+        if (!$canView) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $pdf = app(\App\Services\PdfExportService::class)->documentPdf($document, 'Document Record');
+
+        return $pdf->stream('document-' . $document->tracking_number . '.pdf');
+    }
+
     public function update(Request $request, Document $document)
     {
+        $user = $request->user();
+
+        $roleValue = is_object($user->role) ? $user->role->value : $user->role;
+        $canManage = $user->isAdmin()
+            || in_array($roleValue, ['superadmin', 'fcos'], true)
+            || $document->originator_id === $user->id;
+
+        if (!$canManage) {
+            return response()->json(['message' => 'You are not authorized to edit this document'], 403);
+        }
+
         $request->validate([
             'subject' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
@@ -307,11 +517,32 @@ class DocumentController extends Controller
 
     public function route(Request $request, Document $document)
     {
+        $user = $request->user();
+
+        $roleValue = is_object($user->role) ? $user->role->value : $user->role;
+        $canAct = $user->isAdmin()
+            || in_array($roleValue, ['superadmin', 'fcos'], true)
+            || $document->originator_id === $user->id
+            || $document->current_office_id === $user->office_id
+            || ($document->recipient_id === $user->id && $document->recipient_type === 'personnel');
+
+        if (!$canAct) {
+            return response()->json(['message' => 'You are not authorized to route this document'], 403);
+        }
+
         $request->validate([
             'action' => 'required|in:' . implode(',', \App\Models\Document::routingActionVerbs()),
             'to_office_id' => 'nullable|exists:offices,id',
             'recipient_type' => 'nullable|in:office,personnel',
-            'recipient_id' => 'nullable|integer',
+            'recipient_id' => ['nullable', 'integer', function ($attribute, $value, $fail) use ($request) {
+                if (!$value) return;
+                $type = $request->input('recipient_type');
+                if ($type === 'personnel' && !\App\Models\User::whereKey($value)->exists()) {
+                    $fail('The selected recipient does not exist.');
+                } elseif ($type === 'office' && !\App\Models\Office::whereKey($value)->exists()) {
+                    $fail('The selected recipient does not exist.');
+                }
+            }],
             'remarks' => 'required|string|max:500',
             'attachment' => 'nullable|file|max:10240',
         ]);
@@ -357,6 +588,10 @@ class DocumentController extends Controller
                     }
                     $targetOfficeId = $targetUser->office_id;
                 } elseif ($recipientType === 'office' && $recipientId) {
+                    if (!\App\Models\Office::find($recipientId)) {
+                        DB::rollBack();
+                        return response()->json(['message' => 'Recipient not found'], 422);
+                    }
                     $targetOfficeId = $recipientId;
                 }
                 $targetOfficeId = $targetOfficeId ?? $fromOfficeId;
@@ -501,6 +736,10 @@ class DocumentController extends Controller
                     }
                     $targetOfficeId = $targetUser->office_id;
                 } elseif ($recipientType === 'office' && $recipientId) {
+                    if (!\App\Models\Office::find($recipientId)) {
+                        DB::rollBack();
+                        return response()->json(['message' => 'Recipient not found'], 422);
+                    }
                     $targetOfficeId = $recipientId;
                 }
 
@@ -568,6 +807,10 @@ class DocumentController extends Controller
                     }
                     $targetOfficeId = $targetUser->office_id;
                 } elseif ($recipientType === 'office' && $recipientId) {
+                    if (!\App\Models\Office::find($recipientId)) {
+                        DB::rollBack();
+                        return response()->json(['message' => 'Recipient not found'], 422);
+                    }
                     $targetOfficeId = $recipientId;
                 }
 
@@ -645,6 +888,10 @@ class DocumentController extends Controller
                     }
                     $targetOfficeId = $targetUser->office_id;
                 } else {
+                    if (!\App\Models\Office::find($recipientId)) {
+                        DB::rollBack();
+                        return response()->json(['message' => 'Recipient not found'], 422);
+                    }
                     $targetOfficeId = $recipientId;
                 }
 
@@ -729,6 +976,8 @@ class DocumentController extends Controller
                 'new_values' => ['status' => is_object($newStatus) ? $newStatus->value : $newStatus],
             ]);
 
+            $this->syncAcknowledgements($document, $request);
+
             DB::commit();
 
             DocumentStatusChanged::dispatch(
@@ -767,6 +1016,22 @@ class DocumentController extends Controller
 
     public function storeComment(Request $request, Document $document)
     {
+        $user = $request->user();
+
+        $roleValue = is_object($user->role) ? $user->role->value : $user->role;
+        $canView = $user->isAdmin()
+            || !empty($user->can_view_all_documents)
+            || in_array($roleValue, ['superadmin', 'fcos'], true)
+            || $document->originator_id === $user->id
+            || $document->current_office_id === $user->office_id
+            || ($document->recipient_id === $user->id && $document->recipient_type === 'personnel')
+            || ($document->recipient_id === $user->office_id && $document->recipient_type === 'office')
+            || (bool) $document->is_public;
+
+        if (!$canView) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
         $request->validate([
             'body' => 'required|string|max:2000',
         ]);
@@ -811,6 +1076,19 @@ class DocumentController extends Controller
 
     public function uploadAttachment(Request $request, Document $document)
     {
+        $user = $request->user();
+
+        $roleValue = is_object($user->role) ? $user->role->value : $user->role;
+        $canAct = $user->isAdmin()
+            || in_array($roleValue, ['superadmin', 'fcos'], true)
+            || $document->originator_id === $user->id
+            || $document->current_office_id === $user->office_id
+            || ($document->recipient_id === $user->id && $document->recipient_type === 'personnel');
+
+        if (!$canAct) {
+            return response()->json(['message' => 'You are not authorized to modify this document'], 403);
+        }
+
         $request->validate([
             'file' => 'required|file|max:10240',
         ]);
@@ -889,6 +1167,18 @@ class DocumentController extends Controller
 
     public function recall(Request $request, Document $document)
     {
+        $user = $request->user();
+
+        $roleValue = is_object($user->role) ? $user->role->value : $user->role;
+        $canAct = $user->isAdmin()
+            || in_array($roleValue, ['superadmin', 'fcos'], true)
+            || $document->originator_id === $user->id
+            || $document->current_office_id === $user->office_id;
+
+        if (!$canAct) {
+            return response()->json(['message' => 'You are not authorized to recall this document'], 403);
+        }
+
         if ($document->status->value !== 'released') {
             return response()->json(['message' => 'Only released documents can be recalled'], 422);
         }
@@ -1085,6 +1375,18 @@ class DocumentController extends Controller
      */
     public function disseminate(Request $request, Document $document)
     {
+        $user = $request->user();
+
+        $roleValue = is_object($user->role) ? $user->role->value : $user->role;
+        $canAct = $user->isAdmin()
+            || in_array($roleValue, ['superadmin', 'fcos'], true)
+            || $document->originator_id === $user->id
+            || $document->current_office_id === $user->office_id;
+
+        if (!$canAct) {
+            return response()->json(['message' => 'You are not authorized to disseminate this document'], 403);
+        }
+
         $request->validate([
             'remarks' => 'nullable|string|max:500',
         ]);
@@ -1147,6 +1449,8 @@ class DocumentController extends Controller
                     $notification->data,
                 );
             }
+
+            $this->syncAcknowledgements($document, $request);
 
             DB::commit();
 

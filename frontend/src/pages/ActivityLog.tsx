@@ -1,9 +1,11 @@
 ﻿import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import api from '@/services/api'
+import toast from 'react-hot-toast'
 import {
   History,
   Download,
+  FileText,
   ChevronLeft,
   ChevronRight,
   Search,
@@ -75,13 +77,37 @@ export default function ActivityLog() {
     window.open(`/api/reports/export?${params}`, '_blank')
   }
 
+  const handleExportPdf = async () => {
+    try {
+      const params = new URLSearchParams({ type: 'activity' })
+      if (action) params.set('action', action)
+      if (search) params.set('search', search)
+      const res = await api.get(`/reports/export-pdf?${params}`, { responseType: 'blob' })
+      const url = window.URL.createObjectURL(new Blob([res.data]))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'activity-log.pdf'
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Failed to export PDF')
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <button onClick={handleExport} className="btn btn-primary btn-sm flex-shrink-0 sm:ml-auto">
-          <Download className="w-4 h-4" /> Export CSV
-        </button>
+        <div className="flex items-center gap-2 sm:ml-auto">
+          <button onClick={handleExport} className="btn btn-secondary btn-sm flex-shrink-0">
+            <Download className="w-4 h-4" /> Export CSV
+          </button>
+          <button onClick={handleExportPdf} className="btn btn-primary btn-sm flex-shrink-0">
+            <FileText className="w-4 h-4" /> Export PDF
+          </button>
+        </div>
       </div>
 
       {/* Filters */}

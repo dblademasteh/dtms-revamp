@@ -1,13 +1,22 @@
+export type UserRole = 'superadmin' | 'officer' | 'non_officer' | 'fcos' | 'office_station'
+
 export interface User {
   id: number
   name: string
   email: string
-  role: 'encoder' | 'approver' | 'records_officer' | 'division_head' | 'administrator'
+  role: UserRole
   office_id: number
   phone?: string
   status: 'active' | 'inactive' | 'suspended'
   office?: Office
   has_pincode?: boolean
+  can_view_all_documents?: boolean
+  must_change_password?: boolean
+  accnt_no?: string | null
+  rank?: string | null
+  full_name?: string
+  designation?: string | null
+  unit_assignment?: string | null
   created_at: string
   updated_at: string
 }
@@ -25,18 +34,33 @@ export interface Office {
   children?: Office[]
 }
 
+export type DocumentStatus =
+  | 'created'
+  | 'received'
+  | 'in_review'
+  | 'approved'
+  | 'rejected'
+  | 'returned'
+  | 'released'
+  | 'filed'
+
 export interface Document {
   id: number
   tracking_number: string
   document_no?: string
+  suffix?: string
   document_type: string
   subject: string
   description?: string
   priority: 'low' | 'normal' | 'high' | 'urgent'
-  status: 'received' | 'in_review' | 'approved' | 'rejected' | 'returned' | 'released' | 'filed'
+  status: DocumentStatus
   originator_id: number
   current_office_id: number
+  current_step?: number
   routing_template_id?: number
+  due_at?: string | null
+  sla_days?: number | null
+  require_ack?: boolean
   released_at?: string
   is_public: boolean
   originator?: User
@@ -79,12 +103,30 @@ export interface DocumentAttachment {
   created_at: string
 }
 
+export type RoutingAction =
+  | 'created'
+  | 'received'
+  | 'approved'
+  | 'signed'
+  | 'endorsed'
+  | 'noted'
+  | 'recommended'
+  | 'forwarded'
+  | 'rejected'
+  | 'disapproved'
+  | 'returned'
+  | 'referred'
+  | 'resubmitted'
+  | 'filed'
+  | 'routed'
+  | 'acknowledged'
+
 export interface RoutingHistory {
   id: number
   document_id: number
   from_office_id: number
   to_office_id: number
-  action: 'routed' | 'approved' | 'rejected' | 'returned' | 'received'
+  action: RoutingAction
   remarks?: string
   actor_id: number
   step_number: number

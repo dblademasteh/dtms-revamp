@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/services/api'
+import toast from 'react-hot-toast'
 import {
   BarChart,
   Bar,
@@ -89,6 +90,23 @@ export default function Reports() {
     window.open(`/api/reports/export?${params}`, '_blank')
   }
 
+  const handleExportPdf = async (type: string) => {
+    try {
+      const params = new URLSearchParams({ type, from_date: fromDate, to_date: toDate })
+      const res = await api.get(`/reports/export-pdf?${params}`, { responseType: 'blob' })
+      const url = window.URL.createObjectURL(new Blob([res.data]))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `report-${type}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Failed to export PDF')
+    }
+  }
+
   const setRange = (days: number) => {
     const to = new Date()
     const from = new Date()
@@ -165,10 +183,17 @@ export default function Reports() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <button
           onClick={() => handleExport(activeTab)}
-          className="btn btn-primary btn-sm flex-shrink-0 sm:ml-auto"
+          className="btn btn-secondary btn-sm flex-shrink-0 sm:ml-auto"
         >
           <Download className="w-4 h-4" />
           Export CSV
+        </button>
+        <button
+          onClick={() => handleExportPdf(activeTab)}
+          className="btn btn-primary btn-sm flex-shrink-0"
+        >
+          <FileText className="w-4 h-4" />
+          Export PDF
         </button>
       </div>
 

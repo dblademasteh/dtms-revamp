@@ -135,6 +135,44 @@ export default function Dashboard() {
         ))}
       </div>
 
+      {/* SLA / Needs Attention */}
+      {(stats.overdue_documents > 0 || stats.pending_acknowledgements > 0) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
+          {stats.overdue_documents > 0 && (
+            <Link
+              to="/documents"
+              className="card p-4 border-l-4 border-l-red-500 hover:shadow-md transition-shadow flex items-center gap-3"
+            >
+              <div className="stat-icon bg-red-50 text-red-600">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <p className="stat-label">Overdue Documents</p>
+                <p className="stat-value">{stats.overdue_documents}</p>
+                <p className="text-xs text-slate-500 mt-0.5">Past SLA deadline and still in transit</p>
+              </div>
+              <ArrowRight className="w-4 h-4 text-slate-300" />
+            </Link>
+          )}
+          {stats.pending_acknowledgements > 0 && (
+            <Link
+              to="/documents"
+              className="card p-4 border-l-4 border-l-amber-500 hover:shadow-md transition-shadow flex items-center gap-3"
+            >
+              <div className="stat-icon bg-amber-50 text-amber-600">
+                <Clock className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <p className="stat-label">Awaiting Acknowledgment</p>
+                <p className="stat-value">{stats.pending_acknowledgements}</p>
+                <p className="text-xs text-slate-500 mt-0.5">Documents needing your ack</p>
+              </div>
+              <ArrowRight className="w-4 h-4 text-slate-300" />
+            </Link>
+          )}
+        </div>
+      )}
+
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Volume Chart */}

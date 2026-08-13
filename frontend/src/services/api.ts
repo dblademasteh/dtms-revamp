@@ -33,6 +33,9 @@ api.interceptors.response.use(
       localStorage.removeItem('auth-storage')
       window.location.href = '/login'
     }
+    if (error.response?.status === 403 && error.response?.data?.code === 'PASSWORD_CHANGE_REQUIRED') {
+      window.location.href = '/settings?force=password'
+    }
     return Promise.reject(error)
   }
 )

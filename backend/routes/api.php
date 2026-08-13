@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\TwoFactorController;
 use App\Http\Controllers\Api\SuggestionController;
 use App\Http\Controllers\Api\StorageController;
 use App\Http\Controllers\Api\DropdownOptionController;
+use App\Http\Controllers\Api\DocumentAcknowledgmentController;
 
 // Public routes (throttled to mitigate brute-force attacks)
 Route::middleware(['throttle:auth-ip', 'throttle:auth'])->group(function () {
@@ -33,7 +34,7 @@ Route::get('/ranks', [DropdownOptionController::class, 'ranks']);
 Route::get('/dropdown-options', [DropdownOptionController::class, 'index']);
 
 // Protected routes
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'force-password-change'])->group(function () {
     // Auth routes
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
@@ -67,6 +68,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/documents/{document}/attachments/{attachment}/versions', [DocumentController::class, 'attachmentVersions']);
     Route::get('/documents/{document}/attachments/{attachment}/download', [DocumentController::class, 'downloadAttachment']);
     Route::post('/documents/{document}/comments', [DocumentController::class, 'storeComment']);
+    Route::get('/documents/{document}/acknowledgements', [DocumentAcknowledgmentController::class, 'index']);
+    Route::post('/documents/{document}/acknowledge', [DocumentAcknowledgmentController::class, 'acknowledge']);
+    Route::get('/documents/{document}/pdf', [DocumentController::class, 'exportPdf']);
     Route::post('/documents/bulk-delete', function (\Illuminate\Http\Request $request) {
         $request->validate([
             'document_ids' => 'required|array|min:1',
@@ -146,6 +150,7 @@ Route::middleware('auth:sanctum')->group(function () {
          Route::get('/bottlenecks', [ReportController::class, 'bottlenecks']);
          Route::get('/volume', [ReportController::class, 'volume']);
          Route::get('/export', [ReportController::class, 'export']);
+         Route::get('/export-pdf', [ReportController::class, 'exportPdf']);
      });
 
     // Notifications
@@ -338,42 +343,6 @@ Route::middleware('auth:sanctum')->group(function () {
             return $user->load('office');
         });
 
-        Route::post('/users', function (\Illuminate\Http\Request $request) {
-            $request->validate([
-                'name' => 'required|string|max:255',
-                'email' => 'nullable|email|unique:users,email',
-                'accnt_no' => 'required|string|unique:users,accnt_no',
-                'password' => 'required|min:6',
-                'role' => 'required|in:superadmin,officer,non_officer,fcos,office_station',
-                'office_id' => 'required|exists:offices,id',
-                'phone' => 'nullable|string|max:20',
-                'is_chief' => 'nullable|boolean',
-            ]);
-
-            $user = \App\Models\User::create([
-                'name' => $request->name,
-                'email' => $request->email,
-                'accnt_no' => $request->accnt_no,
-                'password' => \Illuminate\Support\Facades\Hash::make($request->password),
-                'role' => $request->role,
-                'office_id' => $request->office_id,
-                'phone' => $request->phone,
-                'status' => 'active',
-            ]);
-
-            if ($request->boolean('is_chief')) {
-                $office = \App\Models\Office::find($request->office_id);
-                $office->head_user_id = $user->id;
-                $office->save();
-            }
-
-            return response()->json([
-                'message' => 'User created successfully',
-                'user' => $user->load('office'),
-            ], 201);
-        });
-
-        // Create / provision a login account from an existing personnel record
         Route::post('/users/from-personnel', function (\Illuminate\Http\Request $request) {
             $request->validate([
                 'user_id' => 'required|exists:users,id',
@@ -389,10 +358,10 @@ Route::middleware('auth:sanctum')->group(function () {
             $password = $request->password ?: 'bfp12345';
             $role = $request->role ?: (function ($rank) {
                 $r = strtoupper((string) $rank);
-                if (preg_match('/SUPT/', $r)) return 'division_head';
-                if (preg_match('/(F|FC)?INSP/', $r)) return 'approver';
-                if (preg_match('/^SFO/', $r)) return 'records_officer';
-                return 'encoder';
+                if (preg_match('/SUPT/', $r)) return 'officer';
+                if (preg_match('/(F|FC)?INSP/', $r)) return 'officer';
+                if (preg_match('/^SFO/', $r)) return 'officer';
+                return 'non_officer';
             })($person->rank);
 
             $person->update([
@@ -401,6 +370,7 @@ Route::middleware('auth:sanctum')->group(function () {
                 'office_id' => $request->office_id,
                 'email' => $request->filled('email') ? $request->email : null,
                 'status' => 'active',
+                'must_change_password' => true,
             ]);
 
             if ($request->boolean('is_chief') && $request->office_id) {
@@ -421,7 +391,7 @@ Route::middleware('auth:sanctum')->group(function () {
             $request->validate([
                 'office_id' => 'required|exists:offices,id',
                 'name' => 'nullable|string|max:255',
-                'role' => 'nullable|in:office_station,officer,non_officer,fcos',
+                'role' => 'nullable|in:office_station,officer,non_officer,fcos,superadmin',
                 'password' => 'nullable|min:6',
                 'email' => 'nullable|email|unique:users,email',
                 'is_chief' => 'nullable|boolean',
@@ -449,6 +419,7 @@ Route::middleware('auth:sanctum')->group(function () {
                 'role' => $request->role ?: 'office_station',
                 'office_id' => $office->id,
                 'status' => 'active',
+                'must_change_password' => true,
             ]);
 
             if ($request->boolean('is_chief', true)) {
@@ -702,7 +673,7 @@ Route::middleware('auth:sanctum')->group(function () {
                 });
             }
 
-            $trails = $query->paginate($request->get('per_page', 50));
+            $trails = $query->paginate(min((int) $request->get('per_page', 50), 100));
 
             return response()->json($trails);
         });

@@ -20,7 +20,8 @@ import {
   Mail,
   MapPin,
   ChevronsUpDown,
-  LifeBuoy
+  LifeBuoy,
+  HelpCircle
 } from 'lucide-react'
 import { useState } from 'react'
 import NotificationBell from '@/components/NotificationBell'
@@ -44,6 +45,7 @@ export default function Layout() {
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
   const [logoFailed, setLogoFailed] = useState(false)
 
   const handleLogout = () => {
@@ -308,6 +310,23 @@ export default function Layout() {
             {/* Notifications */}
             <NotificationBell />
 
+            {/* Help & feedback (mobile: moved out of the floating bubble so it never covers page buttons) */}
+            {user?.role !== 'superadmin' && (
+              <button
+                type="button"
+                onClick={() => setHelpOpen((v) => !v)}
+                aria-label="Open help and feedback"
+                title="Help & feedback"
+                className={`lg:hidden flex items-center justify-center w-9 h-9 rounded-lg transition-colors ${
+                  helpOpen
+                    ? 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-950/40'
+                    : 'text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:text-blue-400 dark:hover:bg-blue-950/40'
+                }`}
+              >
+                <HelpCircle className="h-5 w-5" />
+              </button>
+            )}
+
             {/* Profile: account number + role, with logout */}
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2.5">
@@ -356,7 +375,7 @@ export default function Layout() {
         danger={true}
       />
 
-      {user?.role !== 'superadmin' && <HelpWidget />}
+      {user?.role !== 'superadmin' && <HelpWidget open={helpOpen} onOpenChange={setHelpOpen} />}
     </div>
   )
 }

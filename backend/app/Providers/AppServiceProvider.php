@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Event;
+use App\Events\NotificationCreated;
+use App\Listeners\SendSmsNotification;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -18,6 +21,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Model::unguard(false);
+
+        Event::listen(NotificationCreated::class, SendSmsNotification::class);
 
         // Throttle public auth endpoints: block an IP after too many hits, and
         // additionally clamp per-account attempts so a single credential can't

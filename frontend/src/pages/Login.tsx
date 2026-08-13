@@ -1,5 +1,6 @@
-import { useState, useRef } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/authStore'
 import { useForm } from 'react-hook-form'
 import api from '@/services/api'
@@ -8,7 +9,6 @@ import {
   Eye,
   EyeOff,
   FileText,
-  GitBranch,
   ShieldCheck,
   Smartphone,
   ArrowLeft,
@@ -19,9 +19,17 @@ import {
   Search,
   CheckCircle2,
   Shield,
-  ArrowRight
+  ArrowRight,
+  ScanLine,
+  XCircle,
+  AlertCircle,
+  Copy,
+  Check,
+  MapPin,
+  Clock
 } from 'lucide-react'
 import ModalPortal from '@/components/ModalPortal'
+import QrScannerModal from '@/components/QrScannerModal'
 
 interface LoginForm {
   accnt_no: string
@@ -39,6 +47,94 @@ export default function Login() {
   const navigate = useNavigate()
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>()
+
+  const [trackingNumber, setTrackingNumber] = useState('')
+  const [search, setSearch] = useState('')
+  const [scannerOpen, setScannerOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [searchParams] = useSearchParams()
+
+  useEffect(() => {
+    const urlTrack = searchParams.get('track')?.trim()
+    if (urlTrack) {
+      setTrackingNumber(urlTrack)
+      setSearch(urlTrack)
+    }
+  }, [searchParams])
+
+  const { data: trackingData, isLoading: isTracking, error: trackingError } = useQuery({
+    queryKey: ['track-login', search],
+    queryFn: () => api.get(`/track/${search}`).then((res) => res.data),
+    enabled: !!search,
+    retry: false,
+  })
+
+  const handleTrackSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (trackingNumber.trim()) {
+      setSearch(trackingNumber.trim())
+    }
+  }
+
+  const handleQrResult = useCallback((tracking: string) => {
+    if (!tracking) return
+    setScannerOpen(false)
+    setTrackingNumber(tracking)
+    setSearch(tracking)
+    toast.success('QR Code scanned!')
+  }, [])
+
+  const copyTrackingNumber = () => {
+    if (!trackingData?.tracking_number) return
+    navigator.clipboard.writeText(trackingData.tracking_number)
+    setCopied(true)
+    toast.success('Tracking number copied to clipboard!')
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const getStatusBadge = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'approved':
+      case 'released':
+        return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30 font-bold'
+      case 'in_review':
+      case 'received':
+        return 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 border-blue-200 dark:border-blue-500/30 font-bold'
+      case 'rejected':
+        return 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 border-red-200 dark:border-red-500/30 font-bold'
+      case 'returned':
+        return 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 border-amber-200 dark:border-amber-500/30 font-bold'
+      default:
+        return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700 font-bold'
+    }
+  }
+
+  const statusLabels: Record<string, string> = {
+    created: 'Created',
+    received: 'Received',
+    in_review: 'In Review',
+    approved: 'Approved',
+    rejected: 'Declined',
+    returned: 'Returned',
+    released: 'Released',
+    filed: 'Filed / Archived',
+  }
+
+  const trackSteps = [
+    { key: 'created', label: 'Created' },
+    { key: 'received', label: 'Received' },
+    { key: 'in_review', label: 'Review' },
+    { key: 'released', label: 'Released' },
+  ]
+
+  const getCurrentStepIndex = (status: string) => {
+    const s = status?.toLowerCase() || ''
+    if (s === 'created') return 0
+    if (s === 'received') return 1
+    if (s === 'in_review') return 2
+    if (s === 'approved' || s === 'released' || s === 'filed') return 3
+    return 1
+  }
 
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true)
@@ -72,37 +168,19 @@ export default function Login() {
     }
   }
 
-  const features = [
-    {
-      icon: FileText,
-      title: 'Full Audit Trail Visibility',
-      desc: 'Track document movements and current office custodians in real time.',
-    },
-    {
-      icon: GitBranch,
-      title: 'Guided Office Workflows',
-      desc: 'Seamlessly route memoranda and referrals along verified channels.',
-    },
-    {
-      icon: ShieldCheck,
-      title: 'Enterprise Security & Logs',
-      desc: 'Role-based authorization backed by immutable audit history.',
-    },
-  ]
-
   return (
     <div className="min-h-screen flex bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200">
-      {/* Left panel - Branding Hero */}
-      <div className="hidden lg:flex lg:w-[48%] bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950 relative overflow-hidden text-white p-10 xl:p-14 flex-col justify-between shadow-2xl">
+      {/* Left panel - Public Tracking */}
+      <div className="hidden lg:flex lg:w-[48%] bg-white dark:bg-slate-900 border-r border-slate-200/80 dark:border-slate-800/80 relative overflow-hidden text-slate-900 dark:text-white p-10 xl:p-14 flex-col justify-between shadow-2xl">
         {/* Background Ambient Glows */}
-        <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-[128px] pointer-events-none" />
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-[128px] pointer-events-none" />
+        <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/10 dark:bg-blue-600/10 rounded-full blur-[128px] pointer-events-none" />
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-indigo-500/10 dark:bg-indigo-600/10 rounded-full blur-[128px] pointer-events-none" />
 
         {/* Grid pattern overlay */}
         <div
-          className="absolute inset-0 opacity-[0.03] pointer-events-none"
+          className="absolute inset-0 opacity-[0.04] pointer-events-none"
           style={{
-            backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
+            backgroundImage: `linear-gradient(rgba(148,163,184,0.18) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.18) 1px, transparent 1px)`,
             backgroundSize: '40px 40px',
           }}
         />
@@ -114,47 +192,189 @@ export default function Login() {
               <Shield className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-lg font-extrabold tracking-tight">DTMS</div>
-              <div className="text-[10px] text-slate-400 font-medium">Document Tracking &amp; Management</div>
+              <div className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">DTMS</div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Document Tracking &amp; Management</div>
             </div>
+          </div>
+
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 dark:bg-white/10 backdrop-blur-md border border-slate-200 dark:border-white/15 text-xs font-semibold text-slate-700 dark:text-blue-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span>v2.5 System Online</span>
           </div>
         </div>
 
-        {/* Main Content Hero */}
-        <div className="relative z-10 my-auto max-w-lg space-y-8">
-          <div className="space-y-3">
-            <h1 className="text-3xl xl:text-4xl font-extrabold leading-tight tracking-tight text-white text-balance">
-              Track, route, and account for every document.
+        {/* Main Content - Public Tracking */}
+        <div className="relative z-10 my-auto mx-auto w-full max-w-lg space-y-5">
+          <div className="space-y-2">
+            <h1 className="text-2xl xl:text-3xl font-extrabold leading-tight tracking-tight text-slate-900 dark:text-white">
+              Track Any Document
             </h1>
-            <p className="text-sm text-slate-300 leading-relaxed">
-              An official enterprise platform for routing memoranda, executive orders, circulars, and referrals across government offices with a verified audit trail.
+            <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+              Enter a DTMS tracking number or scan a QR code to view live routing status — no login required.
             </p>
           </div>
 
-          {/* Feature Cards Grid */}
-          <div className="space-y-3.5">
-            {features.map((f) => (
-              <div
-                key={f.title}
-                className="flex items-start gap-3.5 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md hover:bg-white/10 transition-all duration-200"
+          {/* Search Bar & QR Scanner Trigger */}
+          <form onSubmit={handleTrackSubmit} className="relative">
+            <div className="flex items-center gap-2 p-2 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl backdrop-blur-md">
+              <div className="relative flex-1 flex items-center">
+                <Search className="absolute left-3 w-4 h-4 text-slate-500 dark:text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="e.g. 2026-07-0001"
+                  className="w-full pl-9 pr-8 py-2.5 bg-transparent text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 text-sm font-mono focus:outline-none"
+                  value={trackingNumber}
+                  onChange={(e) => setTrackingNumber(e.target.value)}
+                />
+                {trackingNumber && (
+                  <button
+                    type="button"
+                    onClick={() => setTrackingNumber('')}
+                    className="absolute right-2 p-1 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-white"
+                  >
+                    <XCircle className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setScannerOpen(true)}
+                title="Scan QR Code"
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-200 dark:bg-white/10 hover:bg-slate-300 dark:hover:bg-white/20 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-white/15 font-semibold text-xs transition-colors"
               >
-                <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-400">
-                  <f.icon className="w-5 h-5" />
+                <ScanLine className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <span className="hidden xl:inline">Scan QR</span>
+              </button>
+
+              <button
+                type="submit"
+                disabled={!trackingNumber.trim() || isTracking}
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-500/25 disabled:opacity-50 transition-all"
+              >
+                {isTracking ? (
+                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <span>Search</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+
+          {/* Error State */}
+          {trackingError && (
+            <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-center space-y-2 animate-in fade-in duration-200">
+              <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 flex items-center justify-center mx-auto border border-red-200 dark:border-red-500/30">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <h3 className="text-sm font-bold text-red-700 dark:text-red-200">Tracking Number Not Found</h3>
+              <p className="text-xs text-red-600/90 dark:text-red-300/80 leading-relaxed">
+                No document registered with code{' '}
+                <span className="font-mono font-bold text-red-900 dark:text-white">"{search}"</span>. Please verify the code and try again.
+              </p>
+            </div>
+          )}
+
+          {/* Search Results */}
+          {trackingData && (
+            <div className="rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 backdrop-blur-md p-4 sm:p-5 space-y-4 animate-in fade-in duration-200">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                <div className="space-y-1 min-w-0">
+                  <button
+                    onClick={copyTrackingNumber}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-200 dark:bg-white/10 hover:bg-slate-300 dark:hover:bg-white/20 border border-slate-300 dark:border-white/15 font-mono text-[11px] font-bold text-blue-700 dark:text-blue-300 transition-colors"
+                    title="Click to copy tracking number"
+                  >
+                    <span className="truncate max-w-[180px]">{trackingData.tracking_number}</span>
+                    {copied ? <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-3 h-3 text-slate-500 dark:text-slate-400" />}
+                  </button>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium pt-1">
+                    {trackingData.document_type ? trackingData.document_type.replace('_', ' ').toUpperCase() : 'DOCUMENT'}
+                  </p>
                 </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white">{f.title}</h3>
-                  <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">{f.desc}</p>
+
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] border w-fit ${getStatusBadge(trackingData.status)}`}>
+                  <ShieldCheck className="w-3 h-3" />
+                  {statusLabels[trackingData.status] || trackingData.status}
+                </span>
+              </div>
+
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white leading-snug">{trackingData.subject}</h3>
+
+              {/* Compact Workflow Stepper */}
+              <div className="pt-3 border-t border-slate-200 dark:border-white/10">
+                <div className="grid grid-cols-4 gap-1.5">
+                  {trackSteps.map((st, idx) => {
+                    const activeIdx = getCurrentStepIndex(trackingData.status)
+                    const isCompleted = idx <= activeIdx
+                    return (
+                      <div key={st.key} className="space-y-1">
+                        <div
+                          className={`h-1.5 rounded-full transition-all duration-300 ${
+                            isCompleted ? 'bg-blue-600 dark:bg-blue-500 shadow-sm shadow-blue-500/50' : 'bg-slate-200 dark:bg-white/10'
+                          }`}
+                        />
+                        <p className={`text-[10px] font-medium text-center ${isCompleted ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
+                          {st.label}
+                        </p>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
-            ))}
-          </div>
+
+              {/* Location & Last Updated */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-3 border-t border-slate-200 dark:border-white/10 text-xs">
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10">
+                  <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0">
+                    <MapPin className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-slate-500 dark:text-slate-400 text-[10px]">Current Location</p>
+                    <p className="font-semibold text-slate-900 dark:text-white truncate">{trackingData.current_location || 'Office Station'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10">
+                  <div className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center flex-shrink-0">
+                    <Clock className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-slate-500 dark:text-slate-400 text-[10px]">Last Updated</p>
+                    <p className="font-semibold text-slate-900 dark:text-white truncate">
+                      {trackingData.last_updated ? new Date(trackingData.last_updated).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : 'Recently'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Initial Empty State Guide */}
+          {!trackingData && !trackingError && !isTracking && (
+            <div className="p-4 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-center space-y-1.5">
+              <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto border border-blue-200 dark:border-blue-500/20">
+                <FileText className="w-5 h-5" />
+              </div>
+              <h3 className="text-xs font-bold text-slate-900 dark:text-slate-200">How to Track a Document</h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                Enter the tracking number printed on the document (e.g.{' '}
+                <code className="text-blue-700 dark:text-blue-300 bg-slate-200 dark:bg-white/10 px-1 py-0.5 rounded font-mono">2026-07-0001</code>) or scan its QR code.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Footer info */}
-        <div className="relative z-10 text-xs text-slate-400 flex items-center justify-between border-t border-white/10 pt-6">
-          <span>© {new Date().getFullYear()} Document Tracking &amp; Management System</span>
-          <span className="flex items-center gap-1 text-emerald-400 font-semibold">
-            <CheckCircle2 className="w-3.5 h-3.5" />
+        <div className="relative z-10 text-xs text-slate-500 dark:text-slate-400 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-slate-200 dark:border-white/10 pt-6">
+          <span className="min-w-0">
+            © {new Date().getFullYear()} Document Tracking &amp; Management System
+          </span>
+          <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold whitespace-nowrap">
+            <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
             <span>SSL Encrypted</span>
           </span>
         </div>
@@ -314,6 +534,9 @@ export default function Login() {
       {showPincodeModal && (
         <PincodeModal onClose={() => setShowPincodeModal(false)} />
       )}
+
+      {/* QR Scanner Modal */}
+      <QrScannerModal open={scannerOpen} onClose={() => setScannerOpen(false)} onResult={handleQrResult} />
     </div>
   )
 }

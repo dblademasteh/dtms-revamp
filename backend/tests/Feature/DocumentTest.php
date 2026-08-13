@@ -70,8 +70,8 @@ class DocumentTest extends TestCase
 
     public function test_can_show_document(): void
     {
-        $this->authenticate();
-        $doc = Document::factory()->create();
+        $user = $this->authenticate();
+        $doc = Document::factory()->create(['current_office_id' => $user->office_id]);
 
         $response = $this->getJson("/api/documents/{$doc->id}");
         $response->assertStatus(200)
@@ -360,8 +360,8 @@ class DocumentTest extends TestCase
 
     public function test_can_create_comment(): void
     {
-        $this->authenticate();
-        $doc = Document::factory()->create();
+        $user = $this->authenticate();
+        $doc = Document::factory()->create(['current_office_id' => $user->office_id]);
 
         $response = $this->postJson("/api/documents/{$doc->id}/comments", [
             'body' => 'Test comment',

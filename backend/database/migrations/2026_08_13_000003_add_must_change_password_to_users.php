@@ -8,19 +8,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (Schema::hasColumn('users', 'suffix')) {
-            return;
-        }
-
         Schema::table('users', function (Blueprint $table) {
-            $table->string('suffix')->nullable()->after('middle_name');
+            $table->boolean('must_change_password')->default(false)->after('status');
         });
     }
 
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('suffix');
+            $table->dropColumn('must_change_password');
         });
     }
 };

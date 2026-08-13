@@ -29,6 +29,10 @@ RUN mkdir -p bootstrap/cache storage /run/nginx \
     && chown -R www-data:www-data /var/www/html storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
+RUN echo 'upload_max_filesize=50M' > /usr/local/etc/php/conf.d/uploads.ini \
+    && echo 'post_max_size=100M' >> /usr/local/etc/php/conf.d/uploads.ini \
+    && echo 'memory_limit=256M' >> /usr/local/etc/php/conf.d/uploads.ini
+
 RUN rm -rf /etc/nginx/conf.d/* /etc/nginx/http.d/*
 COPY nginx.conf /etc/nginx/http.d/default.conf
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf

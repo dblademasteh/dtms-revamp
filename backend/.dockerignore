@@ -6,5 +6,5 @@ storage/framework/sessions/*
 storage/framework/views/*
 bootstrap/cache/*.php
 .env
-.env.*
+.env.coolify
 .git

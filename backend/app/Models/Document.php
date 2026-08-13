@@ -34,6 +34,11 @@ class Document extends Model
         'recipient_id',
         'cc_list',
         'bcc_list',
+        'due_at',
+        'sla_days',
+        'require_ack',
+        'sla_reminded_at',
+        'sla_escalated_at',
     ];
 
     protected $casts = [
@@ -44,6 +49,11 @@ class Document extends Model
         'is_public' => 'boolean',
         'cc_list' => 'array',
         'bcc_list' => 'array',
+        'due_at' => 'datetime',
+        'sla_days' => 'integer',
+        'require_ack' => 'boolean',
+        'sla_reminded_at' => 'datetime',
+        'sla_escalated_at' => 'datetime',
     ];
 
     // Philippine government document type taxonomy
@@ -167,11 +177,18 @@ class Document extends Model
         return [
             'id' => $this->id,
             'tracking_number' => $this->tracking_number,
+            'document_no' => $this->document_no,
             'subject' => $this->subject,
             'description' => $this->description,
             'document_type' => self::documentTypeLabel($this->document_type ?? 'others'),
             'status' => $this->status ? $this->status->value : null,
+            'priority' => $this->priority ? $this->priority->value : null,
             'classification' => $this->classification ? self::classificationLabel($this->classification) : null,
+            'office_id' => $this->current_office_id,
+            'originator_id' => $this->originator_id,
+            'recipient_type' => $this->recipient_type,
+            'recipient_id' => $this->recipient_id,
+            'is_public' => (bool) $this->is_public,
             'created_at' => $this->created_at ? $this->created_at->timestamp : null,
         ];
     }
@@ -185,6 +202,11 @@ class Document extends Model
     public function currentOffice()
     {
         return $this->belongsTo(Office::class, 'current_office_id');
+    }
+
+    public function acknowledgements()
+    {
+        return $this->hasMany(DocumentAcknowledgment::class);
     }
 
     public function routingTemplate()

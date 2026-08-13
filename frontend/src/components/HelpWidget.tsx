@@ -6,25 +6,29 @@ import SuggestionsWidget from '@/components/SuggestionsWidget'
 
 interface HelpWidgetProps {
   allowSuggestions?: boolean
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export default function HelpWidget({ allowSuggestions = true }: HelpWidgetProps) {
-  const [open, setOpen] = useState(false)
+export default function HelpWidget({ allowSuggestions = true, open, onOpenChange }: HelpWidgetProps) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isOpen = open ?? internalOpen
+  const setOpen = onOpenChange ?? setInternalOpen
   const [tab, setTab] = useState<'assistant' | 'suggestions'>('assistant')
 
   return (
     <>
-      {/* Floating toggle button */}
+      {/* Floating toggle button (desktop only; mobile uses the header trigger) */}
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpen(!isOpen)}
         aria-label="Open help and feedback"
-        className={`fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg transition-all hover:scale-110 hover:shadow-xl active:scale-95 ${
-          open
+        className={`hidden lg:flex fixed bottom-6 right-6 z-50 h-14 w-14 items-center justify-center rounded-full text-white shadow-lg transition-all hover:scale-110 hover:shadow-xl active:scale-95 ${
+          isOpen
             ? 'bg-slate-800 dark:bg-slate-700'
             : 'bg-gradient-to-br from-blue-600 to-indigo-700 shadow-blue-500/30'
         }`}
       >
-        {open ? (
+        {isOpen ? (
           <X className="h-6 w-6" />
         ) : (
           <MessageCircle className="h-6 w-6" />
@@ -32,7 +36,7 @@ export default function HelpWidget({ allowSuggestions = true }: HelpWidgetProps)
       </button>
 
       {/* Panel */}
-      {open && (
+      {isOpen && (
         <>
           <div className="fixed inset-0 z-50 bg-slate-900/20 backdrop-blur-[2px] lg:hidden" onClick={() => setOpen(false)} />
           <div className="fixed bottom-24 right-6 z-50 flex w-[calc(100vw-3rem)] max-w-sm flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
@@ -85,7 +89,7 @@ export default function HelpWidget({ allowSuggestions = true }: HelpWidgetProps)
               {tab === 'assistant' || !allowSuggestions ? (
                 <HelpChatbot embedded />
               ) : (
-                <SuggestionsWidget embedded active={open} />
+                <SuggestionsWidget embedded active={isOpen} />
               )}
             </div>
           </div>

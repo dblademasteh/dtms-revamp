@@ -142,6 +142,23 @@ npm run build
 npm run lint
 ```
 
+## Synology NAS Deployment
+
+A Synology-ready Docker Compose file is provided. See [`SYNLOGY_DEPLOY.md`](SYNLOGY_DEPLOY.md) for the full step-by-step guide.
+
+Quick start:
+
+```bash
+# 1. Copy the template and edit your NAS IP / passwords
+cp .env.synology .env
+
+# 2. Build and start (APP_KEY is auto-generated on first run)
+docker compose -f docker-compose.synology.yml up -d --build
+
+# 3. Run migrations
+docker compose -f docker-compose.synology.yml exec backend php artisan migrate --force
+```
+
 ## License
 
 Proprietary - Government Use Only

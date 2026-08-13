@@ -21,7 +21,7 @@ class SuggestionController extends Controller
         }
 
         return response()->json(
-            $query->orderBy('created_at', 'desc')->paginate($request->get('per_page', 20))
+            $query->orderBy('created_at', 'desc')->paginate(min((int) $request->get('per_page', 20), 100))
         );
     }
 

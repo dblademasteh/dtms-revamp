@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/services/api'
@@ -37,6 +37,7 @@ export default function Documents() {
   const priorities = useDropdownGroup('priorities')
   const [searchParams] = useSearchParams()
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [status, setStatus] = useState(searchParams.get('status') || '')
   const [priority, setPriority] = useState('')
   const [docType, setDocType] = useState('')
@@ -55,6 +56,11 @@ export default function Documents() {
   const [bulkRemarks, setBulkRemarks] = useState('')
 
   const hasActiveFilters = Boolean(search || officeFilter || personnelFilter || status || priority || docType || mineOnly || forMeOnly)
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300)
+    return () => clearTimeout(t)
+  }, [search])
 
   const advancedFilterCount = [officeFilter, personnelFilter, status, priority, docType].filter(Boolean).length
 
@@ -98,10 +104,10 @@ export default function Documents() {
   ], [personnelOptions])
 
   const { data, isLoading } = useQuery({
-    queryKey: ['documents', search, status, priority, docType, page, mineOnly, forMeOnly, officeFilter, personnelFilter],
+    queryKey: ['documents', debouncedSearch, status, priority, docType, page, mineOnly, forMeOnly, officeFilter, personnelFilter],
     queryFn: () => api.get('/documents', {
       params: { 
-        search: search || undefined, 
+        search: debouncedSearch || undefined, 
         status: status || undefined, 
         priority: priority || undefined, 
         document_type: docType || undefined, 

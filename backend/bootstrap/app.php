@@ -15,6 +15,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withSchedule(function ($schedule) {
         $schedule->command('mailbox:sync-all')->everyFiveMinutes()->withoutOverlapping();
+        $schedule->command('sla:check')->everySixHours()->withoutOverlapping();
+        $schedule->command('retention:run')->dailyAt('02:00')->withoutOverlapping();
     })
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->validateCsrfTokens(except: [
@@ -22,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
+            'force-password-change' => \App\Http\Middleware\EnsurePasswordChanged::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

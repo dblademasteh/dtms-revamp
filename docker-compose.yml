@@ -45,6 +45,7 @@ services:
       - MAIL_MAILER=log
       - MAIL_FROM_ADDRESS=noreply@dts.gov.ph
       - SEMAPHORE_SENDER_NAME=DTS
+      - SEMAPHORE_API_KEY=
       - QRCODE_SIZE=300
       - LOG_LEVEL=warning
       - BCRYPT_ROUNDS=12
@@ -103,6 +104,8 @@ services:
 
   meilisearch:
     image: getmeili/meilisearch:v1.10
+    ports:
+      - "7700:7700"
     environment:
       MEILI_MASTER_KEY: dts_meili_key_2024
       MEILI_ENV: production

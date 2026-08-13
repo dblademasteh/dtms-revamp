@@ -142,6 +142,26 @@ export default function DocumentDetail() {
     queryFn: () => api.get(`/documents/${id}`).then(res => res.data),
   })
 
+  const { data: acknowledgements } = useQuery({
+    queryKey: ['acknowledgements', id],
+    queryFn: () => api.get(`/documents/${id}/acknowledgements`).then(res => res.data),
+    enabled: !!document?.require_ack || !!document?.due_at,
+  })
+
+  const acknowledgeMutation = useMutation({
+    mutationFn: () => api.post(`/documents/${id}/acknowledge`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['acknowledgements', id] })
+      toast.success('Document acknowledged')
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Failed to acknowledge'),
+  })
+
+  const myAck = (acknowledgements || []).find((a: any) => a.user_id === user?.id)
+    || (user?.office_id && (acknowledgements || []).find((a: any) => !a.user_id && a.office_id === user.office_id))
+  const hasAcked = !!myAck?.acknowledged_at
+  const pendingAckCount = (acknowledgements || []).filter((a: any) => !a.acknowledged_at).length
+
   const sortedHistory = document?.routing_history 
     ? [...document.routing_history].sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
     : []
@@ -582,15 +602,65 @@ export default function DocumentDetail() {
                   {document.document_no}
                 </span>
               )}
+              {document.due_at && (
+                <span
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-bold border ${
+                    new Date(document.due_at).getTime() < Date.now()
+                      ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800'
+                      : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
+                  }`}
+                  title={`Due ${new Date(document.due_at).toLocaleString('en-PH')}`}
+                >
+                  <Clock className="w-3 h-3" />
+                  {new Date(document.due_at).getTime() < Date.now()
+                    ? `Overdue · ${new Date(document.due_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}`
+                    : `Due ${new Date(document.due_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}`}
+                </span>
+              )}
             </div>
           </div>
         </div>
           <div className="flex items-center gap-2">
+            {document.require_ack && (
+              <button
+                onClick={() => acknowledgeMutation.mutate()}
+                disabled={hasAcked || acknowledgeMutation.isPending}
+                className={`btn btn-sm ${hasAcked ? 'btn-ghost text-emerald-600' : 'btn-primary'}`}
+              >
+                <BadgeCheck className="w-4 h-4" />
+                {hasAcked ? 'Acknowledged' : 'Acknowledge'}
+                {pendingAckCount > 0 && !hasAcked && (
+                  <span className="ml-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-white/25 text-[10px] font-bold flex items-center justify-center">
+                    {pendingAckCount}
+                  </span>
+                )}
+              </button>
+            )}
             <button onClick={() => setShowEditModal(true)} className="btn btn-secondary btn-sm">
               <FileText className="w-4 h-4" /> Edit
             </button>
             <button onClick={handlePrint} className="btn btn-secondary btn-sm">
               <Printer className="w-4 h-4" /> Print
+            </button>
+            <button
+              onClick={async () => {
+                try {
+                  const res = await api.get(`/documents/${id}/pdf`, { responseType: 'blob' })
+                  const url = window.URL.createObjectURL(new Blob([res.data]))
+                  const a = document.createElement('a')
+                  a.href = url
+                  a.download = `${document.tracking_number}.pdf`
+                  document.body.appendChild(a)
+                  a.click()
+                  a.remove()
+                  window.URL.revokeObjectURL(url)
+                } catch (e: any) {
+                  toast.error(e.response?.data?.message || 'Failed to download PDF')
+                }
+              }}
+              className="btn btn-secondary btn-sm"
+            >
+              <Download className="w-4 h-4" /> PDF
             </button>
             <button onClick={() => setShowSlipModal(true)} className="btn btn-secondary btn-sm">
               <FileText className="w-4 h-4" /> Routing Slip
@@ -909,6 +979,48 @@ export default function DocumentDetail() {
 
 {/* Sidebar */}
 <div className="space-y-6">
+{/* Acknowledgements */}
+{document.require_ack && acknowledgements?.length > 0 && (
+<div className="card">
+<div className="card-header">
+<h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">Acknowledgements</h2>
+</div>
+<div className="card-body space-y-2">
+<div className="flex items-center justify-between text-xs">
+<span className="text-slate-500">Pending</span>
+<span className="font-bold text-amber-600">{pendingAckCount}</span>
+</div>
+<div className="flex items-center justify-between text-xs">
+<span className="text-slate-500">Acknowledged</span>
+<span className="font-bold text-emerald-600">{acknowledgements.length - pendingAckCount}</span>
+</div>
+<div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2 max-h-48 overflow-y-auto">
+{acknowledgements.map((a: any) => (
+<div key={a.id} className="flex items-start justify-between gap-2 text-xs">
+<div className="min-w-0">
+<p className="font-semibold text-slate-700 dark:text-slate-200 truncate">
+{a.user ? [a.user.rank, a.user.full_name || a.user.name].filter(Boolean).join(' ') : a.office?.name || 'Office'}
+</p>
+<p className="text-[11px] text-slate-400">
+{a.user ? 'Personnel' : 'Office'}
+</p>
+</div>
+{a.acknowledged_at ? (
+<span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800 font-bold whitespace-nowrap">
+<BadgeCheck className="w-3 h-3" />
+{new Date(a.acknowledged_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}
+</span>
+) : (
+<span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800 font-bold whitespace-nowrap">
+Pending
+</span>
+)}
+</div>
+))}
+</div>
+</div>
+</div>
+)}
 {/* Actions */}
 <div className="card" id="sidebar-actions">
 <div className="card-header">

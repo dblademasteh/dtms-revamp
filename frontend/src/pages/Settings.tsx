@@ -208,6 +208,17 @@ export default function Settings() {
      }
    }, [settingsQuery.data])
 
+   useEffect(() => {
+     const force = new URLSearchParams(window.location.search).get('force')
+     if (force === 'password') {
+       toast('You must change your password before continuing.', { icon: '🔒' })
+       setTimeout(() => {
+         document.getElementById('change-password')?.scrollIntoView({ behavior: 'smooth' })
+       }, 300)
+       window.history.replaceState({}, '', window.location.pathname)
+     }
+   }, [])
+
    const settingsMutation = useMutation({
      mutationFn: (data: any) => api.put('/admin/settings', data),
      onSuccess: (res) => {
@@ -703,7 +714,7 @@ export default function Settings() {
             </div>
 
             {/* Change Password */}
-            <div className="card">
+            <div className="card" id="change-password">
               <div className="card-header flex items-center gap-2">
                 <Lock className="w-4 h-4 text-slate-500" />
                 <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">Change Password</h2>
