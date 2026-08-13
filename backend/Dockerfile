@@ -27,6 +27,7 @@ COPY . .
 
 RUN mkdir -p bootstrap/cache storage /run/nginx \
     && chown -R www-data:www-data /var/www/html storage bootstrap/cache \
+    && chmod -R u+rwX,go+rX /var/www/html \
     && chmod -R 775 storage bootstrap/cache
 
 RUN echo 'upload_max_filesize=50M' > /usr/local/etc/php/conf.d/uploads.ini \
