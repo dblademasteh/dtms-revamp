@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import { useAuthStore } from '@/stores/authStore'
 import Login from '@/pages/Login'
+import ChangePassword from '@/pages/ChangePassword'
 import Dashboard from '@/pages/Dashboard'
 import Documents from '@/pages/Documents'
 import DocumentDetail from '@/pages/DocumentDetail'
@@ -12,6 +13,8 @@ import Reports from '@/pages/Reports'
 import Users from '@/pages/Users'
 import Settings from '@/pages/Settings'
 import Track from '@/pages/Track'
+import AgencyGateway from '@/pages/AgencyGateway'
+import CreateDocumentPublic from '@/pages/CreateDocumentPublic'
 import ForgotPassword from '@/pages/ForgotPassword'
 import ResetPassword from '@/pages/ResetPassword'
 import RoutingTemplates from '@/pages/RoutingTemplates'
@@ -37,13 +40,31 @@ import { useEffect } from 'react'
 const queryClient = new QueryClient()
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
   
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
   }
 
+  if (user?.must_change_password) {
+    return <Navigate to="/change-password" replace />
+  }
+
   return <>{children}</>
+}
+
+function MustChangePasswordRoute() {
+  const { isAuthenticated, user } = useAuthStore()
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+
+  if (!user?.must_change_password) {
+    return <Navigate to="/" replace />
+  }
+
+  return <ChangePassword />
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
@@ -71,6 +92,9 @@ function DropdownOptionsLoader() {
 }
 
 function App() {
+  const { isAuthenticated, user } = useAuthStore()
+  const unlocked = isAuthenticated && !user?.must_change_password
+
   useEffect(() => {
     // 1. Theme
     const theme = localStorage.getItem('dtms-theme') || 'light'
@@ -97,17 +121,20 @@ function App() {
   }, [])
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <RealtimeBridge />
-      <DropdownOptionsLoader />
+      <QueryClientProvider client={queryClient}>
+      {unlocked && <RealtimeBridge />}
+      {unlocked && <DropdownOptionsLoader />}
       <ErrorBoundary>
         <BrowserRouter>
           <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/track" element={<Track />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-            <Route
+           <Route path="/track" element={<Track />} />
+           <Route path="/forgot-password" element={<ForgotPassword />} />
+           <Route path="/reset-password" element={<ResetPassword />} />
+           <Route path="/change-password" element={<MustChangePasswordRoute />} />
+            <Route path="/gateway" element={<AgencyGateway />} />
+            <Route path="/create" element={<CreateDocumentPublic />} />
+           <Route
               path="/"
               element={
                 <ProtectedRoute>

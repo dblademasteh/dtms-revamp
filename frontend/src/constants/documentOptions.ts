@@ -46,6 +46,27 @@ export const DESIGNATIONS: Option[] = [
   { value: 'Utility Worker', label: 'Utility Worker' },
 ]
 
+// Fallback BFP internal offices for the public agency portal (used when the
+// offices API is unavailable — e.g. on the Login page without authentication).
+export const BFP_OFFICES_FALLBACK: Option[] = [
+  { value: 'bfp-national', label: 'BFP National Office' },
+  { value: 'bfp-ncr', label: 'BFP-NCR Regional Office' },
+  { value: 'bfp-r1', label: 'BFP Region 1 - Ilocos' },
+  { value: 'bfp-r2', label: 'BFP Region 2 - Cagayan Valley' },
+  { value: 'bfp-r3', label: 'BFP Region 3 - Central Luzon' },
+  { value: 'bfp-r4a', label: 'BFP Region 4 - CALABARZON' },
+  { value: 'bfp-r5', label: 'BFP Region 5 - Bicol' },
+  { value: 'bfp-r6', label: 'BFP Region 6 - Western Visayas' },
+  { value: 'bfp-r7', label: 'BFP Region 7 - Central Visayas' },
+  { value: 'bfp-r8', label: 'BFP Region 8 - Eastern Visayas' },
+  { value: 'bfp-r9', label: 'BFP Region 9 - Zamboanga' },
+  { value: 'bfp-r10', label: 'BFP Region 10 - Northern Mindanao' },
+  { value: 'bfp-r11', label: 'BFP Region 11 - Davao' },
+  { value: 'bfp-r12', label: 'BFP Region 12 - Soccsksargen' },
+  { value: 'bfp-car', label: 'BFP CAR - Cordillera Administrative Region' },
+  { value: 'bfp-barmm', label: 'BFP-BARMM - Bangsamora Autonomous Region' },
+]
+
 export const DOCUMENT_TYPES = [
   { value: 'memorandum', label: 'Memorandum' },
   { value: 'memorandum_circular', label: 'Memorandum Circular' },

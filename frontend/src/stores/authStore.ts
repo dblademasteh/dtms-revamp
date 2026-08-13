@@ -22,6 +22,7 @@ interface User {
   designation?: string
   notification_preferences?: Record<string, boolean>
   has_pincode?: boolean
+  must_change_password?: boolean
   office?: {
     id: number
     name: string

@@ -14,6 +14,7 @@ import {
   ChevronRight,
   BadgeCheck,
   RotateCcw,
+  Shield,
 } from 'lucide-react'
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
@@ -237,6 +238,18 @@ export default function Dashboard() {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-3 gap-2.5 sm:gap-5">
+        {user?.role === 'superadmin' && (
+          <Link to="/gateway" className="card p-3 sm:p-5 hover:shadow-md transition-shadow cursor-pointer flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 sm:gap-3 text-center sm:text-left">
+            <div className="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center flex-shrink-0">
+              <Shield className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm font-semibold text-slate-900 leading-tight">Agency Gateway</p>
+              <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5 hidden sm:block">Track &amp; create documents</p>
+            </div>
+            <ArrowRight className="w-4 h-4 text-slate-400 ml-auto hidden sm:block flex-shrink-0" />
+          </Link>
+        )}
         <Link to="/reports" className="card p-3 sm:p-5 hover:shadow-md transition-shadow cursor-pointer flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 sm:gap-3 text-center sm:text-left">
           <div className="w-10 h-10 rounded-lg bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
             <TrendingUp className="w-5 h-5 text-primary-600 dark:text-primary-400" />

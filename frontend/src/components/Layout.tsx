@@ -76,6 +76,7 @@ export default function Layout() {
     const meta: Record<string, { title: string; description: string }> = {
       '/': { title: 'Dashboard', description: 'Overview of documents, tasks, and activity' },
       '/documents': { title: 'Documents', description: 'Manage and track your documents' },
+      '/gateway': { title: 'Agency Gateway', description: 'Admin: public tracking & document creation hub' },
       '/announcements': { title: 'Announcements', description: 'Browse announcements and circulars' },
       '/reports': { title: 'Reports', description: 'Generate and view reports' },
       '/personnel': { title: 'Personnel', description: 'Manage personnel records' },
@@ -163,6 +164,16 @@ export default function Layout() {
             >
               <Shield className="w-5 h-5 flex-shrink-0" />
               Users
+            </Link>
+            <Link
+              to="/gateway"
+              className={`nav-item ${
+                isActive('/gateway') ? 'nav-item-active' : 'nav-item-inactive'
+              }`}
+              onClick={() => setSidebarOpen(false)}
+            >
+              <MapPin className="w-5 h-5 flex-shrink-0" />
+              Agency Gateway
             </Link>
             <Link
               to="/admin/templates"

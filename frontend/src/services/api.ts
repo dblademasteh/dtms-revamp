@@ -34,10 +34,38 @@ api.interceptors.response.use(
       window.location.href = '/login'
     }
     if (error.response?.status === 403 && error.response?.data?.code === 'PASSWORD_CHANGE_REQUIRED') {
-      window.location.href = '/settings?force=password'
+      if (!window.location.pathname.startsWith('/change-password')) {
+        window.location.replace('/change-password')
+      }
     }
     return Promise.reject(error)
   }
 )
 
 export default api
+
+// Public API instance — used by the agency portal on the Login page.
+// Shares the request interceptor (adds a token if present) but does NOT
+// redirect on 401, so unauthenticated requests fail gracefully instead of
+// causing an infinite redirect loop.
+export const publicApi = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || '/api',
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
+})
+
+publicApi.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('auth-storage')
+    if (token) {
+      const { state } = JSON.parse(token)
+      if (state?.token) {
+        config.headers.Authorization = `Bearer ${state.token}`
+      }
+    }
+    return config
+  },
+  (error) => Promise.reject(error)
+)

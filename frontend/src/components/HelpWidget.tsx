@@ -8,13 +8,17 @@ interface HelpWidgetProps {
   allowSuggestions?: boolean
   open?: boolean
   onOpenChange?: (open: boolean) => void
+  tab?: 'assistant' | 'suggestions'
+  onTabChange?: (tab: 'assistant' | 'suggestions') => void
 }
 
-export default function HelpWidget({ allowSuggestions = true, open, onOpenChange }: HelpWidgetProps) {
+export default function HelpWidget({ allowSuggestions = true, open, onOpenChange, tab, onTabChange }: HelpWidgetProps) {
   const [internalOpen, setInternalOpen] = useState(false)
   const isOpen = open ?? internalOpen
   const setOpen = onOpenChange ?? setInternalOpen
-  const [tab, setTab] = useState<'assistant' | 'suggestions'>('assistant')
+  const [internalTab, setInternalTab] = useState<'assistant' | 'suggestions'>('assistant')
+  const currentTab = tab ?? internalTab
+  const setTab = onTabChange ?? setInternalTab
 
   return (
     <>
@@ -72,7 +76,7 @@ export default function HelpWidget({ allowSuggestions = true, open, onOpenChange
                     key={t.key}
                     onClick={() => setTab(t.key)}
                     className={`flex flex-1 items-center justify-center gap-1.5 rounded-t-lg px-3 py-2 text-xs font-semibold transition-colors ${
-                      tab === t.key
+                      currentTab === t.key
                         ? 'border-b-2 border-blue-500 text-blue-700 dark:text-blue-400'
                         : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
                     }`}
@@ -86,7 +90,7 @@ export default function HelpWidget({ allowSuggestions = true, open, onOpenChange
 
             {/* Body */}
             <div className="min-h-0">
-              {tab === 'assistant' || !allowSuggestions ? (
+              {currentTab === 'assistant' || !allowSuggestions ? (
                 <HelpChatbot embedded />
               ) : (
                 <SuggestionsWidget embedded active={isOpen} />
