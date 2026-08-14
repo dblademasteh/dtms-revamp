@@ -135,6 +135,14 @@ html.font-jetbrains-mono, html.font-jetbrains-mono body, html.font-jetbrains-mon
     @apply bg-slate-900/50 text-slate-500 border-slate-800/80 shadow-none;
   }
 
+  .input-error {
+    @apply border-danger-500 focus:ring-danger-500 focus:border-danger-500;
+  }
+
+  .dark .input-error {
+    @apply border-danger-400;
+  }
+
   .card {
     @apply bg-white border border-slate-200 rounded-lg shadow-sm;
   }

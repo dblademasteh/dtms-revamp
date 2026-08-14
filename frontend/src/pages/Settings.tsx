@@ -21,9 +21,13 @@ import {
   RotateCcw,
   ShieldAlert,
   ShieldCheck,
-  ChevronDown,
   KeyRound,
   Building2,
+  Camera,
+  Check,
+  Copy,
+  Eye,
+  EyeOff,
   Image as ImageIcon,
   Trash2,
   Globe,
@@ -54,14 +58,21 @@ export default function Settings() {
   const [officeId, setOfficeId] = useState<string>(user?.office_id ? String(user.office_id) : '')
   const [phone, setPhone] = useState(user?.phone || '')
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
-  const [detailsOpen, setDetailsOpen] = useState(true)
-  const [accountOpen, setAccountOpen] = useState(true)
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
+  const [profileErrors, setProfileErrors] = useState<Record<string, string>>({})
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPincodeForm, setShowPincodeForm] = useState(false)
   const [pincodeDigits, setPincodeDigits] = useState(['', '', '', ''])
+  const [confirmPincodeDigits, setConfirmPincodeDigits] = useState(['', '', '', ''])
   const [pincodePassword, setPincodePassword] = useState('')
+  const [pincodeErrors, setPincodeErrors] = useState<Record<string, string>>({})
+  const [showPincodePassword, setShowPincodePassword] = useState(false)
+  const [showCurrentPw, setShowCurrentPw] = useState(false)
+  const [showNewPw, setShowNewPw] = useState(false)
+  const [showConfirmPw, setShowConfirmPw] = useState(false)
+  const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({})
    const [notifPrefs, setNotifPrefs] = useState<Record<string, boolean>>(
      (user as any)?.notification_preferences || {
        doc_routed: true,
@@ -296,6 +307,8 @@ export default function Settings() {
     mutationFn: (data: any) => api.put('/auth/profile', data),
     onSuccess: (res) => {
       setUser(res.data.user)
+      setTouched({})
+      setProfileErrors({})
       toast.success('Profile updated')
     },
     onError: (error: any) => {
@@ -323,9 +336,12 @@ export default function Settings() {
       setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
+      setPasswordErrors({})
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Password change failed')
+      const msg = error.response?.data?.errors?.current_password?.[0] || error.response?.data?.message || 'Password change failed'
+      setPasswordErrors({ current_password: msg })
+      toast.error(msg)
     },
   })
 
@@ -335,18 +351,65 @@ export default function Settings() {
       toast.success('PIN code updated')
       setShowPincodeForm(false)
       setPincodeDigits(['', '', '', ''])
+      setConfirmPincodeDigits(['', '', '', ''])
       setPincodePassword('')
+      setPincodeErrors({})
       if (user) {
         setUser({ ...user, has_pincode: true })
       }
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to update PIN')
+      const msg = error.response?.data?.errors?.current_password?.[0] || error.response?.data?.message || 'Failed to update PIN'
+      setPincodeErrors({ current_password: msg })
+      toast.error(msg)
     },
   })
 
+  const isProfileDirty = useMemo(
+    () =>
+      firstName !== (user?.first_name || '') ||
+      lastName !== (user?.last_name || '') ||
+      middleName !== (user?.middle_name || '') ||
+      name !== (user?.name || '') ||
+      rank !== (user?.rank || '') ||
+      designation !== (user?.designation || '') ||
+      officeId !== (user?.office_id ? String(user.office_id) : '') ||
+      phone !== (user?.phone || ''),
+    [firstName, lastName, middleName, name, rank, designation, officeId, phone, user]
+  )
+  const canSaveProfile = isProfileDirty && Object.keys(profileErrors).length === 0
+
+  const requiredFields: Record<string, string> = {
+    firstName: 'First name',
+    lastName: 'Last name',
+    name: 'Display name',
+  }
+
+  const validateField = (field: string, value: string) =>
+    requiredFields[field] && !value.trim() ? `${requiredFields[field]} is required` : ''
+
+  const onFieldBlur = (field: string, value: string) => {
+    setTouched((t) => ({ ...t, [field]: true }))
+    const err = validateField(field, value)
+    setProfileErrors((prev) => {
+      const next = { ...prev }
+      if (err) next[field] = err
+      else delete next[field]
+      return next
+    })
+  }
+
   const handleProfileSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    const errs: Record<string, string> = {}
+    Object.keys(requiredFields).forEach((field) => {
+      const value = field === 'firstName' ? firstName : field === 'lastName' ? lastName : name
+      const err = validateField(field, value)
+      if (err) errs[field] = err
+    })
+    setProfileErrors(errs)
+    setTouched({ firstName: true, lastName: true, name: true })
+    if (Object.keys(errs).length > 0) return
     profileMutation.mutate({
       name,
       first_name: firstName,
@@ -357,6 +420,36 @@ export default function Settings() {
       office_id: officeId ? Number(officeId) : null,
       phone,
     })
+  }
+
+  const handleProfileReset = () => {
+    setName(user?.name || '')
+    setFirstName(user?.first_name || '')
+    setLastName(user?.last_name || '')
+    setMiddleName(user?.middle_name || '')
+    setRank(user?.rank || '')
+    setDesignation(user?.designation || '')
+    setOfficeId(user?.office_id ? String(user.office_id) : '')
+    setPhone(user?.phone || '')
+    setTouched({})
+    setProfileErrors({})
+  }
+
+  const handleAvatarSelect = (file: File) => {
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be under 5 MB')
+      return
+    }
+    setAvatarPreview(URL.createObjectURL(file))
+    avatarMutation.mutate(file)
+  }
+
+  const handleAvatarRemove = () => {
+    if (!window.confirm('Remove your profile photo?')) return
+    setAvatarPreview(null)
+    if (user) setUser({ ...user, avatar: null })
+    api.delete('/auth/avatar').catch(() => {})
   }
 
   const avatarMutation = useMutation({
@@ -376,17 +469,22 @@ export default function Settings() {
       }
       toast.success('Avatar updated')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Avatar upload failed')
-    },
+     onError: (error: any) => {
+       toast.error(error.response?.data?.message || 'Avatar upload failed')
+       setAvatarPreview(null)
+     },
   })
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (newPassword !== confirmPassword) {
-      toast.error('Passwords do not match')
-      return
-    }
+    const errs: Record<string, string> = {}
+    if (!currentPassword) errs.current_password = 'Enter your current password'
+    if (!newPassword) errs.password = 'Enter a new password'
+    else if (newPassword.length < 6) errs.password = 'Password must be at least 6 characters'
+    if (!confirmPassword) errs.password_confirmation = 'Confirm your new password'
+    else if (confirmPassword !== newPassword) errs.password_confirmation = 'Passwords do not match'
+    setPasswordErrors(errs)
+    if (Object.keys(errs).length > 0) return
     passwordMutation.mutate({
       current_password: currentPassword,
       password: newPassword,
@@ -394,18 +492,48 @@ export default function Settings() {
     })
   }
 
+  const resetPincodeForm = () => {
+    setShowPincodeForm(false)
+    setPincodeDigits(['', '', '', ''])
+    setConfirmPincodeDigits(['', '', '', ''])
+    setPincodePassword('')
+    setPincodeErrors({})
+  }
+
   const handlePincodeSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    const errs: Record<string, string> = {}
+    if (!pincodePassword) errs.current_password = 'Enter your current password'
     const pincode = pincodeDigits.join('')
-    if (pincode.length !== 4) {
-      toast.error('Enter a 4-digit PIN')
-      return
-    }
+    if (pincode.length !== 4) errs.pincode = 'Enter a 4-digit PIN'
+    if (confirmPincodeDigits.join('') !== pincode) errs.confirm = 'PINs do not match'
+    setPincodeErrors(errs)
+    if (Object.keys(errs).length > 0) return
     pincodeMutation.mutate({
       current_password: pincodePassword,
       pincode,
     })
   }
+
+  const passwordStrength = useMemo(() => {
+    if (!newPassword) return 0
+    let score = 0
+    if (newPassword.length >= 6) score++
+    if (newPassword.length >= 10) score++
+    if (/[A-Z]/.test(newPassword) && /[a-z]/.test(newPassword)) score++
+    if (/\d/.test(newPassword)) score++
+    if (/[^A-Za-z0-9]/.test(newPassword)) score++
+    return Math.min(score, 5)
+  }, [newPassword])
+
+  const STRENGTH = [
+    { label: '', color: '', text: '' },
+    { label: 'Weak', color: 'bg-danger-500', text: 'text-danger-600 dark:text-danger-400' },
+    { label: 'Weak', color: 'bg-danger-500', text: 'text-danger-600 dark:text-danger-400' },
+    { label: 'Fair', color: 'bg-warning-500', text: 'text-warning-600 dark:text-warning-400' },
+    { label: 'Good', color: 'bg-primary-500', text: 'text-primary-600 dark:text-primary-400' },
+    { label: 'Strong', color: 'bg-success-500', text: 'text-success-600 dark:text-success-400' },
+  ]
 
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User, admin: false },
@@ -505,27 +633,39 @@ export default function Settings() {
           </div>
         ) : (
         <div className="space-y-3">
-          {/* Identity card — compact horizontal strip */}
-          <div className="card">
-            <div className="flex items-center gap-4 px-4 py-3">
-              {/* Avatar + upload — compact */}
-              <div className="relative flex-shrink-0">
-                <div className="w-14 h-14 rounded-full overflow-hidden bg-primary-100 dark:bg-primary-900/40 ring-2 ring-primary-200 dark:ring-primary-700 flex items-center justify-center">
+          <div className="card overflow-hidden">
+            {/* Identity header */}
+            <div className="flex items-center gap-4 px-6 py-5">
+              {/* Avatar */}
+              <div className="relative flex-shrink-0 group">
+                <div className="w-16 h-16 rounded-full overflow-hidden bg-primary-100 dark:bg-primary-900/40 ring-2 ring-primary-200 dark:ring-primary-700 flex items-center justify-center">
                   {avatarPreview || user?.avatar ? (
                     <img
                       src={avatarPreview || user?.avatar || ''}
-                      alt="Avatar"
+                      alt="Profile photo"
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <span className="text-primary-700 dark:text-primary-300 text-xl font-bold">
+                    <span className="text-primary-700 dark:text-primary-300 text-2xl font-bold">
                       {(user?.name?.charAt(0) || 'U').toUpperCase()}
                     </span>
                   )}
                 </div>
+                <label
+                  className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+                  title="Change photo"
+                >
+                  <Camera className="w-5 h-5 text-white" />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleAvatarSelect(e.target.files?.[0] as File)}
+                  />
+                </label>
                 {avatarMutation.isPending && (
                   <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center">
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   </div>
                 )}
               </div>
@@ -538,17 +678,20 @@ export default function Settings() {
                 <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
                   {user?.designation || user?.role?.replace('_', ' ')} {(user as any)?.office?.name ? `· ${(user as any).office.name}` : ''}
                 </p>
-                <div className="flex items-center gap-3 mt-1">
+                <div className="flex flex-wrap items-center gap-2 mt-2">
                   {user?.accnt_no && (
-                    <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">Acct: {user.accnt_no}</span>
+                    <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">Acct: {user.accnt_no}</span>
                   )}
                   {user?.item_no && (
-                    <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">Item: {user.item_no}</span>
+                    <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">Item: {user.item_no}</span>
                   )}
+                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded-md ${user?.status === 'active' ? 'bg-success-50 text-success-700 dark:bg-success-900/30 dark:text-success-300' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
+                    {user?.status || 'inactive'}
+                  </span>
                 </div>
               </div>
 
-              {/* Upload / Remove actions — right side */}
+              {/* Photo actions */}
               <div className="flex flex-col items-end gap-1 flex-shrink-0">
                 <label className="btn btn-secondary btn-sm cursor-pointer !py-1 !px-2.5 !text-xs">
                   Change Photo
@@ -556,98 +699,97 @@ export default function Settings() {
                     type="file"
                     accept="image/*"
                     className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0]
-                      if (!file) return
-                      if (file.size > 5 * 1024 * 1024) {
-                        toast.error('Image must be under 5 MB')
-                        return
-                      }
-                      setAvatarPreview(URL.createObjectURL(file))
-                      avatarMutation.mutate(file)
-                    }}
+                    onChange={(e) => handleAvatarSelect(e.target.files?.[0] as File)}
                   />
                 </label>
                 {(user?.avatar || avatarPreview) && (
-                  <button
-                    type="button"
-                    className="text-[10px] text-danger-500 hover:text-danger-600"
-                    onClick={() => {
-                      setAvatarPreview(null)
-                      if (user) setUser({ ...user, avatar: null })
-                      api.delete('/auth/avatar').catch(() => {})
-                    }}
-                  >
+                  <button type="button" className="text-[10px] text-danger-500 hover:text-danger-600" onClick={handleAvatarRemove}>
                     Remove
                   </button>
                 )}
               </div>
             </div>
-          </div>
 
-          {/* Editable details */}
-          <div className="card">
-            <button
-              type="button"
-              onClick={() => setDetailsOpen(!detailsOpen)}
-              className="flex items-center justify-between w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-100 dark:border-slate-800"
-            >
-              <h2 className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                Personal Details
-              </h2>
-              <ChevronDown
-                className={`h-3.5 w-3.5 text-slate-400 transition-transform ${detailsOpen ? '' : '-rotate-90'}`}
-              />
-            </button>
-            {detailsOpen && (
-              <div className="px-4 py-3">
-                <form onSubmit={handleProfileSubmit} className="space-y-3">
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">First Name</label>
-                      <input className="input !py-1.5 !text-sm" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Middle Name</label>
-                      <input className="input !py-1.5 !text-sm" value={middleName} onChange={(e) => setMiddleName(e.target.value)} />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Last Name</label>
-                      <input className="input !py-1.5 !text-sm" value={lastName} onChange={(e) => setLastName(e.target.value)} />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Display Name</label>
-                      <input className="input !py-1.5 !text-sm" value={name} onChange={(e) => setName(e.target.value)} />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Rank</label>
-                      <select
-                        className="input !py-1.5 !text-sm w-full"
-                        value={rank}
-                        onChange={(e) => setRank(e.target.value)}
-                      >
-                        <option value="">Select Rank...</option>
-                        {ranks.map((r) => (
-                          <option key={r.value} value={r.value}>{r.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Phone</label>
-                      <input type="tel" className="input !py-1.5 !text-sm" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Optional" />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Designation</label>
-                      <input className="input !py-1.5 !text-sm" list="designation-options" value={designation} onChange={(e) => setDesignation(e.target.value)} placeholder="e.g. System Administrator" />
-                    </div>
-                  </div>
-
+            {/* Personal details */}
+            <form onSubmit={handleProfileSubmit}>
+              <div className="border-t border-slate-100 dark:border-slate-800 px-6 py-5 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Office Assignment</label>
+                    <label htmlFor="profile-first-name" className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">
+                      First Name <span className="text-danger-500">*</span>
+                    </label>
+                    <input
+                      id="profile-first-name"
+                      className={`input !py-1.5 !text-sm ${profileErrors.firstName && touched.firstName ? '!border-danger-400 focus:!ring-danger-500' : ''}`}
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      onBlur={(e) => onFieldBlur('firstName', e.target.value)}
+                    />
+                    {touched.firstName && profileErrors.firstName && (
+                      <p role="alert" className="text-xs text-danger-600 dark:text-danger-400 mt-1">{profileErrors.firstName}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label htmlFor="profile-middle-name" className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Middle Name</label>
+                    <input id="profile-middle-name" className="input !py-1.5 !text-sm" value={middleName} onChange={(e) => setMiddleName(e.target.value)} />
+                  </div>
+                  <div>
+                    <label htmlFor="profile-last-name" className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">
+                      Last Name <span className="text-danger-500">*</span>
+                    </label>
+                    <input
+                      id="profile-last-name"
+                      className={`input !py-1.5 !text-sm ${profileErrors.lastName && touched.lastName ? '!border-danger-400 focus:!ring-danger-500' : ''}`}
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      onBlur={(e) => onFieldBlur('lastName', e.target.value)}
+                    />
+                    {touched.lastName && profileErrors.lastName && (
+                      <p role="alert" className="text-xs text-danger-600 dark:text-danger-400 mt-1">{profileErrors.lastName}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="profile-display-name" className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">
+                      Display Name <span className="text-danger-500">*</span>
+                    </label>
+                    <input
+                      id="profile-display-name"
+                      className={`input !py-1.5 !text-sm ${profileErrors.name && touched.name ? '!border-danger-400 focus:!ring-danger-500' : ''}`}
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      onBlur={(e) => onFieldBlur('name', e.target.value)}
+                    />
+                    {touched.name && profileErrors.name && (
+                      <p role="alert" className="text-xs text-danger-600 dark:text-danger-400 mt-1">{profileErrors.name}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label htmlFor="profile-rank" className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Rank</label>
+                    <select id="profile-rank" className="input !py-1.5 !text-sm w-full" value={rank} onChange={(e) => setRank(e.target.value)}>
+                      <option value="">Select Rank...</option>
+                      {ranks.map((r) => (
+                        <option key={r.value} value={r.value}>{r.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="profile-phone" className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Phone</label>
+                    <input id="profile-phone" type="tel" className="input !py-1.5 !text-sm" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Optional" />
+                  </div>
+                  <div>
+                    <label htmlFor="profile-designation" className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Designation</label>
+                    <input id="profile-designation" className="input !py-1.5 !text-sm" list="designation-options" value={designation} onChange={(e) => setDesignation(e.target.value)} placeholder="e.g. System Administrator" />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="profile-office" className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Office Assignment</label>
+                  {isSuperadmin ? (
                     <Select
+                      id="profile-office"
                       className="text-sm"
                       styles={buildSelectStyles()}
                       options={officeOptions}
@@ -656,50 +798,46 @@ export default function Settings() {
                       value={officeId ? officeOptions.find((o: any) => o.value === officeId) : null}
                       onChange={(opt: any) => setOfficeId(opt ? opt.value : '')}
                     />
-                  </div>
-
-                  <div className="flex justify-end pt-1">
-                    <button type="submit" disabled={profileMutation.isPending} className="btn btn-primary btn-sm !py-1 !px-3 !text-xs">
-                      {profileMutation.isPending ? 'Saving...' : 'Save Changes'}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-          </div>
-
-          {/* Account Info (read-only) */}
-          <div className="card">
-            <button
-              type="button"
-              onClick={() => setAccountOpen(!accountOpen)}
-              className="flex items-center justify-between w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-100 dark:border-slate-800"
-            >
-              <h2 className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                Account Information
-              </h2>
-              <ChevronDown
-                className={`h-3.5 w-3.5 text-slate-400 transition-transform ${accountOpen ? '' : '-rotate-90'}`}
-              />
-            </button>
-            {accountOpen && (
-              <div className="px-4 py-3">
-                <div className="grid grid-cols-3 gap-3 text-sm">
-                  <div>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-0.5">Email</p>
-                    <p className="font-medium text-slate-800 dark:text-slate-200 text-xs truncate">{user?.email}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-0.5">Role</p>
-                    <p className="font-medium text-slate-800 dark:text-slate-200 text-xs capitalize">{user?.role?.replace('_', ' ')}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-0.5">Status</p>
-                    <p className="font-medium text-slate-800 dark:text-slate-200 text-xs capitalize">{user?.status}</p>
-                  </div>
+                  ) : (
+                    <div>
+                      <div className="input !py-1.5 !text-sm bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 truncate">
+                        {(user as any)?.office?.name || 'No office assigned'}
+                      </div>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                        Office assignment is managed by your administrator.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
+
+              {/* Footer */}
+              <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/40 flex flex-wrap items-center justify-between gap-3">
+                <p role="status" className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  {profileMutation.isPending ? (
+                    'Saving your changes…'
+                  ) : isProfileDirty ? (
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      You have unsaved changes.
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-success-500" />
+                      All changes saved.
+                    </span>
+                  )}
+                </p>
+                <div className="flex items-center gap-2">
+                  {isProfileDirty && (
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={handleProfileReset}>Discard</button>
+                  )}
+                  <button type="submit" disabled={profileMutation.isPending || !canSaveProfile} className="btn btn-primary btn-sm !py-1.5 !px-3 !text-xs">
+                    {profileMutation.isPending ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
+              </div>
+            </form>
           </div>
         </div>
         )
@@ -736,36 +874,30 @@ export default function Settings() {
                   </div>
                 ) : (
                   <form onSubmit={handlePincodeSubmit} className="space-y-4">
+                    <PasswordField
+                      id="pin-current-password"
+                      label="Current Password"
+                      value={pincodePassword}
+                      onChange={(e) => {
+                        setPincodePassword(e.target.value)
+                        if (pincodeErrors.current_password) setPincodeErrors((p) => ({ ...p, current_password: '' }))
+                      }}
+                      show={showPincodePassword}
+                      onToggleShow={() => setShowPincodePassword(!showPincodePassword)}
+                      error={pincodeErrors.current_password}
+                    />
                     <div>
-                      <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Current Password</label>
-                      <input type="password" className="input" value={pincodePassword} onChange={(e) => setPincodePassword(e.target.value)} required />
+                      <label htmlFor="pin-digits" className="block text-[13px] font-medium text-slate-700 mb-1.5">New 4-Digit PIN</label>
+                      <PinInputs digits={pincodeDigits} onChange={(d) => { setPincodeDigits(d); if (pincodeErrors.pincode) setPincodeErrors((p) => ({ ...p, pincode: '' })) }} prefix="pin" autoFocusOnFirst />
+                      {pincodeErrors.pincode && <p role="alert" className="text-xs text-danger-600 dark:text-danger-400 mt-1">{pincodeErrors.pincode}</p>}
                     </div>
                     <div>
-                      <label className="block text-[13px] font-medium text-slate-700 mb-1.5">New 4-Digit PIN</label>
-                      <div className="flex gap-2">
-                        {pincodeDigits.map((digit, idx) => (
-                          <input
-                            key={idx}
-                            type="text" inputMode="numeric" maxLength={1}
-                            className="w-12 h-12 text-center text-lg font-bold rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
-                            value={digit}
-                            onChange={(e) => {
-                              if (e.target.value && !/^\d$/.test(e.target.value)) return
-                              const next = [...pincodeDigits]
-                              next[idx] = e.target.value
-                              setPincodeDigits(next)
-                              if (e.target.value && idx < 3) document.getElementById(`pin-${idx + 1}`)?.focus()
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Backspace' && !pincodeDigits[idx] && idx > 0) document.getElementById(`pin-${idx - 1}`)?.focus()
-                            }}
-                            id={`pin-${idx}`} autoFocus={idx === 0}
-                          />
-                        ))}
-                      </div>
+                      <label htmlFor="pin-confirm-digits" className="block text-[13px] font-medium text-slate-700 mb-1.5">Confirm PIN</label>
+                      <PinInputs digits={confirmPincodeDigits} onChange={(d) => { setConfirmPincodeDigits(d); if (pincodeErrors.confirm) setPincodeErrors((p) => ({ ...p, confirm: '' })) }} prefix="pin-confirm" />
+                      {pincodeErrors.confirm && <p role="alert" className="text-xs text-danger-600 dark:text-danger-400 mt-1">{pincodeErrors.confirm}</p>}
                     </div>
                     <div className="flex gap-2 justify-end pt-1">
-                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setShowPincodeForm(false); setPincodeDigits(['', '', '', '']); setPincodePassword('') }}>Cancel</button>
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={resetPincodeForm}>Cancel</button>
                       <button type="submit" disabled={pincodeMutation.isPending} className="btn btn-primary btn-sm">
                         {pincodeMutation.isPending ? 'Saving...' : 'Save PIN'}
                       </button>
@@ -783,18 +915,61 @@ export default function Settings() {
               </div>
               <div className="card-body">
                 <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                  <PasswordField
+                    id="pw-current"
+                    label="Current Password"
+                    value={currentPassword}
+                    onChange={(e) => {
+                      setCurrentPassword(e.target.value)
+                      if (passwordErrors.current_password) setPasswordErrors((p) => ({ ...p, current_password: '' }))
+                    }}
+                    show={showCurrentPw}
+                    onToggleShow={() => setShowCurrentPw(!showCurrentPw)}
+                    error={passwordErrors.current_password}
+                  />
                   <div>
-                    <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Current Password</label>
-                    <input type="password" className="input" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
+                    <PasswordField
+                      id="pw-new"
+                      label="New Password"
+                      value={newPassword}
+                      onChange={(e) => {
+                        setNewPassword(e.target.value)
+                        if (passwordErrors.password) setPasswordErrors((p) => ({ ...p, password: '' }))
+                      }}
+                      show={showNewPw}
+                      onToggleShow={() => setShowNewPw(!showNewPw)}
+                      error={passwordErrors.password}
+                    />
+                    {newPassword && (
+                      <div className="mt-2">
+                        <div className="flex gap-1" aria-hidden="true">
+                          {[1, 2, 3, 4, 5].map((i) => (
+                            <span key={i} className={`h-1 flex-1 rounded-full transition-colors ${i <= passwordStrength ? STRENGTH[passwordStrength].color : 'bg-slate-200 dark:bg-slate-700'}`} />
+                          ))}
+                        </div>
+                        <p className={`text-xs font-medium mt-1 ${STRENGTH[passwordStrength].text}`}>{STRENGTH[passwordStrength].label}</p>
+                      </div>
+                    )}
+                    <p className="text-xs text-slate-400 mt-1">At least 6 characters.</p>
                   </div>
                   <div>
-                    <label className="block text-[13px] font-medium text-slate-700 mb-1.5">New Password</label>
-                    <input type="password" className="input" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={6} />
-                    <p className="text-xs text-slate-400 mt-1">Must be at least 6 characters.</p>
-                  </div>
-                  <div>
-                    <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Confirm New Password</label>
-                    <input type="password" className="input" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                    <PasswordField
+                      id="pw-confirm"
+                      label="Confirm New Password"
+                      value={confirmPassword}
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value)
+                        if (passwordErrors.password_confirmation) setPasswordErrors((p) => ({ ...p, password_confirmation: '' }))
+                      }}
+                      show={showConfirmPw}
+                      onToggleShow={() => setShowConfirmPw(!showConfirmPw)}
+                      error={passwordErrors.password_confirmation}
+                    />
+                    {confirmPassword && (
+                      <p className={`text-xs mt-1 ${confirmPassword === newPassword ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'}`}>
+                        {confirmPassword === newPassword ? 'Passwords match' : 'Passwords do not match'}
+                      </p>
+                    )}
                   </div>
                   <div className="flex justify-end pt-1">
                     <button type="submit" disabled={passwordMutation.isPending} className="btn btn-primary btn-sm">
@@ -1480,9 +1655,12 @@ className="flex items-center justify-between px-3 py-2 rounded-lg border border-
 function TwoFactorCard() {
   const [setup, setSetup] = useState<{ secret: string; qr_svg: string } | null>(null)
   const [confirmCode, setConfirmCode] = useState('')
+  const [confirmError, setConfirmError] = useState('')
   const [recovery, setRecovery] = useState<string[] | null>(null)
   const [disablePw, setDisablePw] = useState('')
+  const [disableError, setDisableError] = useState('')
   const [showDisable, setShowDisable] = useState(false)
+  const [copied, setCopied] = useState<string | null>(null)
 
   const statusQuery = useQuery({
     queryKey: ['2fa-status'],
@@ -1504,10 +1682,13 @@ function TwoFactorCard() {
     onSuccess: (res) => {
       setRecovery(res.data.recovery_codes)
       setSetup(null)
+      setConfirmError('')
       toast.success('Two-factor authentication enabled')
       statusQuery.refetch()
     },
-    onError: (e: any) => toast.error(e.response?.data?.errors?.code?.[0] || e.response?.data?.message || 'Invalid code'),
+    onError: (e: any) => {
+      setConfirmError(e.response?.data?.errors?.code?.[0] || e.response?.data?.message || 'Invalid code')
+    },
   })
 
   const disableMutation = useMutation({
@@ -1516,9 +1697,12 @@ function TwoFactorCard() {
       toast.success('Two-factor authentication disabled')
       setShowDisable(false)
       setDisablePw('')
+      setDisableError('')
       statusQuery.refetch()
     },
-    onError: (e: any) => toast.error(e.response?.data?.errors?.password?.[0] || e.response?.data?.message || 'Failed'),
+    onError: (e: any) => {
+      setDisableError(e.response?.data?.errors?.password?.[0] || e.response?.data?.message || 'Failed')
+    },
   })
 
   const enabled = statusQuery.data?.enabled
@@ -1531,8 +1715,8 @@ function TwoFactorCard() {
           <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider truncate">Two-Factor Authentication</h2>
         </div>
         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border flex-shrink-0 ${enabled ? 'bg-success-50 border-success-100 text-success-700' : 'bg-slate-100 border-slate-200 text-slate-500'}`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${enabled ? 'bg-success-500' : 'bg-slate-400'}`} />
-          {enabled ? 'Enabled' : 'Disabled'}
+          <span className={`w-1.5 h-1.5 rounded-full ${statusQuery.isLoading ? 'animate-pulse bg-slate-400' : enabled ? 'bg-success-500' : 'bg-slate-400'}`} />
+          {statusQuery.isLoading ? 'Checking...' : enabled ? 'Enabled' : 'Disabled'}
         </span>
       </div>
 
@@ -1551,8 +1735,9 @@ function TwoFactorCard() {
             ) : (
               <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3">
                 <div className="flex-1 w-full">
-                  <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Confirm Password to Disable</label>
-                  <input type="password" className="input" value={disablePw} onChange={(e) => setDisablePw(e.target.value)} placeholder="Your password" />
+                  <label htmlFor="2fa-disable-password" className="block text-[13px] font-medium text-slate-700 mb-1.5">Confirm Password to Disable</label>
+                  <input id="2fa-disable-password" type="password" className={`input ${disableError ? 'input-error' : ''}`} value={disablePw} onChange={(e) => { setDisablePw(e.target.value); if (disableError) setDisableError('') }} placeholder="Your password" aria-invalid={!!disableError} />
+                  {disableError && <p role="alert" className="text-xs text-danger-600 dark:text-danger-400 mt-1">{disableError}</p>}
                 </div>
                 <div className="flex gap-2">
                   <button className="btn btn-ghost btn-sm" onClick={() => { setShowDisable(false); setDisablePw('') }}>Cancel</button>
@@ -1569,15 +1754,21 @@ function TwoFactorCard() {
           <div className="space-y-4">
             <p className="text-sm text-slate-500">Scan the QR code with your authenticator app, then enter the 6-digit code to confirm.</p>
             <div className="flex flex-col sm:flex-row gap-4 items-start">
-              <div className="w-[180px] h-[180px] p-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 flex items-center justify-center overflow-hidden" dangerouslySetInnerHTML={{ __html: setup.qr_svg }} />
+              <div className="w-[180px] h-[180px] p-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 flex items-center justify-center overflow-hidden" role="img" aria-label="QR code to scan with your authenticator app" dangerouslySetInnerHTML={{ __html: setup.qr_svg }} />
               <div className="flex-1 space-y-3 w-full">
                 <div>
                   <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1">Manual Key</p>
-                  <code className="block break-all text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-700 select-all">{setup.secret}</code>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 min-w-0 break-all text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-700 select-all">{setup.secret}</code>
+                    <button type="button" className="btn btn-ghost btn-sm flex-shrink-0" aria-label="Copy manual key" onClick={() => copyText(setup.secret, 'key', setCopied)}>
+                      {copied === 'key' ? <Check className="w-3.5 h-3.5 text-success-500" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Verification Code</label>
-                  <input type="text" inputMode="numeric" maxLength={6} className="input text-center text-xl tracking-[0.4em] font-semibold" value={confirmCode} onChange={(e) => setConfirmCode(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="••••••" />
+                  <label htmlFor="2fa-confirm-code" className="block text-[13px] font-medium text-slate-700 mb-1.5">Verification Code</label>
+                  <input id="2fa-confirm-code" type="text" inputMode="numeric" maxLength={6} className={`input text-center text-xl tracking-[0.4em] font-semibold ${confirmError ? 'input-error' : ''}`} value={confirmCode} onChange={(e) => { setConfirmCode(e.target.value.replace(/\D/g, '').slice(0, 6)); if (confirmError) setConfirmError('') }} placeholder="••••••" aria-invalid={!!confirmError} />
+                  {confirmError && <p role="alert" className="text-xs text-danger-600 dark:text-danger-400 mt-1">{confirmError}</p>}
                 </div>
                 <div className="flex gap-2">
                   <button className="btn btn-ghost btn-sm" onClick={() => setSetup(null)}>Cancel</button>
@@ -1599,10 +1790,105 @@ function TwoFactorCard() {
                 <code key={c} className="text-xs font-mono bg-white dark:bg-slate-800 border border-warning-200 dark:border-warning-700 rounded px-2 py-1.5 text-center text-slate-700 dark:text-slate-200 select-all">{c}</code>
               ))}
             </div>
-            <button className="btn btn-primary btn-sm" onClick={() => { setRecovery(null); statusQuery.refetch() }}>I've saved them</button>
+            <div className="flex gap-2">
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => copyText(recovery.join('\n'), 'codes', setCopied)}>
+                {copied === 'codes' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />} {copied === 'codes' ? 'Copied' : 'Copy All'}
+              </button>
+              <button className="btn btn-primary btn-sm" onClick={() => { setRecovery(null); statusQuery.refetch() }}>I've saved them</button>
+            </div>
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+function copyText(text: string, id: string, setCopied: (id: string | null) => void) {
+  navigator.clipboard.writeText(text).then(
+    () => {
+      setCopied(id)
+      setTimeout(() => setCopied(null), 1500)
+    },
+    () => toast.error('Could not copy to clipboard')
+  )
+}
+
+type FieldError = string | undefined
+
+function fieldClass(error?: FieldError, extra?: string) {
+  return `input ${extra || ''} ${error ? 'input-error' : ''}`.trim()
+}
+
+function PasswordField(props: {
+  id: string
+  label: string
+  value: string
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  show: boolean
+  onToggleShow: () => void
+  error?: FieldError
+  autoComplete?: string
+}) {
+  return (
+    <div>
+      <label htmlFor={props.id} className="block text-[13px] font-medium text-slate-700 mb-1.5">{props.label}</label>
+      <div className="relative">
+        <input
+          id={props.id}
+          type={props.show ? 'text' : 'password'}
+          autoComplete={props.autoComplete}
+          className={fieldClass(props.error, 'pr-10')}
+          value={props.value}
+          onChange={props.onChange}
+          aria-invalid={!!props.error}
+        />
+        <button
+          type="button"
+          className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600"
+          onClick={props.onToggleShow}
+          aria-label={props.show ? `Hide ${props.label.toLowerCase()}` : `Show ${props.label.toLowerCase()}`}
+          tabIndex={-1}
+        >
+          {props.show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+        </button>
+      </div>
+      {props.error && <p role="alert" className="text-xs text-danger-600 dark:text-danger-400 mt-1">{props.error}</p>}
+    </div>
+  )
+}
+
+function PinInputs(props: {
+  digits: string[]
+  onChange: (digits: string[]) => void
+  prefix: string
+  autoFocusOnFirst?: boolean
+}) {
+  const setDigit = (idx: number, val: string) => {
+    if (val && !/^\d$/.test(val)) return
+    const next = [...props.digits]
+    next[idx] = val
+    props.onChange(next)
+    if (val && idx < 3) document.getElementById(`${props.prefix}-${idx + 1}`)?.focus()
+  }
+  return (
+    <div className="flex gap-2">
+      {props.digits.map((digit, idx) => (
+        <input
+          key={idx}
+          id={`${props.prefix}-${idx}`}
+          type="text"
+          inputMode="numeric"
+          maxLength={1}
+          aria-label={`Digit ${idx + 1} of 4`}
+          className="w-12 h-12 text-center text-lg font-bold rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+          value={digit}
+          autoFocus={props.autoFocusOnFirst && idx === 0}
+          onChange={(e) => setDigit(idx, e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Backspace' && !props.digits[idx] && idx > 0) document.getElementById(`${props.prefix}-${idx - 1}`)?.focus()
+          }}
+        />
+      ))}
     </div>
   )
 }
