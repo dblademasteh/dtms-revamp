@@ -304,15 +304,8 @@ Route::middleware(['auth:sanctum', 'force-password-change'])->group(function () 
     // System settings (admin only)
     Route::middleware('admin')->prefix('admin')->group(function () {
         Route::get('/settings', function () {
-            $branding = new \App\Http\Controllers\Api\BrandingController;
             return response()->json([
-                'settings' => [
-                    'retention_months' => (int) \App\Models\SystemSetting::get('retention_months', 12),
-                    'system_title' => \App\Models\SystemSetting::get('system_title', \App\Http\Controllers\Api\BrandingController::defaults()['system_title']),
-                    'system_description' => \App\Models\SystemSetting::get('system_description', \App\Http\Controllers\Api\BrandingController::defaults()['system_description']),
-                    'login_logo' => $branding->publicIndex()->getData()->branding['login_logo'],
-                    'sidebar_logo' => $branding->publicIndex()->getData()->branding['sidebar_logo'],
-                ],
+                'settings' => \App\Http\Controllers\Api\BrandingController::settingsArray(),
             ]);
         });
 
@@ -333,16 +326,9 @@ Route::middleware(['auth:sanctum', 'force-password-change'])->group(function () 
                 \App\Models\SystemSetting::set('system_description', $request->system_description);
             }
 
-            $branding = new \App\Http\Controllers\Api\BrandingController;
             return response()->json([
                 'message' => 'Settings updated',
-                'settings' => [
-                    'retention_months' => (int) \App\Models\SystemSetting::get('retention_months', 12),
-                    'system_title' => \App\Models\SystemSetting::get('system_title', \App\Http\Controllers\Api\BrandingController::defaults()['system_title']),
-                    'system_description' => \App\Models\SystemSetting::get('system_description', \App\Http\Controllers\Api\BrandingController::defaults()['system_description']),
-                    'login_logo' => $branding->publicIndex()->getData()->branding['login_logo'],
-                    'sidebar_logo' => $branding->publicIndex()->getData()->branding['sidebar_logo'],
-                ],
+                'settings' => \App\Http\Controllers\Api\BrandingController::settingsArray(),
             ]);
         });
 

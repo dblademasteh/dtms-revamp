@@ -543,7 +543,7 @@ class DocumentController extends Controller
                     $fail('The selected recipient does not exist.');
                 }
             }],
-            'remarks' => 'required|string|max:500',
+            'remarks' => 'nullable|string|max:500',
             'attachment' => 'nullable|file|max:10240',
         ]);
 

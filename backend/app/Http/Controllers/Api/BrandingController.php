@@ -18,6 +18,18 @@ class BrandingController extends Controller
         ];
     }
 
+    public static function settingsArray(): array
+    {
+        $branding = new self;
+        return [
+            'retention_months' => (int) SystemSetting::get('retention_months', 12),
+            'system_title' => SystemSetting::get('system_title', self::defaults()['system_title']),
+            'system_description' => SystemSetting::get('system_description', self::defaults()['system_description']),
+            'login_logo' => $branding->logoUrl('login'),
+            'sidebar_logo' => $branding->logoUrl('sidebar'),
+        ];
+    }
+
     protected function logoPath(string $type): ?string
     {
         $key = $type === 'login' ? 'login_logo' : 'sidebar_logo';

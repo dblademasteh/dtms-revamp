@@ -15,6 +15,17 @@ fi
 php artisan config:clear || true
 php artisan route:clear || true
 php artisan migrate --force || true
+
+# The public/storage folder must be a symlink to storage/app/public so
+# uploaded files (avatars, documents, branding logos) are served correctly.
+# Older images shipped a real directory here; migrate any legacy files and
+# replace it with the symlink.
+if [ -e public/storage ] && [ ! -L public/storage ]; then
+    echo "Migrating legacy public/storage contents..."
+    mkdir -p storage/app/public
+    cp -rn public/storage/. storage/app/public/ 2>/dev/null || true
+    rm -rf public/storage
+fi
 php artisan storage:link || true
 
 exec supervisord -c /etc/supervisor/conf.d/supervisord.conf

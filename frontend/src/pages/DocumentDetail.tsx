@@ -355,7 +355,8 @@ export default function DocumentDetail() {
   const isRoutingDisposition = action === 'approve' && ['forwarded', 'endorsed', 'recommended'].includes(disposition)
 
   const handleAction = () => {
-    if (!action || !remarks || !disposition) return
+    if (!action || !disposition) return
+    if ((action === 'return' || action === 'resubmit') && !remarks) return
     
     let targetOffice = document?.current_office_id
     if (action === 'return' || action === 'resubmit' || action === 'send' || isRoutingDisposition) {
@@ -1383,7 +1384,11 @@ className="flex items-center justify-between w-full text-left"
                       <div>
                         <label className="block text-[11px] font-bold text-slate-500 mb-2 uppercase tracking-widest">
                           {action === 'return' ? 'Reason for Return' : action === 'resubmit' ? 'Resubmission Notes' : 'Remarks'}
-                          <span className="ml-1 text-red-400">*</span>
+                          {action === 'return' || action === 'resubmit' ? (
+                            <span className="ml-1 text-red-400">*</span>
+                          ) : (
+                            <span className="text-slate-400 font-normal normal-case"> (optional)</span>
+                          )}
                         </label>
                         <textarea
                           className="input w-full min-h-[90px] bg-slate-50/50 border-slate-200 focus:bg-white text-sm resize-none"
@@ -1468,7 +1473,7 @@ className="flex items-center justify-between w-full text-left"
                         </button>
                         <button
                           onClick={handleAction}
-                          disabled={!remarks || routeMutation.isPending || ((['return', 'resubmit', 'send'].includes(action) || isRoutingDisposition) && recipientSelection.length === 0)}
+                          disabled={routeMutation.isPending || ((action === 'return' || action === 'resubmit') && !remarks) || ((['return', 'resubmit', 'send'].includes(action) || isRoutingDisposition) && recipientSelection.length === 0)}
                           className={`inline-flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ${cfg.btnClass}`}
                         >
                           {routeMutation.isPending ? (
