@@ -240,27 +240,23 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200">
-      {/* Left panel - Public hub (desktop only) */}
-      <div className="relative hidden lg:flex w-full lg:w-[48%] bg-white dark:bg-slate-950 lg:dark:bg-slate-900 border-b lg:border-b-0 lg:border-r border-slate-200/80 dark:border-slate-800/80 overflow-hidden text-slate-900 dark:text-white p-6 lg:p-10 xl:p-14 flex-col justify-between shadow-2xl lg:shadow-none">
+{/* Left panel - Public hub (desktop only) */}
+       <div className="relative hidden lg:flex w-full lg:w-[48%] bg-gradient-to-r from-white via-slate-50/90 to-indigo-50 dark:from-slate-950 dark:via-slate-950 dark:to-indigo-950/50 border-b lg:border-b-0 lg:border-r border-slate-200/70 dark:border-slate-800 overflow-hidden text-slate-900 dark:text-white p-6 lg:p-10 xl:p-14 flex-col justify-between shadow-2xl lg:shadow-none">
+        {/* Color wash overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/30 via-indigo-50/20 to-purple-50/15 dark:from-blue-950/20 dark:via-indigo-950/15 dark:to-purple-950/10 pointer-events-none" />
         {/* Background Ambient Glows */}
-        <div className="absolute top-0 left-0 w-72 h-72 sm:w-96 sm:h-96 bg-blue-500/10 dark:bg-blue-600/10 rounded-full blur-[100px] pointer-events-none" />
-        <div className="absolute bottom-0 right-0 w-72 h-72 sm:w-96 sm:h-96 bg-indigo-500/10 dark:bg-indigo-600/10 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute top-0 left-0 w-72 h-72 sm:w-96 sm:h-96 bg-blue-500/15 dark:bg-blue-400/20 rounded-full blur-[80px] pointer-events-none" />
+        <div className="absolute bottom-0 right-0 w-72 h-72 sm:w-96 sm:h-96 bg-indigo-500/15 dark:bg-indigo-400/20 rounded-full blur-[80px] pointer-events-none" />
 
         {/* Grid pattern overlay */}
         <div
-          className="absolute inset-0 opacity-[0.04] pointer-events-none lg:hidden"
+          className="absolute inset-0 opacity-[0.08] pointer-events-none"
           style={{
-            backgroundImage: `linear-gradient(rgba(148,163,184,0.18) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.18) 1px, transparent 1px)`,
+            backgroundImage: `linear-gradient(rgba(148,163,184,0.25) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.25) 1px, transparent 1px)`,
             backgroundSize: '40px 40px',
+            mixBlendMode: 'multiply',
           }}
         />
-        <div
-          className="absolute inset-0 opacity-[0.04] pointer-events-none hidden lg:block"
-          style={{
-            backgroundImage: `linear-gradient(rgba(148,163,184,0.18) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.18) 1px, transparent 1px)`,
-            backgroundSize: '40px 40px',
-          }}
-         />
 
         {/* Main Content - Routing Hub */}
         <div className="relative z-10 flex flex-col items-center w-full max-w-lg mx-auto my-auto mt-8 mb-8 px-4">
@@ -648,16 +644,16 @@ export default function Login() {
             <form onSubmit={handleSubmit(onSubmit)} className={shaking ? 'space-y-6 animate-shake' : 'space-y-6'}>
               {/* Account Number Field */}
               <div className="space-y-2">
-                <label htmlFor="accnt_no" className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                <label htmlFor="accnt_no" className="block text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1.5">
                   Account Number
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
                   <input
                     id="accnt_no"
                     type="text"
                     autoComplete="username"
-                    className="w-full pl-10 pr-4 py-3 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white font-mono placeholder:text-slate-400"
+                    className="w-full pl-10 pr-4 py-3 text-sm text-slate-900 dark:text-white bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 dark:focus:border-blue-500 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 font-mono shadow-sm"
                     placeholder="e.g. P12345"
                     {...register('accnt_no', {
                       required: 'Account Number is required',
@@ -675,7 +671,7 @@ export default function Login() {
               {/* Password Field */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label htmlFor="password" className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                  <label htmlFor="password" className="block text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
                     Password
                   </label>
                   <Link to="/forgot-password" className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold">
@@ -683,12 +679,12 @@ export default function Login() {
                   </Link>
                 </div>
                 <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
                   <input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
-                    className="w-full pl-10 pr-10 py-3 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white placeholder:text-slate-400"
+                    className="w-full pl-10 pr-10 py-3 text-sm text-slate-900 dark:text-white bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 dark:focus:border-blue-500 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 font-mono shadow-sm"
                     placeholder="Enter your password"
                     {...register('password', { required: 'Password is required' })}
                   />
@@ -696,7 +692,7 @@ export default function Login() {
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-3.5 rounded-xl transition-colors"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg transition-colors"
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -713,7 +709,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition-all shadow-md shadow-blue-500/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm transition-all shadow-xl shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 focus:ring-2 focus:ring-blue-500/40 focus:ring-offset-2"
               >
                 {isLoading ? (
                   <span className="flex items-center gap-2">
@@ -731,11 +727,11 @@ export default function Login() {
           )}
 
           {/* Auxiliary Links */}
-          <div className="space-y-6">
+          <div className="space-y-5 mt-6">
             <button
               type="button"
               onClick={() => setShowPincodeModal(true)}
-              className="w-full flex items-center justify-center gap-2 p-4 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-800 text-sm font-bold transition-all"
+              className="w-full flex items-center justify-center gap-2.5 p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold text-sm transition-all"
             >
               <KeyRound className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               <span>Sign in with 4-Digit PIN Code</span>
@@ -744,7 +740,7 @@ export default function Login() {
             <div className="text-center lg:hidden">
               <Link
                 to="/gateway"
-                className="inline-flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold text-sm shadow-lg shadow-blue-500/25 hover:scale-[1.02] transition-all"
+                className="inline-flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold text-sm shadow-lg shadow-blue-500/25 hover:scale-[1.01] transition-all"
               >
                 <span>Agency Gateway</span>
               </Link>
