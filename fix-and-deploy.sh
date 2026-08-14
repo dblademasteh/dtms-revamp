@@ -43,8 +43,10 @@ docker run -d \
   --restart unless-stopped \
   dts-frontend:latest
 
-echo "=== Step 6: Start cloudflared tunnel ==="
-docker run -d \
+echo "=== Step 6: Wait for frontend to be ready, then start cloudflared ==="
+echo "Waiting for frontend to stabilize..."
+sleep 3
+docker start cloudflared 2>/dev/null || docker run -d \
   --name cloudflared \
   --restart unless-stopped \
   --network container:dts-frontend \
