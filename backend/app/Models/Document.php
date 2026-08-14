@@ -167,7 +167,7 @@ class Document extends Model
                 $document->tracking_number = self::generateTrackingNumber();
             }
             if (empty($document->document_no)) {
-                $document->document_no = self::generateDocumentNumber();
+                $document->document_no = $document->tracking_number;
             }
         });
     }
@@ -269,14 +269,13 @@ class Document extends Model
     public static function generateTrackingNumber(?string $officeCode = null): string
     {
         $year = date('Y');
-        $prefix = $officeCode ? strtoupper(trim($officeCode)) : 'BFP';
         $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
         $code = '';
         for ($i = 0; $i < 6; $i++) {
             $code .= $chars[random_int(0, strlen($chars) - 1)];
         }
 
-        return sprintf('%s-%s-%s', $prefix, $year, $code);
+        return sprintf('BFP-%s-%s', $year, $code);
     }
 
     /**

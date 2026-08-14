@@ -437,11 +437,6 @@ export default function Documents() {
                               <Copy className="w-3 h-3 text-slate-400" />
                             )}
                           </button>
-                          {doc.document_no && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-[11px] font-semibold text-slate-600 dark:text-slate-400">
-                              {doc.document_no}
-                            </span>
-                          )}
                         </div>
                       </div>
                     </td>

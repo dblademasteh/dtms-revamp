@@ -598,11 +598,6 @@ export default function DocumentDetail() {
               <span className="font-mono text-xs font-bold tracking-wide text-primary-700 dark:text-primary-300 bg-primary-100 dark:bg-primary-900/40 px-2.5 py-1 rounded border border-primary-200 dark:border-primary-700/60 shadow-sm inline-block">
                 {document.tracking_number}
               </span>
-              {document.document_no && (
-                <span className="font-mono text-xs font-bold tracking-wide text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded border border-slate-200 dark:border-slate-700 inline-block">
-                  {document.document_no}
-                </span>
-              )}
               {document.due_at && (
                 <span
                   className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-bold border ${
