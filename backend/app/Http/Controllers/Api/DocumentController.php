@@ -75,11 +75,14 @@ class DocumentController extends Controller
                 $q->where(function ($q2) use ($userId) {
                     $q2->where('recipient_type', 'personnel')
                         ->where('recipient_id', $userId);
-                })->orWhere(function ($q2) use ($officeId) {
-                    $q2->where('recipient_type', 'office')
-                        ->where('recipient_id', $officeId);
                 });
-            })->where('status', '!=', DocumentStatus::CREATED->value);
+                if ($officeId) {
+                    $q->orWhere(function ($q2) use ($officeId) {
+                        $q2->where('recipient_type', 'office')
+                            ->where('recipient_id', $officeId);
+                    });
+                }
+            })->whereIn('status', ['received', 'in_review', 'returned']);
         }
 
         if ($request->has('search')) {
@@ -175,7 +178,7 @@ class DocumentController extends Controller
             if ($officeId) {
                 $target[] = '(recipient_type = "office" AND recipient_id = ' . $officeId . ')';
             }
-            $clauses[] = '((' . implode(' OR ', $target) . ') AND status != "created")';
+            $clauses[] = '((' . implode(' OR ', $target) . ') AND status IN ["received", "in_review", "returned"])';
         }
 
         if ($request->has('is_public')) {
