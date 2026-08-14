@@ -16,7 +16,6 @@ import {
   User,
   Lock,
   CheckCircle2,
-  Shield,
   ArrowRight,
    AlertCircle,
    AlertTriangle,
@@ -239,8 +238,8 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200">
-      {/* Left panel - Public hub */}
-      <div className="relative w-full lg:w-[48%] bg-white dark:bg-slate-950 lg:dark:bg-slate-900 border-b lg:border-b-0 lg:border-r border-slate-200/80 dark:border-slate-800/80 overflow-hidden text-slate-900 dark:text-white p-6 lg:p-10 xl:p-14 flex flex-col justify-between shadow-2xl lg:shadow-none">
+      {/* Left panel - Public hub (desktop only) */}
+      <div className="relative hidden lg:flex w-full lg:w-[48%] bg-white dark:bg-slate-950 lg:dark:bg-slate-900 border-b lg:border-b-0 lg:border-r border-slate-200/80 dark:border-slate-800/80 overflow-hidden text-slate-900 dark:text-white p-6 lg:p-10 xl:p-14 flex-col justify-between shadow-2xl lg:shadow-none">
         {/* Background Ambient Glows */}
         <div className="absolute top-0 left-0 w-72 h-72 sm:w-96 sm:h-96 bg-blue-500/10 dark:bg-blue-600/10 rounded-full blur-[100px] pointer-events-none" />
         <div className="absolute bottom-0 right-0 w-72 h-72 sm:w-96 sm:h-96 bg-indigo-500/10 dark:bg-indigo-600/10 rounded-full blur-[100px] pointer-events-none" />
@@ -617,11 +616,11 @@ export default function Login() {
         <div className="w-full max-w-[400px] space-y-6">
           {/* Header */}
           <div className="flex flex-col items-center text-center space-y-4">
-            <div className="w-20 h-16 rounded-3xl bg-white dark:bg-slate-900 shadow-xs border border-slate-200/80 dark:border-slate-800 flex items-center justify-center">
+            <div className="w-20 h-20 rounded-3xl bg-white dark:bg-slate-900 shadow-xs border border-slate-200/80 dark:border-slate-800 flex items-center justify-center overflow-hidden">
               <img
-                src="/logo.png?v=3"
+                src="/logo.png?v=4"
                 alt="Logo"
-                className="w-full h-full object-contain filter drop-shadow"
+                className="w-full h-full object-contain p-1.5"
               />
             </div>
             <div>
@@ -745,7 +744,6 @@ export default function Login() {
                 to="/gateway"
                 className="inline-flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold text-sm shadow-lg shadow-blue-500/25 hover:scale-[1.02] transition-all"
               >
-                <Shield className="w-5 h-5" />
                 <span>Agency Gateway</span>
               </Link>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
