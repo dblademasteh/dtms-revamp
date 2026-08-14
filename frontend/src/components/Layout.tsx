@@ -28,6 +28,30 @@ import NotificationBell from '@/components/NotificationBell'
 import ConfirmModal from '@/components/ConfirmModal'
 import HelpWidget from '@/components/HelpWidget'
 import { useBranding } from '@/hooks/useBranding'
+import { Sun, Moon } from 'lucide-react'
+
+const THEME_KEY = 'dtms-theme'
+
+function useTheme() {
+  const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  useEffect(() => {
+    const saved = localStorage.getItem(THEME_KEY) as 'light' | 'dark' | null
+    if (saved) {
+      setTheme(saved)
+      if (saved === 'dark') document.documentElement.classList.add('dark')
+    }
+  }, [])
+  const toggleTheme = () => {
+    setTheme((t) => {
+      const next = t === 'light' ? 'dark' : 'light'
+      localStorage.setItem(THEME_KEY, next)
+      if (next === 'dark') document.documentElement.classList.add('dark')
+      else document.documentElement.classList.remove('dark')
+      return next
+    })
+  }
+  return { theme, toggleTheme }
+}
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -49,6 +73,7 @@ export default function Layout() {
   const [helpOpen, setHelpOpen] = useState(false)
   const [logoFailed, setLogoFailed] = useState(false)
   const branding = useBranding()
+  const { toggleTheme } = useTheme()
 
   const handleLogout = () => {
     setShowLogoutConfirm(true)
@@ -331,6 +356,18 @@ export default function Layout() {
 
             {/* Notifications */}
             <NotificationBell />
+
+            {/* Theme toggle */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-label="Toggle dark/light mode"
+              title="Toggle theme"
+              className="flex items-center justify-center w-9 h-9 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              <Sun className="h-5 w-5 dark:hidden" />
+              <Moon className="h-5 w-5 hidden dark:inline-block" />
+            </button>
 
             {/* Help & feedback (mobile: moved out of the floating bubble so it never covers page buttons) */}
             {user?.role !== 'superadmin' && (
