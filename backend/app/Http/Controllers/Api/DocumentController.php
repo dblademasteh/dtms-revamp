@@ -1143,7 +1143,7 @@ class DocumentController extends Controller
     {
         $user = \Illuminate\Support\Facades\Auth::user();
 
-        if (!$user->isAdmin() && $document->originator_id !== $user->id) {
+        if (!$user->isAdmin()) {
             return response()->json(['message' => 'You are not authorized to delete this document'], 403);
         }
 

@@ -93,7 +93,7 @@ Route::middleware(['auth:sanctum', 'force-password-change'])->group(function () 
                 continue;
             }
 
-            if (!$user->isAdmin() && $document->originator_id !== $user->id) {
+            if (!$user->isAdmin()) {
                 $errors[] = ['document_id' => $docId, 'error' => 'Unauthorized'];
                 continue;
             }

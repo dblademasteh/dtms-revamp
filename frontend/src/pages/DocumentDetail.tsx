@@ -1137,7 +1137,7 @@ className="flex items-center justify-between w-full text-left"
                   Posted for all staff
                 </div>
               )}
-              {(user?.role === 'superadmin' || document.originator_id === user?.id) && (
+              {user?.role === 'superadmin' && (
                 <button
                   onClick={() => setShowDeleteModal(true)}
                   className="w-full btn btn-danger-outline"
