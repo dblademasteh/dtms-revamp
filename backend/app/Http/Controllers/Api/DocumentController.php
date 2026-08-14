@@ -1171,9 +1171,7 @@ class DocumentController extends Controller
 
         $roleValue = is_object($user->role) ? $user->role->value : $user->role;
         $canAct = $user->isAdmin()
-            || in_array($roleValue, ['superadmin', 'fcos'], true)
-            || $document->originator_id === $user->id
-            || $document->current_office_id === $user->office_id;
+            || $document->originator_id === $user->id;
 
         if (!$canAct) {
             return response()->json(['message' => 'You are not authorized to recall this document'], 403);
@@ -1189,12 +1187,16 @@ class DocumentController extends Controller
         try {
             $oldStatus = $document->status;
             $fromOfficeId = $document->current_office_id;
+            $recipientType = $document->recipient_type;
+            $recipientId = $document->recipient_id;
 
             $recallOfficeId = $request->user()->office_id ?? $fromOfficeId;
 
             $document->update([
                 'status' => DocumentStatus::RETURNED,
                 'current_office_id' => $recallOfficeId,
+                'recipient_type' => null,
+                'recipient_id' => null,
             ]);
 
             RoutingHistory::create([
@@ -1223,6 +1225,34 @@ class DocumentController extends Controller
                 $this->storeVersionedAttachment($document, $request->file('attachment'), $request->user()->id);
                 // The history record was already created above for this step.
                 // We'll update the history record with the attachment info if needed, or rely on AuditTrail.
+            }
+
+            $recipientUserId = null;
+            if ($recipientType === 'personnel') {
+                $recipientUserId = $recipientId;
+            } elseif ($recipientType === 'office') {
+                $office = \App\Models\Office::find($recipientId);
+                $recipientUserId = $office?->head_user_id;
+            }
+            if ($recipientUserId && $recipientUserId !== $request->user()->id) {
+                $notification = \App\Models\Notification::create([
+                    'user_id' => $recipientUserId,
+                    'type' => 'document_recalled',
+                    'title' => 'Document Recalled',
+                    'message' => "The document \"{$document->subject}\" ({$document->tracking_number}) was recalled by the sender.",
+                    'channel' => 'in_app',
+                    'sent_at' => now(),
+                    'data' => ['document_id' => $document->id, 'tracking_number' => $document->tracking_number, 'subject' => $document->subject],
+                ]);
+
+                NotificationCreated::dispatch(
+                    $notification->id,
+                    $notification->user_id,
+                    $notification->type,
+                    $notification->title,
+                    $notification->message,
+                    $notification->data,
+                );
             }
 
             DB::commit();
