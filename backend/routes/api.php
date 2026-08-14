@@ -36,6 +36,9 @@ Route::get('/dropdown-options', [DropdownOptionController::class, 'index']);
 // Public branding (system title/description/logos) for login & public pages
 Route::get('/branding', [App\Http\Controllers\Api\BrandingController::class, 'publicIndex']);
 
+// Public PWA manifest (branded name/description/icons) for install & splash
+Route::get('/manifest.webmanifest', [App\Http\Controllers\Api\BrandingController::class, 'manifest']);
+
 // Protected routes
 Route::middleware(['auth:sanctum', 'force-password-change'])->group(function () {
     // Auth routes

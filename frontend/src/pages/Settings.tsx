@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import api from '@/services/api'
@@ -39,6 +39,7 @@ function formatBytes(bytes: number): string {
 
 export default function Settings() {
   const { user, setUser } = useAuthStore()
+  const queryClient = useQueryClient()
   const ranks = useRanks()
   const designations = useDropdownGroup('designations')
   const isSuperadmin = user?.role === 'superadmin'
@@ -230,16 +231,18 @@ export default function Settings() {
      }
    }, [])
 
-   const settingsMutation = useMutation({
-     mutationFn: (data: any) => api.put('/admin/settings', data),
-     onSuccess: (res) => {
-       setRetentionMonths(res.data.settings.retention_months)
-       setSystemTitle(res.data.settings.system_title)
-       setSystemDescription(res.data.settings.system_description)
-       setLoginLogo(res.data.settings.login_logo)
-       setSidebarLogo(res.data.settings.sidebar_logo)
-       toast.success('Settings updated')
-     },
+    const settingsMutation = useMutation({
+      mutationFn: (data: any) => api.put('/admin/settings', data),
+      onSuccess: (res) => {
+        setRetentionMonths(res.data.settings.retention_months)
+        setSystemTitle(res.data.settings.system_title)
+        setSystemDescription(res.data.settings.system_description)
+        setLoginLogo(res.data.settings.login_logo)
+        setSidebarLogo(res.data.settings.sidebar_logo)
+        queryClient.invalidateQueries({ queryKey: ['branding'] })
+        queryClient.invalidateQueries({ queryKey: ['admin-settings'] })
+        toast.success('Settings updated')
+      },
      onError: (error: any) => {
        toast.error(error.response?.data?.message || 'Save failed')
      },
@@ -261,12 +264,14 @@ export default function Settings() {
          headers: { 'Content-Type': 'multipart/form-data' },
        })
      },
-     onSuccess: (res, vars) => {
-       const url = res.data?.logo_url ?? null
-       if (vars.type === 'login') setLoginLogo(url)
-       else setSidebarLogo(url)
-       toast.success(res.data?.message || 'Logo updated')
-     },
+      onSuccess: (res, vars) => {
+        const url = res.data?.logo_url ?? null
+        if (vars.type === 'login') setLoginLogo(url)
+        else setSidebarLogo(url)
+        queryClient.invalidateQueries({ queryKey: ['branding'] })
+        queryClient.invalidateQueries({ queryKey: ['admin-settings'] })
+        toast.success(res.data?.message || 'Logo updated')
+      },
      onError: (error: any) => {
        toast.error(error.response?.data?.message || 'Logo upload failed')
      },
@@ -275,11 +280,13 @@ export default function Settings() {
    const deleteLogoMutation = useMutation({
      mutationFn: (type: 'login' | 'sidebar') =>
        api.delete('/admin/branding/logo', { data: { type } }),
-     onSuccess: (res, type) => {
-       if (type === 'login') setLoginLogo(null)
-       else setSidebarLogo(null)
-       toast.success(res.data?.message || 'Logo removed')
-     },
+      onSuccess: (res, type) => {
+        if (type === 'login') setLoginLogo(null)
+        else setSidebarLogo(null)
+        queryClient.invalidateQueries({ queryKey: ['branding'] })
+        queryClient.invalidateQueries({ queryKey: ['admin-settings'] })
+        toast.success(res.data?.message || 'Logo removed')
+      },
      onError: (error: any) => {
        toast.error(error.response?.data?.message || 'Remove failed')
      },
@@ -1271,7 +1278,7 @@ export default function Settings() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-slate-500">Application</p>
-                  <p className="font-medium text-slate-900">DTMS - Document Tracking and Management System</p>
+                  <p className="font-medium text-slate-900">{systemTitle} - {systemDescription}</p>
                 </div>
                 <div>
                   <p className="text-slate-500">Environment</p>

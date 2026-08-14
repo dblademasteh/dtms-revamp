@@ -1,19 +1,30 @@
 import { Link } from 'react-router-dom'
 import { MapPin, FilePlus2, ArrowRight, Shield } from 'lucide-react'
+import { useBranding } from '@/hooks/useBranding'
 
 export default function AgencyGateway() {
+  const branding = useBranding()
   return (
     <div className="min-h-[calc(100vh-5rem)] bg-slate-50 dark:bg-slate-950">
       <div className="max-w-4xl mx-auto p-6 sm:p-8 lg:p-12">
         {/* ===== Top Bar with Logo ===== */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
-              <Shield className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center overflow-hidden text-white shadow-lg shadow-blue-500/30">
+              {branding.sidebar_logo || branding.login_logo ? (
+                <img
+                  src={branding.sidebar_logo || branding.login_logo || ''}
+                  alt=""
+                  className="w-10 h-10 object-contain"
+                  draggable={false}
+                />
+              ) : (
+                <Shield className="w-5 h-5" />
+              )}
             </div>
             <div>
-              <div className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">DTMS</div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Document Tracking &amp; Management</div>
+              <div className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">{branding.system_title}</div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{branding.system_description}</div>
             </div>
           </div>
           <Link

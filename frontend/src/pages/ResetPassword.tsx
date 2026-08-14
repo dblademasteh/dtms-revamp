@@ -3,10 +3,12 @@ import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import api from '@/services/api'
 import toast from 'react-hot-toast'
 import { Lock, ArrowLeft, Shield, CheckCircle } from 'lucide-react'
+import { useBranding } from '@/hooks/useBranding'
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
+  const branding = useBranding()
   const [email, setEmail] = useState(searchParams.get('email') || '')
   const [token, setToken] = useState(searchParams.get('token') || '')
   const [password, setPassword] = useState('')
@@ -41,8 +43,16 @@ export default function ResetPassword() {
     <div className="min-h-screen bg-gradient-to-br from-navy-900 via-navy-800 to-slate-900 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center w-14 h-14 bg-primary-500 rounded-xl mx-auto mb-4">
-            <Shield className="w-7 h-7 text-white" />
+          <div className="flex items-center justify-center w-14 h-14 bg-primary-500 rounded-xl mx-auto mb-4 overflow-hidden">
+            {branding.login_logo || branding.sidebar_logo ? (
+              <img
+                src={branding.login_logo || branding.sidebar_logo || ''}
+                alt=""
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <Shield className="w-7 h-7 text-white" />
+            )}
           </div>
           <h1 className="text-2xl font-bold text-white">Reset Password</h1>
           <p className="text-slate-400 text-sm mt-2">Enter your new password</p>

@@ -9,22 +9,8 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      manifest: false,
       includeAssets: ['favicon-*.png', 'icons/*.png'],
-      manifest: {
-        name: 'DTMS - Document Tracking and Management System',
-        short_name: 'DTMS',
-        description: 'Track, route, and account for government documents',
-        theme_color: '#1e3a5f',
-        background_color: '#1e3a5f',
-        display: 'standalone',
-        orientation: 'any',
-        start_url: '/',
-        scope: '/',
-        icons: [
-          { src: '/icons/pwa-96x96.png', sizes: '96x96', type: 'image/png', purpose: 'any' },
-          { src: '/icons/pwa-256x256.png', sizes: '256x256', type: 'image/png', purpose: 'any' },
-        ],
-      },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
         runtimeCaching: [

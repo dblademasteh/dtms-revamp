@@ -3,11 +3,13 @@ import { Link } from 'react-router-dom'
 import api from '@/services/api'
 import toast from 'react-hot-toast'
 import { Mail, ArrowLeft, Shield } from 'lucide-react'
+import { useBranding } from '@/hooks/useBranding'
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [devToken, setDevToken] = useState<string | null>(null)
+  const branding = useBranding()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -27,8 +29,16 @@ export default function ForgotPassword() {
     <div className="min-h-screen bg-gradient-to-br from-navy-900 via-navy-800 to-slate-900 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center w-14 h-14 bg-primary-500 rounded-xl mx-auto mb-4">
-            <Shield className="w-7 h-7 text-white" />
+          <div className="flex items-center justify-center w-14 h-14 bg-primary-500 rounded-xl mx-auto mb-4 overflow-hidden">
+            {branding.login_logo || branding.sidebar_logo ? (
+              <img
+                src={branding.login_logo || branding.sidebar_logo || ''}
+                alt=""
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <Shield className="w-7 h-7 text-white" />
+            )}
           </div>
           <h1 className="text-2xl font-bold text-white">Forgot Password</h1>
           <p className="text-slate-400 text-sm mt-2">Enter your email to receive a reset link</p>

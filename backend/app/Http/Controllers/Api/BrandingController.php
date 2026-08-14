@@ -49,6 +49,50 @@ class BrandingController extends Controller
         ]);
     }
 
+    public function manifest()
+    {
+        $title = SystemSetting::get('system_title', self::defaults()['system_title']);
+        $description = SystemSetting::get('system_description', self::defaults()['system_description']);
+        $icon = $this->logoUrl('sidebar') ?? $this->logoUrl('login');
+
+        if ($icon) {
+            $ext = strtolower(pathinfo(parse_url($icon, PHP_URL_PATH) ?: '', PATHINFO_EXTENSION));
+            $type = $ext === 'jpg' || $ext === 'jpeg' ? 'image/jpeg' : ($ext === 'webp' ? 'image/webp' : 'image/png');
+            $icons = [
+                ['src' => $icon, 'sizes' => '192x192', 'type' => $type, 'purpose' => 'any'],
+                ['src' => $icon, 'sizes' => '512x512', 'type' => $type, 'purpose' => 'any'],
+                ['src' => $icon, 'sizes' => '512x512', 'type' => $type, 'purpose' => 'maskable'],
+            ];
+        } else {
+            $icons = [
+                ['src' => '/icons/pwa-96x96.png', 'sizes' => '96x96', 'type' => 'image/png', 'purpose' => 'any'],
+                ['src' => '/icons/pwa-256x256.png', 'sizes' => '256x256', 'type' => 'image/png', 'purpose' => 'any'],
+            ];
+        }
+
+        $payload = [
+            'name' => $title,
+            'short_name' => mb_substr($title, 0, 12),
+            'description' => $description,
+            'theme_color' => '#1e3a5f',
+            'background_color' => '#1e3a5f',
+            'display' => 'standalone',
+            'orientation' => 'any',
+            'start_url' => '/',
+            'scope' => '/',
+            'icons' => $icons,
+        ];
+
+        return response(
+            json_encode($payload, JSON_UNESCAPED_SLASHES),
+            200,
+            [
+                'Content-Type' => 'application/manifest+json',
+                'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            ],
+        );
+    }
+
     protected function logoUrl(string $type): ?string
     {
         $path = $this->logoPath($type);

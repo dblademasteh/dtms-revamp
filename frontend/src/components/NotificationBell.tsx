@@ -2,10 +2,12 @@ import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/services/api'
 import { Bell, Check, X, Trash2, MailX } from 'lucide-react'
+import { useBranding } from '@/hooks/useBranding'
 
 export default function NotificationBell() {
   const [open, setOpen] = useState(false)
   const queryClient = useQueryClient()
+  const branding = useBranding()
 
   const { data: unreadData } = useQuery({
     queryKey: ['notifications-unread'],
@@ -180,7 +182,7 @@ export default function NotificationBell() {
             const text = getNotificationText(latest)
             new Notification(text.title, {
               body: text.message,
-              icon: '/logo.png',
+              icon: branding.sidebar_logo || branding.login_logo || '/logo.png',
             })
           }
         })

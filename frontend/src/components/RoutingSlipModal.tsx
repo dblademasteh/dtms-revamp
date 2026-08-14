@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import { Printer, X } from 'lucide-react'
 import { BFP_ORG, BFP_ACTION_LEGEND, legendForDisposition } from '@/constants/bfp'
 import { dispositionLabel } from '@/constants/documentOptions'
+import { useBranding } from '@/hooks/useBranding'
 
 interface RoutingSlipModalProps {
   open: boolean
@@ -49,6 +50,7 @@ export default function RoutingSlipModal({
   history,
 }: RoutingSlipModalProps) {
   const paperRef = useRef<HTMLDivElement>(null)
+  const branding = useBranding()
 
   if (!open || !document) return null
 
@@ -192,7 +194,7 @@ ${paperRef.current.outerHTML}
             {/* ── LETTERHEAD ── */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 7 }}>
               <img
-                src="/logo.png"
+                src={branding.login_logo || branding.sidebar_logo || '/logo.png'}
                 alt=""
                 style={{ width: 70, height: 70, objectFit: 'contain', flexShrink: 0 }}
                 onError={(e) => (e.currentTarget.style.display = 'none')}
