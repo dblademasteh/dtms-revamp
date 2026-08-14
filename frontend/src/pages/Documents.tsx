@@ -33,6 +33,7 @@ export default function Documents() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const { user } = useAuthStore()
+  const isSuperadmin = useAuthStore((s) => s.isSuperadmin)()
   const documentTypes = useDropdownGroup('document_types')
   const priorities = useDropdownGroup('priorities')
   const [searchParams] = useSearchParams()
@@ -145,6 +146,23 @@ export default function Documents() {
 
   const documents = data?.data || []
   const totalPages = data?.last_page || 1
+
+  // Only the current holder/recipient can act on a document (superadmin always).
+  // received/in_review -> the recipient acts; returned -> the originator or holder resubmits.
+  const canActOn = (doc: any) => {
+    if (isSuperadmin) return true
+    if (!user) return false
+    if (doc.status === 'returned') {
+      if (doc.originator_id === user.id) return true
+      if (user.office_id && doc.current_office_id === user.office_id) return true
+      return false
+    }
+    if (['received', 'in_review'].includes(doc.status)) {
+      if (doc.recipient_type === 'personnel') return doc.recipient_id === user.id
+      if (doc.recipient_type === 'office') return user.office_id && doc.recipient_id === user.office_id
+    }
+    return false
+  }
 
   const copyTracking = (doc: any, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -489,7 +507,7 @@ export default function Documents() {
                           </button>
                         )}
 
-                        {['received', 'in_review'].includes(doc.status) && (
+                        {['received', 'in_review'].includes(doc.status) && canActOn(doc) && (
                           <>
                             <button
                               type="button"
@@ -520,7 +538,7 @@ export default function Documents() {
                           </>
                         )}
 
-                        {doc.status === 'returned' && (
+                        {doc.status === 'returned' && canActOn(doc) && (
                           <button
                             type="button"
                             title="Resubmit Document"
@@ -531,18 +549,20 @@ export default function Documents() {
                           </button>
                         )}
 
-                        <button
-                          type="button"
-                          title="Delete Document"
-                          onClick={() => {
-                            if (window.confirm('Are you sure you want to delete this document record?')) {
-                              bulkDeleteMutation.mutate({ document_ids: [doc.id] })
-                            }
-                          }}
-                          className="p-1.5 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {isSuperadmin && (
+                          <button
+                            type="button"
+                            title="Delete Document"
+                            onClick={() => {
+                              if (window.confirm('Are you sure you want to delete this document record?')) {
+                                bulkDeleteMutation.mutate({ document_ids: [doc.id] })
+                              }
+                            }}
+                            className="p-1.5 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
