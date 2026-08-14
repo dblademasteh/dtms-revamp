@@ -1188,8 +1188,9 @@ class DocumentController extends Controller
 
         try {
             $oldStatus = $document->status;
+            $fromOfficeId = $document->current_office_id;
 
-            $recallOfficeId = $request->user()->office_id ?? $document->current_office_id;
+            $recallOfficeId = $request->user()->office_id ?? $fromOfficeId;
 
             $document->update([
                 'status' => DocumentStatus::RETURNED,
@@ -1198,7 +1199,7 @@ class DocumentController extends Controller
 
             RoutingHistory::create([
                 'document_id' => $document->id,
-                'from_office_id' => $document->current_office_id,
+                'from_office_id' => $fromOfficeId,
                 'to_office_id' => $recallOfficeId,
                 'action' => 'recalled',
                 'remarks' => $request->get('remarks', 'Document recalled from recipient'),
