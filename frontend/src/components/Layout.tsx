@@ -299,10 +299,15 @@ export default function Layout() {
             </button>
 
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-xs">
-                <Shield className="w-4 h-4" />
+              <div className="w-7 h-7 rounded-lg bg-blue-600 dark:bg-blue-600 flex items-center justify-center overflow-hidden flex-shrink-0 text-white shadow-xs">
+                <img
+                  src={branding.sidebar_logo || '/logo.png?v=2'}
+                  alt="DTMS logo"
+                  className="w-7 h-7 object-contain"
+                  draggable={false}
+                />
               </div>
-              <span className="font-extrabold text-slate-900 dark:text-white text-base tracking-tight">DTMS</span>
+              <span className="font-extrabold text-slate-900 dark:text-white text-base tracking-tight">{branding.system_title}</span>
             </div>
           </div>
 
