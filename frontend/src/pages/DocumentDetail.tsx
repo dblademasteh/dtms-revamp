@@ -1084,13 +1084,6 @@ className="flex items-center justify-between w-full text-left"
                         Approve Document
                       </button>
                       <button
-                        onClick={() => selectAction('reject')}
-                        className="w-full btn btn-danger"
-                      >
-                        <XCircle className="w-4 h-4" />
-                        Decline
-                      </button>
-                      <button
                         onClick={() => selectAction('return')}
                         className="w-full btn btn-secondary"
                       >

@@ -11,7 +11,6 @@ import {
   ChevronLeft,
   ChevronRight,
   CheckCircle,
-  XCircle,
   RotateCcw,
   Trash2,
   Building2,
@@ -53,7 +52,7 @@ export default function Documents() {
   // Selection & Bulk Action
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [showBulkModal, setShowBulkModal] = useState(false)
-  const [bulkAction, setBulkAction] = useState<'approved' | 'rejected' | 'returned'>('approved')
+  const [bulkAction, setBulkAction] = useState<'approved' | 'returned'>('approved')
   const [bulkRemarks, setBulkRemarks] = useState('')
 
   const hasActiveFilters = Boolean(search || officeFilter || personnelFilter || status || priority || docType || mineOnly || forMeOnly)
@@ -520,15 +519,6 @@ export default function Documents() {
 
                             <button
                               type="button"
-                              title="Decline Document"
-                              onClick={() => { setSelected(new Set([doc.id])); setBulkAction('rejected'); setShowBulkModal(true) }}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-xs"
-                            >
-                              <XCircle className="w-3.5 h-3.5" /> Decline
-                            </button>
-
-                            <button
-                              type="button"
                               title="Return Document"
                               onClick={() => { setSelected(new Set([doc.id])); setBulkAction('returned'); setShowBulkModal(true) }}
                               className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs"
@@ -620,7 +610,7 @@ export default function Documents() {
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-white capitalize">
-                      {bulkAction === 'rejected' ? 'Decline' : bulkAction === 'approved' ? 'Approve' : 'Return'} Document
+                      {bulkAction === 'approved' ? 'Approve' : 'Return'} Document
                     </h3>
                     <p className="text-xs text-slate-300">Provide official action remarks for audit logging</p>
                   </div>
