@@ -41,20 +41,29 @@ echo "=== Step 5: Set up custom network for DNS resolution ==="
 NETWORK_NAME="dts-network"
 docker network create "$NETWORK_NAME" 2>/dev/null || true
 
-# Find and connect backend container to custom network
+# Find and connect backend container to custom network.
+# NOTE: the docker name filter is a SUBSTRING match, so "name=backend" can
+# return several containers (compose "dtms-revamp-backend-1" + legacy ones),
+# which breaks the network connect. Resolve exactly ONE running backend:
+#   1) exact container name (backend / dts-backend / dtms-backend)
+#   2) compose-managed backend service (docker-compose.synology.yml)
+#   3) any running container with "backend" in its name (first match)
 echo "Finding backend container..."
 BACKEND_CONTAINER=""
 for name in "backend" "dts-backend" "dtms-backend"; do
-  FOUND=$(docker ps -q --filter "name=$name" 2>/dev/null || true)
-  if [ -n "$FOUND" ]; then
-    BACKEND_CONTAINER="$FOUND"
-    break
-  fi
+  BACKEND_CONTAINER=$(docker ps -q --filter "name=^${name}$" 2>/dev/null | head -n1)
+  [ -n "$BACKEND_CONTAINER" ] && break
 done
+if [ -z "$BACKEND_CONTAINER" ]; then
+  BACKEND_CONTAINER=$(docker ps -q --filter "label=com.docker.compose.service=backend" 2>/dev/null | head -n1)
+fi
+if [ -z "$BACKEND_CONTAINER" ]; then
+  BACKEND_CONTAINER=$(docker ps -q --filter "name=backend" 2>/dev/null | head -n1)
+fi
 
 if [ -n "$BACKEND_CONTAINER" ]; then
   BACKEND_NAME=$(docker inspect --format '{{.Name}}' "$BACKEND_CONTAINER" | tr -d '/')
-  echo "  Backend found: $BACKEND_NAME, connecting to $NETWORK_NAME with alias 'backend'..."
+  echo "  Backend found: $BACKEND_NAME (id ${BACKEND_CONTAINER:0:12}), connecting to $NETWORK_NAME with alias 'backend'..."
   docker network disconnect "$NETWORK_NAME" "$BACKEND_CONTAINER" 2>/dev/null || true
   docker network connect --alias backend "$NETWORK_NAME" "$BACKEND_CONTAINER"
 else

@@ -17,14 +17,24 @@ cd "$PROJECT_PATH"
 DOCKER_BASE_PATH="${DOCKER_BASE_PATH:-/volume1/docker/dts}"
 NETWORK_NAME="dts-network"
 
-# Find the running backend container
+# Find the running backend container.
+# NOTE: the docker name filter is a SUBSTRING match ("name=backend" can match
+# compose "dtms-revamp-backend-1" plus legacy containers), which yields a
+# multi-line ID and breaks later commands. Resolve exactly ONE:
+#   1) exact container name
+#   2) compose-managed backend service
+#   3) any running container with "backend" in its name (first match)
 OLD_ID=""
 for name in "dts-project-backend" "dts-backend" "backend" "dtms-backend"; do
-  OLD_ID=$(docker ps -q --filter "name=$name" 2>/dev/null || true)
-  if [ -n "$OLD_ID" ]; then
-    break
-  fi
+  OLD_ID=$(docker ps -q --filter "name=^${name}$" 2>/dev/null | head -n1)
+  [ -n "$OLD_ID" ] && break
 done
+if [ -z "$OLD_ID" ]; then
+  OLD_ID=$(docker ps -q --filter "label=com.docker.compose.service=backend" 2>/dev/null | head -n1)
+fi
+if [ -z "$OLD_ID" ]; then
+  OLD_ID=$(docker ps -q --filter "name=backend" 2>/dev/null | head -n1)
+fi
 
 if [ -z "$OLD_ID" ]; then
   echo "ERROR: No running backend container found. Start it first."
