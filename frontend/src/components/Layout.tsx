@@ -27,6 +27,7 @@ import { useState } from 'react'
 import NotificationBell from '@/components/NotificationBell'
 import ConfirmModal from '@/components/ConfirmModal'
 import HelpWidget from '@/components/HelpWidget'
+import { useBranding } from '@/hooks/useBranding'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -47,6 +48,7 @@ export default function Layout() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   const [logoFailed, setLogoFailed] = useState(false)
+  const branding = useBranding()
 
   const handleLogout = () => {
     setShowLogoutConfirm(true)
@@ -92,7 +94,7 @@ export default function Layout() {
       '/settings': { title: 'Settings', description: 'Account and system preferences' },
       '/help': { title: 'Help Center', description: 'Guides, FAQ, and support' },
     }
-    return meta[pathname] || { title: 'DTMS', description: 'Document Tracking & Management System' }
+    return meta[pathname] || { title: branding.system_title, description: branding.system_description }
   }
 
   const pageMeta = getPageMeta(location.pathname)
@@ -104,7 +106,7 @@ export default function Layout() {
         <div className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-blue-600 dark:bg-blue-600 overflow-hidden flex-shrink-0 text-white shadow-md shadow-blue-500/20">
           {!logoFailed ? (
             <img
-              src="/logo.png?v=2"
+              src={branding.sidebar_logo || '/logo.png?v=2'}
               alt="DTMS logo"
               className="w-7 h-7 object-contain relative z-10"
               draggable={false}
@@ -115,8 +117,8 @@ export default function Layout() {
           )}
         </div>
         <div>
-          <div className="text-slate-900 dark:text-white font-extrabold text-base leading-tight tracking-tight">DTMS</div>
-          <div className="text-slate-500 dark:text-slate-400 text-[11px] font-medium">Document Tracking &amp; Management</div>
+          <div className="text-slate-900 dark:text-white font-extrabold text-base leading-tight tracking-tight">{branding.system_title}</div>
+          <div className="text-slate-500 dark:text-slate-400 text-[11px] font-medium">{branding.system_description}</div>
         </div>
       </div>
 

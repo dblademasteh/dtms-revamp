@@ -24,6 +24,9 @@ import {
   ChevronDown,
   KeyRound,
   Building2,
+  Image as ImageIcon,
+  Trash2,
+  Globe,
 } from 'lucide-react'
 
 function formatBytes(bytes: number): string {
@@ -185,6 +188,10 @@ export default function Settings() {
   const [scale, setScale] = useState(localStorage.getItem('dtms-scale') || 'md')
 
    const [retentionMonths, setRetentionMonths] = useState<number>(12)
+   const [systemTitle, setSystemTitle] = useState('DTMS')
+   const [systemDescription, setSystemDescription] = useState('Document Tracking & Management')
+   const [loginLogo, setLoginLogo] = useState<string | null>(null)
+   const [sidebarLogo, setSidebarLogo] = useState<string | null>(null)
 
    const settingsQuery = useQuery({
      queryKey: ['admin-settings'],
@@ -205,6 +212,10 @@ export default function Settings() {
    useEffect(() => {
      if (settingsQuery.data) {
        setRetentionMonths(settingsQuery.data.retention_months ?? 12)
+       setSystemTitle(settingsQuery.data.system_title ?? 'DTMS')
+       setSystemDescription(settingsQuery.data.system_description ?? 'Document Tracking & Management')
+       setLoginLogo(settingsQuery.data.login_logo ?? null)
+       setSidebarLogo(settingsQuery.data.sidebar_logo ?? null)
      }
    }, [settingsQuery.data])
 
@@ -223,10 +234,54 @@ export default function Settings() {
      mutationFn: (data: any) => api.put('/admin/settings', data),
      onSuccess: (res) => {
        setRetentionMonths(res.data.settings.retention_months)
+       setSystemTitle(res.data.settings.system_title)
+       setSystemDescription(res.data.settings.system_description)
+       setLoginLogo(res.data.settings.login_logo)
+       setSidebarLogo(res.data.settings.sidebar_logo)
        toast.success('Settings updated')
      },
      onError: (error: any) => {
        toast.error(error.response?.data?.message || 'Save failed')
+     },
+   })
+
+   const saveBranding = () => {
+     settingsMutation.mutate({
+       system_title: systemTitle,
+       system_description: systemDescription,
+     })
+   }
+
+   const logoMutation = useMutation({
+     mutationFn: ({ type, file }: { type: 'login' | 'sidebar'; file: File }) => {
+       const fd = new FormData()
+       fd.append('type', type)
+       fd.append('logo', file)
+       return api.post('/admin/branding/logo', fd, {
+         headers: { 'Content-Type': 'multipart/form-data' },
+       })
+     },
+     onSuccess: (res, vars) => {
+       const url = res.data?.logo_url ?? null
+       if (vars.type === 'login') setLoginLogo(url)
+       else setSidebarLogo(url)
+       toast.success(res.data?.message || 'Logo updated')
+     },
+     onError: (error: any) => {
+       toast.error(error.response?.data?.message || 'Logo upload failed')
+     },
+   })
+
+   const deleteLogoMutation = useMutation({
+     mutationFn: (type: 'login' | 'sidebar') =>
+       api.delete('/admin/branding/logo', { data: { type } }),
+     onSuccess: (res, type) => {
+       if (type === 'login') setLoginLogo(null)
+       else setSidebarLogo(null)
+       toast.success(res.data?.message || 'Logo removed')
+     },
+     onError: (error: any) => {
+       toast.error(error.response?.data?.message || 'Remove failed')
      },
    })
 
@@ -1061,8 +1116,149 @@ export default function Settings() {
                    {settingsMutation.isPending ? 'Saving...' : 'Save Retention'}
                  </button>
                </div>
-             </div>
-           </div>
+              </div>
+            </div>
+
+          <div className="card">
+            <div className="card-header flex items-center gap-2">
+              <Globe className="w-4 h-4 text-slate-500" />
+              <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
+                Branding
+              </h2>
+            </div>
+            <div className="card-body space-y-6">
+              <p className="text-xs text-slate-500">
+                Customize the system title, description, and logos shown on the login page and the sidebar.
+              </p>
+
+              {/* Title & Description */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                    System title
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={100}
+                    className="input"
+                    value={systemTitle}
+                    onChange={(e) => setSystemTitle(e.target.value)}
+                    placeholder="e.g. DTMS"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                    System description
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={255}
+                    className="input"
+                    value={systemDescription}
+                    onChange={(e) => setSystemDescription(e.target.value)}
+                    placeholder="e.g. Document Tracking & Management"
+                  />
+                </div>
+              </div>
+              <button
+                onClick={saveBranding}
+                disabled={settingsMutation.isPending}
+                className="btn btn-primary btn-sm"
+              >
+                {settingsMutation.isPending ? 'Saving...' : 'Save Title & Description'}
+              </button>
+
+              {/* Login Logo */}
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
+                <p className="text-[13px] font-semibold text-slate-900 dark:text-slate-100 mb-1">Login Page Logo</p>
+                <p className="text-xs text-slate-500 mb-3">Shown above the sign-in form. PNG with transparency recommended.</p>
+                <div className="flex items-center gap-4">
+                  <div className="w-20 h-20 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                    {loginLogo ? (
+                      <img src={loginLogo} alt="Login logo" className="w-full h-full object-contain p-1" />
+                    ) : (
+                      <ImageIcon className="w-6 h-6 text-slate-400" />
+                    )}
+                  </div>
+                  <div className="flex flex-col items-start gap-2">
+                    <label className="btn btn-secondary btn-sm cursor-pointer">
+                      {logoMutation.isPending && logoMutation.variables?.type === 'login' ? 'Uploading...' : 'Upload Logo'}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          if (file.size > 5 * 1024 * 1024) {
+                            toast.error('Image must be under 5 MB')
+                            return
+                          }
+                          logoMutation.mutate({ type: 'login', file })
+                        }}
+                      />
+                    </label>
+                    {loginLogo && (
+                      <button
+                        type="button"
+                        onClick={() => deleteLogoMutation.mutate('login')}
+                        disabled={deleteLogoMutation.isPending}
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-500 hover:text-red-600"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Remove logo
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Sidebar Logo */}
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
+                <p className="text-[13px] font-semibold text-slate-900 dark:text-slate-100 mb-1">Sidebar Logo</p>
+                <p className="text-xs text-slate-500 mb-3">Shown in the sidebar and public page headers.</p>
+                <div className="flex items-center gap-4">
+                  <div className="w-20 h-20 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                    {sidebarLogo ? (
+                      <img src={sidebarLogo} alt="Sidebar logo" className="w-full h-full object-contain p-1" />
+                    ) : (
+                      <ImageIcon className="w-6 h-6 text-slate-400" />
+                    )}
+                  </div>
+                  <div className="flex flex-col items-start gap-2">
+                    <label className="btn btn-secondary btn-sm cursor-pointer">
+                      {logoMutation.isPending && logoMutation.variables?.type === 'sidebar' ? 'Uploading...' : 'Upload Logo'}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          if (file.size > 5 * 1024 * 1024) {
+                            toast.error('Image must be under 5 MB')
+                            return
+                          }
+                          logoMutation.mutate({ type: 'sidebar', file })
+                        }}
+                      />
+                    </label>
+                    {sidebarLogo && (
+                      <button
+                        type="button"
+                        onClick={() => deleteLogoMutation.mutate('sidebar')}
+                        disabled={deleteLogoMutation.isPending}
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-500 hover:text-red-600"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Remove logo
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div className="card">
             <div className="card-header flex items-center gap-2">

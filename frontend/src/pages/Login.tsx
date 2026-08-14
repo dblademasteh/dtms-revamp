@@ -28,6 +28,7 @@ import ModalPortal from '@/components/ModalPortal'
 import MultiSelect, { type Option } from '@/components/MultiSelect'
 import SearchableSelect from '@/components/SearchableSelect'
 import { useDropdownGroup } from '@/hooks/useDropdownOptions'
+import { useBranding } from '@/hooks/useBranding'
 import { BFP_OFFICES_FALLBACK } from '@/constants/documentOptions'
 
 interface LoginForm {
@@ -58,6 +59,7 @@ export default function Login() {
 
   const [searchParams] = useSearchParams()
   const [fromGateway, setFromGateway] = useState(false)
+  const branding = useBranding()
 
   useEffect(() => {
     const urlTab = searchParams.get('tab')
@@ -618,7 +620,7 @@ export default function Login() {
           <div className="flex flex-col items-center text-center space-y-4">
             <div className="w-20 h-20 rounded-3xl bg-white dark:bg-slate-900 shadow-xs border border-slate-200/80 dark:border-slate-800 flex items-center justify-center overflow-hidden">
               <img
-                src="/logo.png?v=4"
+                src={branding.login_logo || '/logo.png?v=4'}
                 alt="Logo"
                 className="w-full h-full object-contain p-1.5"
               />

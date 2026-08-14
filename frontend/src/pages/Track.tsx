@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import QrScannerModal from '@/components/QrScannerModal'
+import { useBranding } from '@/hooks/useBranding'
 
 export default function Track() {
   const [trackingNumber, setTrackingNumber] = useState('')
@@ -31,6 +32,7 @@ export default function Track() {
   const [copied, setCopied] = useState(false)
   const [searchParams] = useSearchParams()
   const [logoFailed, setLogoFailed] = useState(false)
+  const branding = useBranding()
 
   useEffect(() => {
     const urlTrack = searchParams.get('track')?.trim()
@@ -124,7 +126,7 @@ export default function Track() {
             <div className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-blue-600 dark:bg-blue-600 overflow-hidden flex-shrink-0 text-white shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">
               {!logoFailed ? (
                 <img
-                  src="/logo.png?v=2"
+                  src={branding.sidebar_logo || '/logo.png?v=2'}
                   alt="DTMS logo"
                   className="w-7 h-7 object-contain relative z-10"
                   draggable={false}
@@ -135,8 +137,8 @@ export default function Track() {
               )}
             </div>
             <div>
-              <div className="text-base font-extrabold text-slate-900 dark:text-white leading-none">DTMS</div>
-              <div className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">Document Tracking System</div>
+              <div className="text-base font-extrabold text-slate-900 dark:text-white leading-none">{branding.system_title}</div>
+              <div className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">{branding.system_description}</div>
             </div>
           </Link>
 

@@ -33,6 +33,9 @@ Route::get('/ranks', [DropdownOptionController::class, 'ranks']);
 // Public dropdown options endpoint
 Route::get('/dropdown-options', [DropdownOptionController::class, 'index']);
 
+// Public branding (system title/description/logos) for login & public pages
+Route::get('/branding', [App\Http\Controllers\Api\BrandingController::class, 'publicIndex']);
+
 // Protected routes
 Route::middleware(['auth:sanctum', 'force-password-change'])->group(function () {
     // Auth routes
@@ -301,9 +304,14 @@ Route::middleware(['auth:sanctum', 'force-password-change'])->group(function () 
     // System settings (admin only)
     Route::middleware('admin')->prefix('admin')->group(function () {
         Route::get('/settings', function () {
+            $branding = new \App\Http\Controllers\Api\BrandingController;
             return response()->json([
                 'settings' => [
                     'retention_months' => (int) \App\Models\SystemSetting::get('retention_months', 12),
+                    'system_title' => \App\Models\SystemSetting::get('system_title', \App\Http\Controllers\Api\BrandingController::defaults()['system_title']),
+                    'system_description' => \App\Models\SystemSetting::get('system_description', \App\Http\Controllers\Api\BrandingController::defaults()['system_description']),
+                    'login_logo' => $branding->publicIndex()->getData()->branding['login_logo'],
+                    'sidebar_logo' => $branding->publicIndex()->getData()->branding['sidebar_logo'],
                 ],
             ]);
         });
@@ -311,19 +319,37 @@ Route::middleware(['auth:sanctum', 'force-password-change'])->group(function () 
         Route::put('/settings', function (\Illuminate\Http\Request $request) {
             $request->validate([
                 'retention_months' => 'sometimes|integer|min:1|max:240',
+                'system_title' => 'sometimes|string|max:100',
+                'system_description' => 'sometimes|string|max:255',
             ]);
 
             if ($request->has('retention_months')) {
                 \App\Models\SystemSetting::set('retention_months', $request->retention_months);
             }
+            if ($request->has('system_title')) {
+                \App\Models\SystemSetting::set('system_title', $request->system_title);
+            }
+            if ($request->has('system_description')) {
+                \App\Models\SystemSetting::set('system_description', $request->system_description);
+            }
 
+            $branding = new \App\Http\Controllers\Api\BrandingController;
             return response()->json([
                 'message' => 'Settings updated',
                 'settings' => [
                     'retention_months' => (int) \App\Models\SystemSetting::get('retention_months', 12),
+                    'system_title' => \App\Models\SystemSetting::get('system_title', \App\Http\Controllers\Api\BrandingController::defaults()['system_title']),
+                    'system_description' => \App\Models\SystemSetting::get('system_description', \App\Http\Controllers\Api\BrandingController::defaults()['system_description']),
+                    'login_logo' => $branding->publicIndex()->getData()->branding['login_logo'],
+                    'sidebar_logo' => $branding->publicIndex()->getData()->branding['sidebar_logo'],
                 ],
             ]);
         });
+
+        // Branding logo uploads (admin only)
+        Route::post('/branding/logo', [\App\Http\Controllers\Api\BrandingController::class, 'uploadLogo']);
+        Route::delete('/branding/logo', [\App\Http\Controllers\Api\BrandingController::class, 'deleteLogo']);
+
 
         // Dropdown options management (admin only) — includes the 'ranks' group
         Route::post('/dropdown-options', [DropdownOptionController::class, 'store']);
