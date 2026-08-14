@@ -38,8 +38,19 @@ docker rm cloudflared 2>/dev/null || true
 docker rm dts-frontend 2>/dev/null || true
 
 echo "=== Step 5: Start frontend container ==="
+# Create custom network for backend->frontend DNS resolution
+NETWORK_NAME="dts-network"
+docker network create "$NETWORK_NAME" 2>/dev/null || true
+
+# Connect backend container to the custom network (if running)
+BACKEND_CONTAINER=$(docker ps -q --filter "name=backend" --filter "name=dts-backend" 2>/dev/null || true)
+if [ -n "$BACKEND_CONTAINER" ]; then
+  docker network connect "$NETWORK_NAME" "$BACKEND_CONTAINER" 2>/dev/null || true
+fi
+
 docker run -d \
   --name dts-frontend \
+  --network "$NETWORK_NAME" \
   --restart unless-stopped \
   dts-frontend:latest
 
