@@ -6,10 +6,9 @@ if [ ! -f .env ]; then
 fi
 
 if ! grep -q "^APP_KEY=base64:" .env 2>/dev/null; then
-    if ! grep -q "^APP_KEY=" .env 2>/dev/null; then
-        echo "APP_KEY=" >> .env
+    if [ -z "$(grep '^APP_KEY=' .env 2>/dev/null)" ]; then
+        php artisan key:generate --force
     fi
-    php artisan key:generate --force || true
 fi
 
 php artisan config:clear || true

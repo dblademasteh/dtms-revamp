@@ -58,8 +58,9 @@ services:
       meilisearch:
         condition: service_started
     restart: unless-stopped
+    env_file:
+      - ${DOCKER_BASE_PATH:-/volume1/docker/dts}/backend/.env
     volumes:
-      - ${DOCKER_BASE_PATH:-/volume1/docker/dts}/backend/.env:/var/www/html/.env
       - ${DOCKER_BASE_PATH:-/volume1/docker/dts}/backend/storage:/var/www/html/storage
       - ${DOCKER_BASE_PATH:-/volume1/docker/dts}/backend/bootstrap/cache:/var/www/html/bootstrap/cache
 
