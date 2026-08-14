@@ -43,9 +43,19 @@ NETWORK_NAME="dts-network"
 docker network create "$NETWORK_NAME" 2>/dev/null || true
 
 # Connect backend container to the custom network (if running)
-BACKEND_CONTAINER=$(docker ps -q --filter "name=backend" --filter "name=dts-backend" 2>/dev/null || true)
+BACKEND_CONTAINER=$(docker ps -q --filter "name=backend" 2>/dev/null || true)
+if [ -z "$BACKEND_CONTAINER" ]; then
+  BACKEND_CONTAINER=$(docker ps -q --filter "name=dts-backend" 2>/dev/null || true)
+fi
+if [ -z "$BACKEND_CONTAINER" ]; then
+  BACKEND_CONTAINER=$(docker ps -q --filter "name=dtms-backend" 2>/dev/null || true)
+fi
 if [ -n "$BACKEND_CONTAINER" ]; then
+  BACKEND_NAME=$(docker inspect --format '{{.Name}}' "$BACKEND_CONTAINER" | tr -d '/')
+  echo "Connecting backend ($BACKEND_NAME) to $NETWORK_NAME..."
   docker network connect "$NETWORK_NAME" "$BACKEND_CONTAINER" 2>/dev/null || true
+else
+  echo "WARNING: Backend container not found. Frontend will run without backend connectivity."
 fi
 
 docker run -d \
