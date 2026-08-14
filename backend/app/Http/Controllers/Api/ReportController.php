@@ -338,23 +338,7 @@ class ReportController extends Controller
 
         // Scoped stats for non-admins (matches what they can see in the document list)
         if (!$user->isAdmin()) {
-            $userOfficeId = $user->office_id;
-            $userId = $user->id;
-            $scope = function ($q) use ($userOfficeId, $userId) {
-                $q->where(function ($w) use ($userOfficeId, $userId) {
-                    $w->where('originator_id', $userId)
-                      ->orWhere('current_office_id', $userOfficeId)
-                      ->orWhere(function ($q2) use ($userId) {
-                          $q2->where('recipient_type', 'personnel')
-                             ->where('recipient_id', $userId);
-                      })
-                      ->orWhere(function ($q2) use ($userOfficeId) {
-                          $q2->where('recipient_type', 'office')
-                             ->where('recipient_id', $userOfficeId);
-                      })
-                      ->orWhere('is_public', true);
-                });
-            };
+            $scope = fn ($q) => $q->visibleTo($user);
 
             $stats['total_documents'] = Document::where($scope)->count();
             $stats['pending_documents'] = Document::where($scope)->whereIn('status', ['received', 'in_review', 'returned'])->count();
@@ -392,23 +376,7 @@ class ReportController extends Controller
 
         // Recent documents (scoped to the user's permission, same as the document list)
         $recentDocuments = Document::with(['originator', 'currentOffice'])
-            ->when(!$user->isAdmin(), function ($q) use ($user) {
-                $userOfficeId = $user->office_id;
-                $userId = $user->id;
-                $q->where(function ($w) use ($userOfficeId, $userId) {
-                    $w->where('originator_id', $userId)
-                      ->orWhere('current_office_id', $userOfficeId)
-                      ->orWhere(function ($q2) use ($userId) {
-                          $q2->where('recipient_type', 'personnel')
-                             ->where('recipient_id', $userId);
-                      })
-                      ->orWhere(function ($q2) use ($userOfficeId) {
-                          $q2->where('recipient_type', 'office')
-                             ->where('recipient_id', $userOfficeId);
-                      })
-                      ->orWhere('is_public', true);
-                });
-            })
+            ->when(!$user->isAdmin(), fn ($q) => $q->visibleTo($user))
             ->orderBy('created_at', 'desc')
             ->limit(10)
             ->get();

@@ -142,7 +142,7 @@ return [
         'index-settings' => [
             'documents' => [
                 'searchableAttributes' => ['subject', 'tracking_number', 'document_no', 'description'],
-                'filterableAttributes' => ['status', 'document_type', 'priority', 'classification', 'office_id', 'originator_id', 'recipient_type', 'recipient_id', 'is_public', 'created_at'],
+                'filterableAttributes' => ['status', 'document_type', 'priority', 'classification', 'office_id', 'originator_id', 'recipient_type', 'recipient_id', 'is_public', 'cc_list', 'bcc_list', 'created_at'],
                 'sortableAttributes' => ['created_at'],
                 'pagination' => ['maxTotalHits' => 10000],
             ],

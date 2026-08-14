@@ -172,6 +172,94 @@ class Document extends Model
         });
     }
 
+    /**
+     * Scope documents to what a user can see: those they originated, direct
+     * recipients (personnel or office), CC/BCC recipients, and public
+     * announcements. Restricted/confidential documents are never exposed via
+     * the public (is_public) clause.
+     */
+    public function scopeVisibleTo($query, \App\Models\User $user)
+    {
+        $userId = $user->id;
+        $officeId = $user->office_id;
+
+        $query->where(function ($q) use ($userId, $officeId) {
+            $q->where('originator_id', $userId)
+              ->orWhere(function ($q2) use ($userId) {
+                  $q2->where('recipient_type', 'personnel')
+                     ->where('recipient_id', $userId);
+              });
+
+            if ($officeId) {
+                $q->orWhere(function ($q2) use ($officeId) {
+                    $q2->where('recipient_type', 'office')
+                       ->where('recipient_id', $officeId);
+                });
+            }
+
+            foreach (['cc_list', 'bcc_list'] as $column) {
+                $q->orWhereJsonContains($column, [['type' => 'personnel', 'id' => $userId]]);
+                if ($officeId) {
+                    $q->orWhereJsonContains($column, [['type' => 'office', 'id' => $officeId]]);
+                }
+            }
+
+            $q->orWhere(function ($q2) {
+                $q2->where('is_public', true)
+                   ->where(function ($q3) {
+                       $q3->whereNull('classification')
+                          ->orWhereNotIn('classification', ['restricted', 'confidential']);
+                   });
+            });
+        });
+
+        return $query;
+    }
+
+    /**
+     * Single-document equivalent of scopeVisibleTo for detail/permission checks.
+     */
+    public function isVisibleTo(\App\Models\User $user): bool
+    {
+        $userId = $user->id;
+        $officeId = $user->office_id;
+
+        if ($this->originator_id === $userId) {
+            return true;
+        }
+
+        if ($this->recipient_type === 'personnel' && $this->recipient_id === $userId) {
+            return true;
+        }
+
+        if ($officeId && $this->recipient_type === 'office' && $this->recipient_id === $officeId) {
+            return true;
+        }
+
+        $inList = function (array $list) use ($userId, $officeId) {
+            foreach ($list ?? [] as $entry) {
+                if (($entry['type'] ?? '') === 'personnel' && ($entry['id'] ?? null) === $userId) {
+                    return true;
+                }
+                if ($officeId && ($entry['type'] ?? '') === 'office' && ($entry['id'] ?? null) === $officeId) {
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        if ($inList($this->cc_list ?? [])) {
+            return true;
+        }
+
+        if ($inList($this->bcc_list ?? [])) {
+            return true;
+        }
+
+        return (bool) $this->is_public
+            && !in_array($this->classification, ['restricted', 'confidential'], true);
+    }
+
     public function toSearchableArray(): array
     {
         return [
@@ -189,6 +277,16 @@ class Document extends Model
             'recipient_type' => $this->recipient_type,
             'recipient_id' => $this->recipient_id,
             'is_public' => (bool) $this->is_public,
+            'cc_list' => collect($this->cc_list ?? [])
+                ->map(fn ($e) => trim(($e['type'] ?? '') . ':' . ($e['id'] ?? ''), ':'))
+                ->filter()
+                ->values()
+                ->all(),
+            'bcc_list' => collect($this->bcc_list ?? [])
+                ->map(fn ($e) => trim(($e['type'] ?? '') . ':' . ($e['id'] ?? ''), ':'))
+                ->filter()
+                ->values()
+                ->all(),
             'created_at' => $this->created_at ? $this->created_at->timestamp : null,
         ];
     }

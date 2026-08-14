@@ -41,21 +41,7 @@ class DocumentController extends Controller
         $hasGlobalPermission = !empty($user->can_view_all_documents) || in_array($roleValue, ['superadmin', 'fcos']);
 
         if (!$hasGlobalPermission) {
-            $query->where(function ($q) use ($user) {
-                $userOfficeId = $user->office_id;
-                $userId = $user->id;
-                $q->where('originator_id', $userId)
-                  ->orWhere('current_office_id', $userOfficeId)
-                  ->orWhere(function ($q2) use ($userId) {
-                      $q2->where('recipient_type', 'personnel')
-                         ->where('recipient_id', $userId);
-                  })
-                  ->orWhere(function ($q2) use ($userOfficeId) {
-                      $q2->where('recipient_type', 'office')
-                         ->where('recipient_id', $userOfficeId);
-                  })
-                  ->orWhere('is_public', true);
-            });
+            $query->visibleTo($user);
         }
 
         if ($request->has('status')) {
@@ -138,12 +124,19 @@ class DocumentController extends Controller
             $userId = $user->id;
             $officeId = $user->office_id;
             $parts = ["originator_id = {$userId}"];
+            $parts[] = '(recipient_type = "personnel" AND recipient_id = ' . $userId . ')';
             if ($officeId) {
-                $parts[] = "office_id = {$officeId}";
                 $parts[] = '(recipient_type = "office" AND recipient_id = ' . $officeId . ')';
             }
-            $parts[] = '(recipient_type = "personnel" AND recipient_id = ' . $userId . ')';
-            $parts[] = 'is_public = true';
+            $parts[] = 'cc_list = "personnel:' . $userId . '"';
+            if ($officeId) {
+                $parts[] = 'cc_list = "office:' . $officeId . '"';
+            }
+            $parts[] = 'bcc_list = "personnel:' . $userId . '"';
+            if ($officeId) {
+                $parts[] = 'bcc_list = "office:' . $officeId . '"';
+            }
+            $parts[] = '(is_public = true AND (classification IS NULL OR classification NOT IN ["Restricted", "Confidential"]))';
             $clauses[] = '(' . implode(' OR ', $parts) . ')';
         }
 
@@ -401,11 +394,7 @@ class DocumentController extends Controller
         $canView = $user->isAdmin()
             || !empty($user->can_view_all_documents)
             || in_array($roleValue, ['superadmin', 'fcos'], true)
-            || $document->originator_id === $user->id
-            || $document->current_office_id === $user->office_id
-            || ($document->recipient_id === $user->id && $document->recipient_type === 'personnel')
-            || ($document->recipient_id === $user->office_id && $document->recipient_type === 'office')
-            || (bool) $document->is_public;
+            || $document->isVisibleTo($user);
 
         if (!$canView) {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -471,11 +460,7 @@ class DocumentController extends Controller
         $canView = $user->isAdmin()
             || !empty($user->can_view_all_documents)
             || in_array($roleValue, ['superadmin', 'fcos'], true)
-            || $document->originator_id === $user->id
-            || $document->current_office_id === $user->office_id
-            || ($document->recipient_id === $user->id && $document->recipient_type === 'personnel')
-            || ($document->recipient_id === $user->office_id && $document->recipient_type === 'office')
-            || (bool) $document->is_public;
+            || $document->isVisibleTo($user);
 
         if (!$canView) {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -1022,11 +1007,7 @@ class DocumentController extends Controller
         $canView = $user->isAdmin()
             || !empty($user->can_view_all_documents)
             || in_array($roleValue, ['superadmin', 'fcos'], true)
-            || $document->originator_id === $user->id
-            || $document->current_office_id === $user->office_id
-            || ($document->recipient_id === $user->id && $document->recipient_type === 'personnel')
-            || ($document->recipient_id === $user->office_id && $document->recipient_type === 'office')
-            || (bool) $document->is_public;
+            || $document->isVisibleTo($user);
 
         if (!$canView) {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -1063,6 +1044,10 @@ class DocumentController extends Controller
         $document = Document::where('tracking_number', $trackingNumber)
             ->with(['currentOffice', 'routingHistory.actor', 'routingHistory.fromOffice', 'routingHistory.toOffice'])
             ->firstOrFail();
+
+        if (in_array($document->classification, ['restricted', 'confidential'], true)) {
+            return response()->json(['message' => 'Not Found'], 404);
+        }
 
         return response()->json([
             'tracking_number' => $document->tracking_number,
@@ -1417,6 +1402,10 @@ class DocumentController extends Controller
 
         if (!$canAct) {
             return response()->json(['message' => 'You are not authorized to disseminate this document'], 403);
+        }
+
+        if (in_array($document->classification, ['restricted', 'confidential'], true)) {
+            return response()->json(['message' => 'Restricted/confidential documents cannot be disseminated'], 403);
         }
 
         $request->validate([

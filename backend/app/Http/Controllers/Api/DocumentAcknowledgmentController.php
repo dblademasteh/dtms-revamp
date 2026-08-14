@@ -20,8 +20,7 @@ class DocumentAcknowledgmentController extends Controller
         $canView = $user->isAdmin()
             || !empty($user->can_view_all_documents)
             || in_array(is_object($user->role) ? $user->role->value : $user->role, ['superadmin', 'fcos'], true)
-            || $document->originator_id === $user->id
-            || $document->current_office_id === $user->office_id;
+            || $document->isVisibleTo($user);
 
         if (!$canView) {
             return response()->json(['message' => 'Forbidden'], 403);
