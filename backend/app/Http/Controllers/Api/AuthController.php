@@ -3,10 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\PasswordReset;
+use App\Mail\VerifyEmail;
+use App\Models\LoginAudit;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -27,17 +31,41 @@ class AuthController extends Controller
             ->orWhereRaw('LOWER(email) = ?', [$identifier])
             ->first();
 
+        // Lockout gate: reject before verifying the password so locked accounts
+        // can't be used to probe credentials.
+        if ($user) {
+            $remaining = $this->lockoutRemainingMinutes($user);
+            if ($remaining > 0) {
+                $this->recordLoginAudit($user->id, $user->email, false, 'account_locked', $request);
+
+                throw ValidationException::withMessages([
+                    'accnt_no' => ["Too many failed attempts. Your account is locked. Try again in {$remaining} minute(s)."],
+                ]);
+            }
+        }
+
         if (!$user || !Hash::check($request->password, $user->password)) {
+            if ($user) {
+                $this->registerFailedAttempt($user, $request, 'invalid_credentials');
+            } else {
+                $this->recordLoginAudit(null, $identifier, false, 'unknown_account', $request);
+            }
+
             throw ValidationException::withMessages([
                 'accnt_no' => ['The provided credentials are incorrect.'],
             ]);
         }
 
         if ($user->status !== 'active') {
+            $this->recordLoginAudit($user->id, $user->email, false, 'account_deactivated', $request);
+
             throw ValidationException::withMessages([
                 'accnt_no' => ['Your account has been deactivated.'],
             ]);
         }
+
+        $this->clearLockout($user);
+        $this->recordLoginAudit($user->id, $user->email, true, null, $request);
 
         // Two-factor authentication gate.
         if ($user->two_factor_enabled) {
@@ -84,10 +112,14 @@ class AuthController extends Controller
         $totp = new \App\Services\TotpService();
 
         if (!$totp->verify($secret, $request->code)) {
+            $this->recordLoginAudit($user->id, $user->email, false, 'invalid_2fa_code', $request);
+
             throw ValidationException::withMessages([
                 'code' => ['Invalid authentication code.'],
             ]);
         }
+
+        $this->recordLoginAudit($user->id, $user->email, true, '2fa', $request);
 
         cache()->forget($request->two_fa_token);
 
@@ -108,17 +140,39 @@ class AuthController extends Controller
 
         $user = User::whereRaw('LOWER(accnt_no) = ?', [strtolower($request->accnt_no)])->first();
 
+        if ($user) {
+            $remaining = $this->lockoutRemainingMinutes($user);
+            if ($remaining > 0) {
+                $this->recordLoginAudit($user->id, $user->email, false, 'account_locked', $request);
+
+                throw ValidationException::withMessages([
+                    'accnt_no' => ["Too many failed attempts. Your account is locked. Try again in {$remaining} minute(s)."],
+                ]);
+            }
+        }
+
         if (!$user || $user->pincode !== $request->pincode) {
+            if ($user) {
+                $this->registerFailedAttempt($user, $request, 'invalid_pincode');
+            } else {
+                $this->recordLoginAudit(null, strtolower($request->accnt_no), false, 'unknown_account', $request);
+            }
+
             throw ValidationException::withMessages([
                 'accnt_no' => ['The provided credentials are incorrect.'],
             ]);
         }
 
         if ($user->status !== 'active') {
+            $this->recordLoginAudit($user->id, $user->email, false, 'account_deactivated', $request);
+
             throw ValidationException::withMessages([
                 'accnt_no' => ['Your account has been deactivated.'],
             ]);
         }
+
+        $this->clearLockout($user);
+        $this->recordLoginAudit($user->id, $user->email, true, 'pincode', $request);
 
         $token = $user->createToken('auth-token-pincode')->plainTextToken;
 
@@ -311,9 +365,14 @@ class AuthController extends Controller
 
         \Log::info("Password reset token for {$user->email}: {$token}");
 
+        try {
+            Mail::to($user->email)->send(new PasswordReset($user, $token));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send password reset email: ' . $e->getMessage());
+        }
+
         return response()->json([
             'message' => 'If this email exists, a reset link has been sent',
-            'dev_token' => $token,
         ]);
     }
 
@@ -348,6 +407,71 @@ class AuthController extends Controller
         \DB::table('password_reset_tokens')->where('email', $request->email)->delete();
 
         return response()->json(['message' => 'Password has been reset successfully']);
+    }
+
+    /**
+     * Send a verification link to the authenticated user's email address.
+     */
+    public function sendEmailVerification(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user->email) {
+            return response()->json(['message' => 'No email address is set on your account.'], 422);
+        }
+
+        if ($user->hasVerifiedEmail()) {
+            return response()->json(['message' => 'Your email is already verified.']);
+        }
+
+        $token = Str::random(64);
+
+        $user->update([
+            'email_verify_token' => $token,
+            'email_verify_token_sent_at' => now(),
+        ]);
+
+        try {
+            Mail::to($user->email)->send(new VerifyEmail($user, $token));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send verification email: ' . $e->getMessage());
+        }
+
+        return response()->json(['message' => 'Verification email sent. Please check your inbox.']);
+    }
+
+    /**
+     * Verify an email address using the token from the emailed link.
+     */
+    public function verifyEmail(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'token' => 'required|string',
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user || !$user->email_verify_token || !hash_equals($user->email_verify_token, $request->token)) {
+            return response()->json(['message' => 'Invalid verification link.'], 422);
+        }
+
+        if ($user->hasVerifiedEmail()) {
+            return response()->json(['message' => 'Your email is already verified.']);
+        }
+
+        $sentAt = $user->email_verify_token_sent_at;
+        if ($sentAt && $sentAt->copy()->addHours(24)->isPast()) {
+            return response()->json(['message' => 'Verification link has expired. Request a new one from Settings.'], 422);
+        }
+
+        $user->update([
+            'email_verified_at' => now(),
+            'email_verify_token' => null,
+            'email_verify_token_sent_at' => null,
+        ]);
+
+        return response()->json(['message' => 'Email verified successfully.']);
     }
 
     public function changePassword(Request $request)
@@ -391,5 +515,66 @@ class AuthController extends Controller
         $user->update(['pincode' => $request->pincode]);
 
         return response()->json(['message' => 'PIN code changed successfully']);
+    }
+
+    private function maxLoginAttempts(): int
+    {
+        return (int) env('LOGIN_MAX_ATTEMPTS', 5);
+    }
+
+    private function loginLockoutMinutes(): int
+    {
+        return (int) env('LOGIN_LOCKOUT_MINUTES', 15);
+    }
+
+    private function recordLoginAudit(?int $userId, ?string $email, bool $success, ?string $reason = null, ?Request $request = null): void
+    {
+        LoginAudit::create([
+            'user_id' => $userId,
+            'email' => $email,
+            'success' => $success,
+            'ip_address' => $request?->ip(),
+            'user_agent' => $request?->userAgent(),
+            'reason' => $reason,
+        ]);
+    }
+
+    private function registerFailedAttempt(User $user, Request $request, string $reason): void
+    {
+        $attempts = (int) $user->failed_login_attempts + 1;
+
+        $update = ['failed_login_attempts' => $attempts];
+
+        if ($attempts >= $this->maxLoginAttempts()) {
+            $update['locked_until'] = now()->addMinutes($this->loginLockoutMinutes());
+            $update['failed_login_attempts'] = 0;
+        }
+
+        $user->update($update);
+
+        $this->recordLoginAudit($user->id, $user->email, false, $reason, $request);
+    }
+
+    private function clearLockout(User $user): void
+    {
+        if ((int) $user->failed_login_attempts > 0 || $user->locked_until) {
+            $user->update(['failed_login_attempts' => 0, 'locked_until' => null]);
+        }
+    }
+
+    private function lockoutRemainingMinutes(User $user): int
+    {
+        if (!$user->locked_until) {
+            return 0;
+        }
+
+        $remaining = now()->diffInMinutes($user->locked_until, false);
+
+        if ($remaining <= 0) {
+            $user->update(['locked_until' => null]);
+            return 0;
+        }
+
+        return (int) ceil($remaining);
     }
 }

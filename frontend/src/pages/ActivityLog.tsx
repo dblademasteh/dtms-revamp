@@ -20,6 +20,11 @@ import {
   Send,
   ListFilter,
   Inbox,
+  LogIn,
+  ShieldCheck,
+  ShieldX,
+  Monitor,
+  Fingerprint,
 } from 'lucide-react'
 
 const ACTION_META: Record<string, { icon: typeof Send; label: string; dot: string; chip: string }> = {
@@ -50,10 +55,32 @@ const actionOptions = [
   { value: 'deleted', label: 'Deleted' },
 ]
 
+const successOptions = [
+  { value: '', label: 'All Results' },
+  { value: '1', label: 'Successful' },
+  { value: '0', label: 'Failed' },
+]
+
+function statusText(reason?: string): string {
+  switch (reason) {
+    case 'locked': return 'Account locked after repeated failures'
+    case 'invalid_credentials': return 'Invalid email or password'
+    case 'invalid_pincode': return 'Invalid PIN code'
+    case 'inactive': return 'Account inactive'
+    default: return reason || 'Login attempt'
+  }
+}
+
 export default function ActivityLog() {
+  const [view, setView] = useState<'activity' | 'logins'>('activity')
+
   const [page, setPage] = useState(1)
   const [action, setAction] = useState('')
   const [search, setSearch] = useState('')
+
+  const [loginPage, setLoginPage] = useState(1)
+  const [loginSearch, setLoginSearch] = useState('')
+  const [loginSuccess, setLoginSuccess] = useState('')
 
   const { data, isLoading } = useQuery({
     queryKey: ['activity', page, action, search],
@@ -67,8 +94,24 @@ export default function ActivityLog() {
     }).then(res => res.data),
   })
 
+  const { data: loginData, isLoading: loginLoading } = useQuery({
+    queryKey: ['login-audits', loginPage, loginSearch, loginSuccess],
+    enabled: view === 'logins',
+    queryFn: () => api.get('/admin/login-audits', {
+      params: {
+        page: loginPage,
+        per_page: 25,
+        success: loginSuccess !== '' ? (loginSuccess === '1') : undefined,
+        search: loginSearch || undefined,
+      },
+    }).then(res => res.data),
+  })
+
   const trails = data?.data || []
   const totalPages = data?.last_page || 1
+
+  const audits = loginData?.data || []
+  const loginTotalPages = loginData?.last_page || 1
 
   const handleExport = () => {
     const params = new URLSearchParams({ type: 'activity' })
@@ -98,150 +141,308 @@ export default function ActivityLog() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2 sm:ml-auto">
-          <button onClick={handleExport} className="btn btn-secondary btn-sm flex-shrink-0">
-            <Download className="w-4 h-4" /> Export CSV
+      {/* Tab switch */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="inline-flex rounded-lg bg-slate-100 dark:bg-slate-800 p-1">
+          <button
+            onClick={() => setView('activity')}
+            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              view === 'activity'
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+            }`}
+          >
+            <History className="w-3.5 h-3.5" />
+            Document Activity
           </button>
-          <button onClick={handleExportPdf} className="btn btn-primary btn-sm flex-shrink-0">
-            <FileText className="w-4 h-4" /> Export PDF
+          <button
+            onClick={() => setView('logins')}
+            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              view === 'logins'
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+            }`}
+          >
+            <LogIn className="w-3.5 h-3.5" />
+            Login Audits
           </button>
         </div>
+
+        {view === 'activity' && (
+          <div className="flex items-center gap-2">
+            <button onClick={handleExport} className="btn btn-secondary btn-sm flex-shrink-0">
+              <Download className="w-4 h-4" /> Export CSV
+            </button>
+            <button onClick={handleExportPdf} className="btn btn-primary btn-sm flex-shrink-0">
+              <FileText className="w-4 h-4" /> Export PDF
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Filters */}
-      <div className="card">
-        <div className="card-body flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search by description, tracking # or subject..."
-              className="input !pl-9"
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-            />
-          </div>
-          <div className="relative w-full sm:w-52">
-            <ListFilter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-            <select
-              className="input !pl-9 cursor-pointer"
-              value={action}
-              onChange={(e) => { setAction(e.target.value); setPage(1) }}
-            >
-              {actionOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Timeline */}
-      <div className="card overflow-hidden">
-        {isLoading ? (
-          <div className="p-8 space-y-5">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="flex items-start gap-4">
-                <div className="h-10 w-10 rounded-full bg-slate-100 dark:bg-slate-800 animate-pulse" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 w-1/3 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
-                  <div className="h-3 w-2/3 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
-                </div>
+      {view === 'activity' ? (
+        <>
+          {/* Filters */}
+          <div className="card">
+            <div className="card-body flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search by description, tracking # or subject..."
+                  className="input !pl-9"
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+                />
               </div>
-            ))}
-          </div>
-        ) : trails.length === 0 ? (
-          <div className="flex flex-col items-center py-16 px-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
-              <History className="h-6 w-6 text-slate-400 dark:text-slate-500" />
+              <div className="relative w-full sm:w-52">
+                <ListFilter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                <select
+                  className="input !pl-9 cursor-pointer"
+                  value={action}
+                  onChange={(e) => { setAction(e.target.value); setPage(1) }}
+                >
+                  {actionOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
             </div>
-            <h3 className="mt-4 text-sm font-semibold text-slate-900 dark:text-slate-100">No activity found</h3>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              {search || action
-                ? 'Try adjusting your search or filters.'
-                : 'Activity will appear here as documents are processed.'}
-            </p>
           </div>
-        ) : (
-          <div className="relative px-6 py-6">
-            {/* Vertical timeline line */}
-            <div className="absolute left-[54px] top-6 bottom-6 w-px bg-slate-100 dark:bg-slate-800" />
-            <div className="space-y-6">
-              {trails.map((trail: any) => {
-                const meta = metaFor(trail.action)
-                const Icon = meta.icon
-                const isSystem = !trail.user?.id
-                return (
-                  <div key={trail.id} className="relative flex items-start gap-4">
-                    {/* Icon node */}
-                    <div className={`relative z-10 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 ${meta.dot} text-white shadow-sm`}>
-                      <Icon className="h-4 w-4" />
-                    </div>
 
-                    <div className="flex-1 min-w-0 pt-0.5">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                          {isSystem ? 'System' : [trail.user.rank, trail.user.full_name || trail.user.name].filter(Boolean).join(' ')}
-                        </p>
-                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${meta.chip}`}>
-                          {meta.label}
-                        </span>
-                        {trail.document && (
-                          <a
-                            href={`/documents/${trail.document?.id}`}
-                            className="text-xs font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
-                          >
-                            #{trail.document?.tracking_number}
-                          </a>
-                        )}
-                      </div>
-                      <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{trail.description}</p>
-                      {(trail.document?.subject || trail.ip_address) && (
-                        <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-xs text-slate-400 dark:text-slate-500">
-                          {trail.document?.subject && (
-                            <span className="max-w-md truncate italic">{trail.document.subject}</span>
-                          )}
-                          {trail.document?.subject && trail.ip_address && <span className="w-0.5 h-0.5 rounded-full bg-slate-300 dark:bg-slate-600" />}
-                          {trail.ip_address && <span className="font-mono">{trail.ip_address}</span>}
-                        </div>
-                      )}
-                      <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
-                        {new Date(trail.created_at).toLocaleString()}
-                      </p>
+          {/* Timeline */}
+          <div className="card overflow-hidden">
+            {isLoading ? (
+              <div className="p-8 space-y-5">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="flex items-start gap-4">
+                    <div className="h-10 w-10 rounded-full bg-slate-100 dark:bg-slate-800 animate-pulse" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 w-1/3 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+                      <div className="h-3 w-2/3 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
                     </div>
                   </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
+                ))}
+              </div>
+            ) : trails.length === 0 ? (
+              <div className="flex flex-col items-center py-16 px-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
+                  <History className="h-6 w-6 text-slate-400 dark:text-slate-500" />
+                </div>
+                <h3 className="mt-4 text-sm font-semibold text-slate-900 dark:text-slate-100">No activity found</h3>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  {search || action
+                    ? 'Try adjusting your search or filters.'
+                    : 'Activity will appear here as documents are processed.'}
+                </p>
+              </div>
+            ) : (
+              <div className="relative px-6 py-6">
+                {/* Vertical timeline line */}
+                <div className="absolute left-[54px] top-6 bottom-6 w-px bg-slate-100 dark:bg-slate-800" />
+                <div className="space-y-6">
+                  {trails.map((trail: any) => {
+                    const meta = metaFor(trail.action)
+                    const Icon = meta.icon
+                    const isSystem = !trail.user?.id
+                    return (
+                      <div key={trail.id} className="relative flex items-start gap-4">
+                        {/* Icon node */}
+                        <div className={`relative z-10 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 ${meta.dot} text-white shadow-sm`}>
+                          <Icon className="h-4 w-4" />
+                        </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between gap-3 border-t border-slate-200 dark:border-slate-800 px-6 py-3">
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Page <span className="font-medium text-slate-700 dark:text-slate-200">{page}</span> of{' '}
-              <span className="font-medium text-slate-700 dark:text-slate-200">{totalPages}</span>
-            </p>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="btn btn-secondary btn-sm disabled:opacity-40"
-              >
-                <ChevronLeft className="w-4 h-4" /> Previous
-              </button>
-              <button
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="btn btn-secondary btn-sm disabled:opacity-40"
-              >
-                Next <ChevronRight className="w-4 h-4" />
-              </button>
+                        <div className="flex-1 min-w-0 pt-0.5">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                              {isSystem ? 'System' : [trail.user.rank, trail.user.full_name || trail.user.name].filter(Boolean).join(' ')}
+                            </p>
+                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${meta.chip}`}>
+                              {meta.label}
+                            </span>
+                            {trail.document && (
+                              <a
+                                href={`/documents/${trail.document?.id}`}
+                                className="text-xs font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+                              >
+                                #{trail.document?.tracking_number}
+                              </a>
+                            )}
+                          </div>
+                          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{trail.description}</p>
+                          {(trail.document?.subject || trail.ip_address) && (
+                            <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-xs text-slate-400 dark:text-slate-500">
+                              {trail.document?.subject && (
+                                <span className="max-w-md truncate italic">{trail.document.subject}</span>
+                              )}
+                              {trail.document?.subject && trail.ip_address && <span className="w-0.5 h-0.5 rounded-full bg-slate-300 dark:bg-slate-600" />}
+                              {trail.ip_address && <span className="font-mono">{trail.ip_address}</span>}
+                            </div>
+                          )}
+                          <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+                            {new Date(trail.created_at).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between gap-3 border-t border-slate-200 dark:border-slate-800 px-6 py-3">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Page <span className="font-medium text-slate-700 dark:text-slate-200">{page}</span> of{' '}
+                  <span className="font-medium text-slate-700 dark:text-slate-200">{totalPages}</span>
+                </p>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="btn btn-secondary btn-sm disabled:opacity-40"
+                  >
+                    <ChevronLeft className="w-4 h-4" /> Previous
+                  </button>
+                  <button
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="btn btn-secondary btn-sm disabled:opacity-40"
+                  >
+                    Next <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Login audit filters */}
+          <div className="card">
+            <div className="card-body flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search by name, email or account #..."
+                  className="input !pl-9"
+                  value={loginSearch}
+                  onChange={(e) => { setLoginSearch(e.target.value); setLoginPage(1) }}
+                />
+              </div>
+              <div className="relative w-full sm:w-52">
+                <ListFilter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                <select
+                  className="input !pl-9 cursor-pointer"
+                  value={loginSuccess}
+                  onChange={(e) => { setLoginSuccess(e.target.value); setLoginPage(1) }}
+                >
+                  {successOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
             </div>
           </div>
-        )}
-      </div>
+
+          {/* Login audit list */}
+          <div className="card overflow-hidden">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+              {loginLoading ? (
+                <div className="p-8 space-y-5">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="flex items-start gap-4">
+                      <div className="h-10 w-10 rounded-full bg-slate-100 dark:bg-slate-800 animate-pulse" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 w-1/3 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+                        <div className="h-3 w-2/3 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : audits.length === 0 ? (
+                <div className="flex flex-col items-center py-16 px-4">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
+                    <Fingerprint className="h-6 w-6 text-slate-400 dark:text-slate-500" />
+                  </div>
+                  <h3 className="mt-4 text-sm font-semibold text-slate-900 dark:text-slate-100">No login activity found</h3>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    {loginSearch || loginSuccess !== ''
+                      ? 'Try adjusting your search or filters.'
+                      : 'Login attempts will appear here.'}
+                  </p>
+                </div>
+              ) : (
+                audits.map((audit: any) => {
+                  const userName = audit.user
+                    ? [audit.user.rank, audit.user.full_name || audit.user.name].filter(Boolean).join(' ')
+                    : audit.email
+                  return (
+                    <div key={audit.id} className="flex items-start gap-4 px-6 py-4">
+                      <div className={`relative z-10 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border text-white shadow-sm ${
+                        audit.success
+                          ? 'bg-success-500 border-success-200 dark:border-success-800'
+                          : 'bg-danger-500 border-danger-200 dark:border-danger-800'
+                      }`}>
+                        {audit.success ? <ShieldCheck className="h-4 w-4" /> : <ShieldX className="h-4 w-4" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{userName}</p>
+                          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
+                            audit.success
+                              ? 'bg-success-50 text-success-700 border-success-200 dark:bg-success-900/40 dark:text-success-300 dark:border-success-800'
+                              : 'bg-danger-50 text-danger-700 border-danger-200 dark:bg-danger-900/40 dark:text-danger-300 dark:border-danger-800'
+                          }`}>
+                            {audit.success ? 'Successful' : 'Failed'}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{statusText(audit.reason)}</p>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-xs text-slate-400 dark:text-slate-500">
+                          <span className="inline-flex items-center gap-1">
+                            <Monitor className="w-3 h-3" />
+                            <span className="font-mono">{audit.ip_address || '—'}</span>
+                          </span>
+                          {audit.user_agent && (
+                            <span className="max-w-md truncate">{audit.user_agent}</span>
+                          )}
+                        </div>
+                        <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+                          {new Date(audit.created_at).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+
+            {/* Pagination */}
+            {loginTotalPages > 1 && (
+              <div className="flex items-center justify-between gap-3 border-t border-slate-200 dark:border-slate-800 px-6 py-3">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Page <span className="font-medium text-slate-700 dark:text-slate-200">{loginPage}</span> of{' '}
+                  <span className="font-medium text-slate-700 dark:text-slate-200">{loginTotalPages}</span>
+                </p>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setLoginPage(p => Math.max(1, p - 1))}
+                    disabled={loginPage === 1}
+                    className="btn btn-secondary btn-sm disabled:opacity-40"
+                  >
+                    <ChevronLeft className="w-4 h-4" /> Previous
+                  </button>
+                  <button
+                    onClick={() => setLoginPage(p => Math.min(loginTotalPages, p + 1))}
+                    disabled={loginPage === loginTotalPages}
+                    className="btn btn-secondary btn-sm disabled:opacity-40"
+                  >
+                    Next <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 }

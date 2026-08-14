@@ -14,14 +14,20 @@ use Illuminate\Support\Facades\Broadcast;
 |
 */
 
-Broadcast::channel('documents', function () {
-    return true;
-});
-
 Broadcast::channel('App.Models.User.{id}', function (User $user, int $id) {
     return (int) $user->id === (int) $id;
 });
 
 Broadcast::channel('App.Models.Document.{id}', function (User $user, int $id) {
-    return true;
+    $document = \App\Models\Document::find($id);
+    if (!$document) {
+        return false;
+    }
+
+    $roleValue = is_object($user->role) ? $user->role->value : $user->role;
+
+    return $user->isAdmin()
+        || !empty($user->can_view_all_documents)
+        || in_array($roleValue, ['superadmin', 'fcos'], true)
+        || $document->isVisibleTo($user);
 });

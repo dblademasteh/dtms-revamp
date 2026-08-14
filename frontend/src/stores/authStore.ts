@@ -8,6 +8,7 @@ interface User {
   full_name?: string
   rank?: string
   email: string
+  email_verified_at?: string | null
   role: string
   status: string
   phone?: string

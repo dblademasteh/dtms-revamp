@@ -39,6 +39,11 @@ class User extends Authenticatable
         'avatar',
         'pincode',
         'can_view_all_documents',
+        'failed_login_attempts',
+        'locked_until',
+        'email_verified_at',
+        'email_verify_token',
+        'email_verify_token_sent_at',
     ];
 
     protected $appends = ['full_name', 'has_pincode'];
@@ -61,6 +66,9 @@ class User extends Authenticatable
         'can_view_all_documents' => 'boolean',
         'two_factor_confirmed_at' => 'datetime',
         'two_factor_recovery_codes' => 'array',
+        'failed_login_attempts' => 'integer',
+        'locked_until' => 'datetime',
+        'email_verify_token_sent_at' => 'datetime',
     ];
 
     // Relationships
@@ -115,6 +123,11 @@ class User extends Authenticatable
         return !is_null($this->pincode);
     }
 
+    public function hasVerifiedEmail(): bool
+    {
+        return !is_null($this->email_verified_at);
+    }
+
     public function documents()
     {
         return $this->hasMany(Document::class, 'originator_id');
@@ -133,6 +146,11 @@ class User extends Authenticatable
     public function notifications()
     {
         return $this->hasMany(Notification::class);
+    }
+
+    public function loginAudits()
+    {
+        return $this->hasMany(LoginAudit::class);
     }
 
     // Helper methods

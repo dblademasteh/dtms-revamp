@@ -41,12 +41,8 @@ class DocumentStatusChanged implements ShouldBroadcast
     {
         return [
             'document_id' => $this->documentId,
-            'tracking_number' => $this->trackingNumber,
-            'subject' => $this->subject,
-            'status' => $this->status,
             'action' => $this->action,
             'actor_id' => $this->actorId,
-            'actor_name' => $this->actorName,
         ];
     }
 }

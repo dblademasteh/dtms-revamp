@@ -51,6 +51,7 @@ import {
 } from '@/constants/documentOptions'
 import RoutingSlipModal from '@/components/RoutingSlipModal'
 import { useDropdownGroup } from '@/hooks/useDropdownOptions'
+import { useDocumentRealtime } from '@/hooks/useDocumentRealtime'
 
 const personLabel = (p: any) =>
   p ? [p.rank, p.full_name || p.name].filter(Boolean).join(' ') : '—'
@@ -64,6 +65,7 @@ export default function DocumentDetail() {
   const { user } = useAuthStore()
   const isSuperadmin = useAuthStore((s) => s.isSuperadmin)()
   const dispositions = useDropdownGroup('routing_dispositions')
+  useDocumentRealtime(id)
   const [action, setAction] = useState<'approve' | 'reject' | 'return' | 'resubmit' | 'file' | 'send' | null>(null)
   const [disposition, setDisposition] = useState('approved')
   const [remarks, setRemarks] = useState('')

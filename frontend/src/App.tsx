@@ -17,6 +17,7 @@ import AgencyGateway from '@/pages/AgencyGateway'
 import CreateDocumentPublic from '@/pages/CreateDocumentPublic'
 import ForgotPassword from '@/pages/ForgotPassword'
 import ResetPassword from '@/pages/ResetPassword'
+import VerifyEmail from '@/pages/VerifyEmail'
 import RoutingTemplates from '@/pages/RoutingTemplates'
 import Offices from '@/pages/Offices'
 import ActivityLog from '@/pages/ActivityLog'
@@ -134,6 +135,7 @@ function App() {
            <Route path="/change-password" element={<MustChangePasswordRoute />} />
             <Route path="/gateway" element={<AgencyGateway />} />
             <Route path="/create" element={<CreateDocumentPublic />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
            <Route
               path="/"
               element={
@@ -152,9 +154,9 @@ function App() {
               <Route path="personnel" element={<AdminRoute><Personnel /></AdminRoute>} />
               <Route path="mailbox" element={<Mailbox />} />
               <Route path="office-profile" element={<OfficeProfile />} />
-              <Route path="admin/users" element={<Users />} />
-              <Route path="admin/templates" element={<RoutingTemplates />} />
-              <Route path="admin/offices" element={<Offices />} />
+              <Route path="admin/users" element={<AdminRoute><Users /></AdminRoute>} />
+              <Route path="admin/templates" element={<AdminRoute><RoutingTemplates /></AdminRoute>} />
+              <Route path="admin/offices" element={<AdminRoute><Offices /></AdminRoute>} />
               <Route path="admin/storage" element={<AdminRoute><Storage /></AdminRoute>} />
               <Route path="admin/activity" element={<AdminRoute><ActivityLog /></AdminRoute>} />
               <Route path="admin/suggestions" element={<AdminRoute><AdminSuggestions /></AdminRoute>} />

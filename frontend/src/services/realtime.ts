@@ -56,3 +56,7 @@ export function disconnectRealtime(): void {
 export function userChannelName(userId: number): string {
   return `App.Models.User.${userId}`
 }
+
+export function documentChannelName(documentId: number): string {
+  return `App.Models.Document.${documentId}`
+}

@@ -19,6 +19,7 @@ Route::middleware(['throttle:auth-ip', 'throttle:auth'])->group(function () {
     Route::post('/auth/2fa/verify', [AuthController::class, 'verify2fa']);
     Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
+    Route::post('/auth/email/verify', [AuthController::class, 'verifyEmail']);
 });
 
 // Public tracking lookup
@@ -50,6 +51,7 @@ Route::middleware(['auth:sanctum', 'force-password-change'])->group(function () 
     Route::put('/auth/password', [AuthController::class, 'changePassword']);
     Route::put('/auth/pincode', [AuthController::class, 'changePincode']);
     Route::put('/auth/notification-preferences', [AuthController::class, 'updateNotificationPreferences']);
+    Route::post('/auth/email/verification/send', [AuthController::class, 'sendEmailVerification']);
 
     // Two-factor authentication (authenticated)
     Route::get('/auth/2fa/status', [TwoFactorController::class, 'status']);
@@ -339,6 +341,29 @@ Route::middleware(['auth:sanctum', 'force-password-change'])->group(function () 
         Route::post('/branding/logo', [\App\Http\Controllers\Api\BrandingController::class, 'uploadLogo']);
         Route::delete('/branding/logo', [\App\Http\Controllers\Api\BrandingController::class, 'deleteLogo']);
 
+        // Login activity (admin only)
+        Route::get('/login-audits', function (\Illuminate\Http\Request $request) {
+            $query = \App\Models\LoginAudit::with('user')
+                ->orderBy('created_at', 'desc');
+
+            if ($request->boolean('success')) {
+                $query->where('success', $request->boolean('success'));
+            }
+
+            if ($request->has('search')) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('email', 'like', "%{$search}%")
+                      ->orWhereHas('user', function ($q2) use ($search) {
+                          $q2->where('name', 'like', "%{$search}%")
+                             ->orWhere('accnt_no', 'like', "%{$search}%");
+                      });
+                });
+            }
+
+            return response()->json($query->paginate(min((int) $request->get('per_page', 25), 100)));
+        });
+
 
         // Dropdown options management (admin only) — includes the 'ranks' group
         Route::post('/dropdown-options', [DropdownOptionController::class, 'store']);
@@ -480,6 +505,11 @@ Route::middleware(['auth:sanctum', 'force-password-change'])->group(function () 
             }
 
             $user->update(array_filter($allowed, fn($v) => !is_null($v)));
+
+            // Re-activating a locked account clears any login lockout.
+            if (($request->status ?? null) === 'active') {
+                $user->update(['failed_login_attempts' => 0, 'locked_until' => null]);
+            }
 
             return response()->json([
                 'message' => 'User updated',

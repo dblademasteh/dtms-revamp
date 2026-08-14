@@ -31,6 +31,8 @@ import {
   Image as ImageIcon,
   Trash2,
   Globe,
+  MailCheck,
+  MailWarning,
 } from 'lucide-react'
 
 function formatBytes(bytes: number): string {
@@ -475,6 +477,17 @@ export default function Settings() {
      },
   })
 
+  const sendVerificationMutation = useMutation({
+    mutationFn: () => api.post('/auth/email/verification/send'),
+    onSuccess: (res) => {
+      toast.success(res.data?.message || 'Verification email sent')
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Could not send verification email')
+    },
+  })
+
+
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const errs: Record<string, string> = {}
@@ -805,6 +818,41 @@ export default function Settings() {
                       </div>
                       <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                         Office assignment is managed by your administrator.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+                  <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Email Address</label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="input !py-1.5 !text-sm bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 truncate flex-1 min-w-[200px]">
+                      {user?.email}
+                    </div>
+                    {user?.email_verified_at ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-success-600 dark:text-success-400 bg-success-50 dark:bg-success-900/30 px-2 py-1 rounded-md">
+                        <MailCheck className="w-3.5 h-3.5" />
+                        Verified
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-1 rounded-md">
+                        <MailWarning className="w-3.5 h-3.5" />
+                        Not verified
+                      </span>
+                    )}
+                  </div>
+                  {!user?.email_verified_at && (
+                    <div className="mt-2">
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm !py-1.5 !px-3 !text-xs"
+                        onClick={() => sendVerificationMutation.mutate()}
+                        disabled={sendVerificationMutation.isPending}
+                      >
+                        {sendVerificationMutation.isPending ? 'Sending...' : 'Send verification email'}
+                      </button>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
+                        Your email is verified by clicking the link sent to your inbox. Some actions may require a verified email.
                       </p>
                     </div>
                   )}
