@@ -28,4 +28,8 @@ if [ -e public/storage ] && [ ! -L public/storage ]; then
 fi
 php artisan storage:link || true
 
+# Ensure the nginx worker (user "nginx") can traverse the storage tree;
+# uploaded files are owned by www-data and storage/app may be 700.
+chmod -R o+rX storage 2>/dev/null || true
+
 exec supervisord -c /etc/supervisor/conf.d/supervisord.conf
