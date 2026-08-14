@@ -44,13 +44,13 @@ services:
       - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS:-noreply@dts.gov.ph}
       - SEMAPHORE_SENDER_NAME=${SEMAPHORE_SENDER_NAME:-DTS}
       - QRCODE_SIZE=300
-- LOG_LEVEL=warning
-  - BCRYPT_ROUNDS=12
-  - TRUSTED_PROXIES=*
-  - SESSION_SECURE_COOKIE=true
-  - LOGIN_MAX_ATTEMPTS=${LOGIN_MAX_ATTEMPTS:-5}
-  - LOGIN_LOCKOUT_MINUTES=${LOGIN_LOCKOUT_MINUTES:-15}
-  depends_on:
+      - LOG_LEVEL=warning
+      - BCRYPT_ROUNDS=12
+      - TRUSTED_PROXIES=*
+      - SESSION_SECURE_COOKIE=true
+      - LOGIN_MAX_ATTEMPTS=${LOGIN_MAX_ATTEMPTS:-5}
+      - LOGIN_LOCKOUT_MINUTES=${LOGIN_LOCKOUT_MINUTES:-15}
+    depends_on:
       redis:
         condition: service_healthy
       postgres:
@@ -129,7 +129,5 @@ services:
     image: cloudflare/cloudflared:latest
     container_name: cloudflared
     restart: unless-stopped
-    depends_on:
-      - frontend
     network_mode: service:frontend
-    command: ["tunnel", "--no-autoupdate", "run", "--url=http://localhost", "--token=eyJhIjoiY2Q3YWUzNzZlNzRjMmEwMjkxOTQ1YWNmZThhNTAyYmUiLCJ0IjoiOGE5ZjNiNDMtODUzZC00NWZjLTkxMWEtNzE2NGZhOTJmNzQ3IiwicyI6Ik1qUTJNalU1WkRZdFlqTmxNeTAwTlRVNUxXRTNNREV0TXpsa05tRXpNVFEzTlRSaSJ9"]
+    command: ["tunnel", "--no-autoupdate", "run", "--url=http://localhost:80", "--token=eyJhIjoiY2Q3YWUzNzZlNzRjMmEwMjkxOTQ1YWNmZThhNTAyYmUiLCJ0IjoiOGE5ZjNiNDMtODUzZC00NWZjLTkxMWEtNzE2NGZhOTJmNzQ3IiwicyI6Ik1qUTJNalU1WkRZdFlqTmxNeTAwTlRVNUxXRTNNREV0TXpsa05tRXpNVFEzTlRSaSJ9"]
