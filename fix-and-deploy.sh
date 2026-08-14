@@ -54,8 +54,9 @@ done
 
 if [ -n "$BACKEND_CONTAINER" ]; then
   BACKEND_NAME=$(docker inspect --format '{{.Name}}' "$BACKEND_CONTAINER" | tr -d '/')
-  echo "  Backend found: $BACKEND_NAME, connecting to $NETWORK_NAME..."
-  docker network connect "$NETWORK_NAME" "$BACKEND_CONTAINER" 2>/dev/null || true
+  echo "  Backend found: $BACKEND_NAME, connecting to $NETWORK_NAME with alias 'backend'..."
+  docker network disconnect "$NETWORK_NAME" "$BACKEND_CONTAINER" 2>/dev/null || true
+  docker network connect --alias backend "$NETWORK_NAME" "$BACKEND_CONTAINER"
 else
   echo "  WARNING: Backend not running. Frontend will serve static content only."
 fi
