@@ -23,7 +23,7 @@ import {
   LifeBuoy,
   HelpCircle
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import NotificationBell from '@/components/NotificationBell'
 import ConfirmModal from '@/components/ConfirmModal'
 import HelpWidget from '@/components/HelpWidget'
@@ -98,6 +98,10 @@ export default function Layout() {
   }
 
   const pageMeta = getPageMeta(location.pathname)
+
+  useEffect(() => {
+    document.title = pageMeta.title ? `${pageMeta.title} | ${branding.system_title}` : branding.system_title
+  }, [pageMeta.title, branding.system_title])
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full bg-white dark:bg-slate-900 border-r border-slate-200/80 dark:border-slate-800 transition-colors duration-200">

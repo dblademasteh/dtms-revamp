@@ -9,6 +9,25 @@
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
     <link rel="apple-touch-icon" href="/icons/pwa-256x256.png" />
     <title>DTMS - Document Tracking and Management System</title>
+    <script>
+      // Use the uploaded branding logo as the browser tab icon when available.
+      (function () {
+        function setFavicon(url) {
+          if (!url) return
+          document.querySelectorAll('link[rel="icon"]').forEach(function (l) {
+            l.href = url
+          })
+        }
+        fetch('/api/branding')
+          .then(function (r) { return r.ok ? r.json() : null })
+          .then(function (d) {
+            var b = d && d.branding
+            if (!b) return
+            setFavicon(b.sidebar_logo || b.login_logo || '/favicon-32x32.png')
+          })
+          .catch(function () {})
+      })()
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
