@@ -21,7 +21,8 @@ import {
   Check,
   AlertCircle,
   ShieldCheck,
-  SlidersHorizontal
+  SlidersHorizontal,
+  User
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { documentTypeLabel, statusLabel } from '@/constants/documentOptions'
@@ -422,6 +423,7 @@ export default function Documents() {
               <thead>
                 <tr className="bg-slate-50/80 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-800 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   <th className="py-4 pl-6 px-4">Document Details</th>
+                  <th className="py-4 px-4">Sender</th>
                   <th className="py-4 px-4">Status</th>
                   <th className="py-4 px-4">Type &amp; Priority</th>
                   <th className="py-4 px-4">Current Location</th>
@@ -455,6 +457,18 @@ export default function Documents() {
                             )}
                           </button>
                         </div>
+                      </div>
+                    </td>
+
+                    {/* Sender / Originator */}
+                    <td className="py-4 px-4 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                          <User className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                        </span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[160px]" title={doc.originator?.name || 'Unknown'}>
+                          {doc.originator?.name || 'Unknown'}
+                        </span>
                       </div>
                     </td>
 
