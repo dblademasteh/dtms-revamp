@@ -53,11 +53,6 @@ class BrandingController extends Controller
         $type = $request->type;
         $file = $request->file('logo');
 
-        $size = @getimagesize($file->getRealPath());
-        if (!$size || $size[0] > 2000 || $size[1] > 2000) {
-            return response()->json(['message' => 'Image dimensions are too large (max 2000x2000 px)'], 422);
-        }
-
         @ini_set('memory_limit', '512M');
 
         $ext = strtolower($file->getClientOriginalExtension());
