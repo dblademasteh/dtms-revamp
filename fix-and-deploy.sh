@@ -2,14 +2,17 @@
 # ==========================================
 # Synology Deployment Fix + Update Script
 # ==========================================
-# Fixes broken Docker Compose and deploys updated frontend
-# Paste this into your SSH session on the Synology NAS
-# ==========================================
+# Rebuilds frontend and ensures all services are on the correct network
+# Usage: bash fix-and-deploy.sh
+# ==========================================================================
 
 set -e
 
 PROJECT_PATH="/volume1/docker/dts/dtms-revamp"
 cd "$PROJECT_PATH"
+
+COMPOSE_FILE="docker-compose.synology.yml"
+NETWORK_NAME="dtms-revamp_default"       # network used by compose services
 
 echo "=== Step 1: Pull latest changes ==="
 git pull origin master
@@ -31,49 +34,22 @@ docker build \
   -f frontend/Dockerfile \
   frontend/
 
-echo "=== Step 4: Stop existing containers ==="
-docker stop cloudflared 2>/dev/null || true
+echo "=== Step 4: Stop and remove old frontend container ==="
 docker stop dts-frontend 2>/dev/null || true
-docker rm cloudflared 2>/dev/null || true
 docker rm dts-frontend 2>/dev/null || true
 
-echo "=== Step 5: Set up custom network for DNS resolution ==="
-NETWORK_NAME="dts-network"
-docker network create "$NETWORK_NAME" 2>/dev/null || true
-
-# Find and connect backend container to custom network.
-# NOTE: the docker name filter is a SUBSTRING match, so "name=backend" can
-# return several containers (compose "dtms-revamp-backend-1" + legacy ones),
-# which breaks the network connect. Resolve exactly ONE running backend:
-#   1) exact container name (backend / dts-backend / dtms-backend)
-#   2) compose-managed backend service (docker-compose.synology.yml)
-#   3) any running container with "backend" in its name (first match)
-echo "Finding backend container..."
-BACKEND_CONTAINER=""
-for name in "backend" "dts-backend" "dtms-backend"; do
-  BACKEND_CONTAINER=$(docker ps -q --filter "name=^${name}$" 2>/dev/null | head -n1)
-  [ -n "$BACKEND_CONTAINER" ] && break
-done
+echo "=== Step 5: Find backend container ID ==="
+# The name filter for docker ps is PREFIX-MATCH, so we use a list and pick the running one
+BACKEND_CONTAINER=$(docker ps --filter "name=dtms-revamp-backend-1" --format "{{.ID}}" | head -n1)
 if [ -z "$BACKEND_CONTAINER" ]; then
-  BACKEND_CONTAINER=$(docker ps -q --filter "label=com.docker.compose.service=backend" 2>/dev/null | head -n1)
-fi
-if [ -z "$BACKEND_CONTAINER" ]; then
-  BACKEND_CONTAINER=$(docker ps -q --filter "name=backend" 2>/dev/null | head -n1)
+  echo "WARNING: No running backend container found."
 fi
 
-if [ -n "$BACKEND_CONTAINER" ]; then
-  BACKEND_NAME=$(docker inspect --format '{{.Name}}' "$BACKEND_CONTAINER" | tr -d '/')
-  echo "  Backend found: $BACKEND_NAME (id ${BACKEND_CONTAINER:0:12}), connecting to $NETWORK_NAME with alias 'backend'..."
-  docker network disconnect "$NETWORK_NAME" "$BACKEND_CONTAINER" 2>/dev/null || true
-  docker network connect --alias backend "$NETWORK_NAME" "$BACKEND_CONTAINER"
-else
-  echo "  WARNING: Backend not running. Frontend will serve static content only."
-fi
-
-echo "=== Step 6: Start frontend container ==="
+echo "=== Step 6: Start frontend container on composite network ==="
 FRONTEND_ID=$(docker run -d \
   --name dts-frontend \
   --network "$NETWORK_NAME" \
+  --network-alias dts-frontend \
   --restart unless-stopped \
   dts-frontend:latest)
 echo "  Frontend started: $FRONTEND_ID"
@@ -94,24 +70,28 @@ done
 
 if [ "$FRONTEND_RUNNING" = "false" ]; then
   echo "ERROR: Frontend container failed to start!"
-  echo "=== Frontend logs ==="
   docker logs --tail 20 "$FRONTEND_ID"
-  echo "=== Network info ==="
-  docker network inspect "$NETWORK_NAME" --format '{{json .Containers}}' 2>/dev/null || true
-  echo "=== Backend containers ==="
-  docker ps --filter "name=backend" --format "table {{.ID}}\t{{.Names}}\t{{.Status}}" 2>/dev/null || true
   exit 1
 fi
 
-echo "=== Step 8: Start cloudflared tunnel ==="
-docker start cloudflared 2>/dev/null || docker run -d \
-  --name cloudflared \
-  --restart unless-stopped \
-  --network container:dts-frontend \
-  cloudflare/cloudflared:latest \
-  tunnel --no-autoupdate run --url=http://localhost --token=eyJhIjoiY2Q3YWUzNzZlNzRjMmEwMjkxOTQ1YWNmZThhNTAyYmUiLCJ0IjoiOGE5ZjNiNDMtODUzZC00NWZjLTkxMWEtNzE2NGZhOTJmNzQ3IiwicyI6Ik1qUTJNalU1WkRZdFlqTmxNeTAwTlRVNUxXRTNNREV0TXpsa05tRXpNVFEzTlRSaSJ9
+echo "=== Step 8: Ensure backend is on the same network ==="
+if [ -n "$BACKEND_CONTAINER" ]; then
+  # Check if backend is already on the network
+  docker network connect "$NETWORK_NAME" "$BACKEND_CONTAINER" 2>/dev/null || true
+fi
 
-echo "=== Step 9: Verify all containers ==="
+echo "=== Step 9: Start cloudflared tunnel ==="
+if ! docker ps --filter "name=cloudflared" --format "{{.ID}}" | grep -q .; then
+  docker run -d \
+    --name cloudflared \
+    --restart unless-stopped \
+    --network "$NETWORK_NAME" \
+    cloudflare/cloudflared:latest \
+    tunnel --no-autoupdate run --url=http://localhost:80 --token=eyJhIjoiY2Q3YWUzNzZlNzRjMmEwMjkxOTQ1YWNmZThhNTAyYmUiLCJ0IjoiOGE5ZjNiNDMtODUzZC00NWZjLTkxMWEtNzE2NGZhOTJmNzQ3IiwicyI6Ik1qUTJNalU1WkRZdFlqTmxNeTAwTlRVNUxXRTNNREV0TXpsa05tRXpNVFEzTlRSaSJ9
+fi
+docker start cloudflared 2>/dev/null || true
+
+echo "=== Step 10: Verify all containers ==="
 docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
 echo "=== Deployment complete ==="
