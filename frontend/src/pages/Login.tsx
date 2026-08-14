@@ -641,10 +641,10 @@ export default function Login() {
               }}
             />
           ) : (
-            <form onSubmit={handleSubmit(onSubmit)} className={shaking ? 'space-y-6 animate-shake' : 'space-y-6'}>
+            <form onSubmit={handleSubmit(onSubmit)} className={shaking ? 'space-y-4 animate-shake' : 'space-y-4'}>
               {/* Account Number Field */}
-              <div className="space-y-2">
-                <label htmlFor="accnt_no" className="block text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+              <div className="space-y-1.5">
+                <label htmlFor="accnt_no" className="block text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
                   Account Number
                 </label>
                 <div className="relative">
@@ -661,7 +661,7 @@ export default function Login() {
                   />
                 </div>
                 {errors.accnt_no && (
-                  <p className="text-xs text-red-500 font-medium flex items-center gap-1 mt-1">
+                  <p className="text-xs text-red-500 font-medium flex items-center gap-1 mt-0.5">
                     <span className="w-1 h-1 rounded-full bg-red-500" />
                     {errors.accnt_no.message}
                   </p>
@@ -669,7 +669,7 @@ export default function Login() {
               </div>
 
               {/* Password Field */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label htmlFor="password" className="block text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
                     Password
@@ -684,7 +684,7 @@ export default function Login() {
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
-                    className="w-full pl-10 pr-10 py-3 text-sm text-slate-900 dark:text-white bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 dark:focus:border-blue-500 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 font-mono shadow-sm"
+className="w-full pl-10 pr-10 py-2.5 text-sm text-slate-900 dark:text-white bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 dark:focus:border-blue-500 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 font-mono shadow-sm"
                     placeholder="Enter your password"
                     {...register('password', { required: 'Password is required' })}
                   />
@@ -698,7 +698,7 @@ export default function Login() {
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="text-xs text-red-500 font-medium flex items-center gap-1 mt-1">
+                  <p className="text-xs text-red-500 font-medium flex items-center gap-1 mt-0.5">
                     <span className="w-1 h-1 rounded-full bg-red-500" />
                     {errors.password.message}
                   </p>
@@ -709,7 +709,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm transition-all shadow-xl shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 focus:ring-2 focus:ring-blue-500/40 focus:ring-offset-2"
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm transition-all shadow-md shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 focus:ring-2 focus:ring-blue-500/30 focus:ring-offset-2"
               >
                 {isLoading ? (
                   <span className="flex items-center gap-2">
@@ -727,11 +727,11 @@ export default function Login() {
           )}
 
           {/* Auxiliary Links */}
-          <div className="space-y-5 mt-6">
+          <div className="space-y-4 mt-4">
             <button
               type="button"
               onClick={() => setShowPincodeModal(true)}
-              className="w-full flex items-center justify-center gap-2.5 p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold text-sm transition-all"
+              className="w-full flex items-center justify-center gap-2 p-3.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold text-sm transition-all"
             >
               <KeyRound className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               <span>Sign in with 4-Digit PIN Code</span>
@@ -740,11 +740,11 @@ export default function Login() {
             <div className="text-center lg:hidden">
               <Link
                 to="/gateway"
-                className="inline-flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold text-sm shadow-lg shadow-blue-500/25 hover:scale-[1.01] transition-all"
+                className="inline-flex items-center justify-center gap-1.5 w-full px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold text-sm shadow-md shadow-blue-500/20 hover:scale-[1.005] transition-all"
               >
                 <span>Agency Gateway</span>
               </Link>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
                 Track documents or create new ones — no login required
               </p>
             </div>
