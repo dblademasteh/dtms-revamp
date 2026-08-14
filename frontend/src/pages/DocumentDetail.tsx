@@ -1126,7 +1126,7 @@ className="flex items-center justify-between w-full text-left"
                   )}
                 </p>
               )}
-              {document.status === 'released' && (user?.role === 'superadmin' || document.originator_id === user?.id) && (
+              {['received', 'in_review', 'returned', 'released'].includes(document.status) && (user?.role === 'superadmin' || user?.role === 'fcos' || document.originator_id === user?.id) && (
                 <button
                   onClick={() => setShowRecallModal(true)}
                   className="w-full btn btn-warning"

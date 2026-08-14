@@ -1179,8 +1179,9 @@ class DocumentController extends Controller
             return response()->json(['message' => 'You are not authorized to recall this document'], 403);
         }
 
-        if ($document->status->value !== 'released') {
-            return response()->json(['message' => 'Only released documents can be recalled'], 422);
+        $recallable = in_array($document->status->value, ['received', 'in_review', 'returned', 'released'], true);
+        if (!$recallable) {
+            return response()->json(['message' => 'This document cannot be recalled in its current state'], 422);
         }
 
         DB::beginTransaction();
