@@ -1,137 +1,158 @@
-# Synology NAS Deployment Guide
+# Synology NAS Deployment Guide (DTS)
 
-This guide walks you through deploying the DTS (Document Tracking System) to a Synology NAS using Docker Compose via **Container Manager**.
+Deploying the DTS (Document Tracking System) to a Synology NAS via Docker Compose
+in **Container Manager**. The stack runs entirely on the NAS and is served publicly
+through a Cloudflare tunnel.
+
+- **Repo**: `https://github.com/dblademasteh/dtms-revamp.git` (branch `master`)
+- **NAS path**: `/volume1/docker/dts`
+- **Compose file**: `docker-compose.synology.yml`
 
 ## Prerequisites
 
-1. **Synology NAS** running DSM 7.x with **Container Manager** package installed
-2. **Shared folder** named `docker` (or create one at `/volume1/docker`)
-3. **SSH access** enabled (Control Panel → Terminal & SNMP)
-4. **Terminal** access (use `sudo -i` after SSH login)
+1. Synology NAS running DSM 7.x with **Container Manager** installed.
+2. A `docker` shared folder at `/volume1/docker`.
+3. SSH access enabled (Control Panel → Terminal & SNMP).
+4. A user in the `docker` group (or use `sudo` for every docker command).
+5. GitHub access from the NAS (or deploy from your machine via `deploy-synology.sh`).
 
-## 1. Create a Shared Folder
+## 1. First-time setup
 
-1. Open **Control Panel** → **Shared Folder**
-2. Click **Create**
-3. Name it e.g. `docker` — this maps to `/volume1/docker`
-4. Assign appropriate permissions
-
-## 2. Transfer Project Files
-
-Copy the entire `dts-project` to your Synology:
+### Clone the repository
 
 ```bash
-# From your local machine, copy the project to the NAS
-scp -r dts-project admin@SYNOLOGY_IP:/volume1/docker/dts-project
+ssh bfpr2@YOUR_NAS_IP
+sudo -i
+cd /volume1/docker
+git clone https://github.com/dblademasteh/dtms-revamp.git dts
+cd dts
 ```
 
-Or use **File Station** to drag-and-drop the project folder into the `docker` shared folder.
-
-## 3. Configure Environment Variables
+### Environment files
 
 Two `.env` files are needed:
 
-### 3a. Root `.env` (compose variables)
+1. **Root `.env`** (compose + app variables) — copy from the template:
 
-Create the `.env` file from the template:
+   ```bash
+   cp .env.synology .env
+   vi .env
+   ```
 
-```bash
-cd /volume1/docker/dts-project
-cp .env.synology .env
-```
+   Critical values:
 
-Edit `.env` to match your setup:
+   | Variable | What to set |
+   |---|---|
+   | `APP_URL` | Public URL, e.g. `https://dtms.devbry.online` |
+   | `FRONTEND_URL` | Same public URL |
+   | `DB_PASSWORD` | A strong password of your choice |
+   | `MEILISEARCH_KEY` | A strong key of your choice |
+   | `SANCTUM_STATEFUL_DOMAINS` | Your domain, e.g. `dtms.devbry.online` |
+   | `SESSION_DOMAIN` | Your domain (or leave empty for a host-only cookie) |
+   | `CLOUDFLARE_TUNNEL_TOKEN` | Your Cloudflare tunnel token (required for public access) |
+   | `SESSION_SECURE_COOKIE` | `true` behind HTTPS, `false` for plain-HTTP LAN access |
+   | `DB_BACKUP_RETENTION` | How many nightly backups to keep (default `14`) |
+   | `FRONTEND_PORT` / `BACKEND_PORT` | Only change if 80/8000 are taken |
 
-```bash
-vi .env
-```
+2. **Backend `.env`** (APP_KEY persistence) — must exist or compose refuses to start.
+   It can be empty; the backend generates and persists `APP_KEY` on first boot:
 
-### Critical Settings to Change
+   ```bash
+   mkdir -p /volume1/docker/dts/backend/storage
+   touch /volume1/docker/dts/backend/.env
+   ```
 
-| Variable | What to set |
-|---|---|
-| `APP_URL` | Your public URL, e.g. `https://dtms.devbry.online` |
-| `DB_PASSWORD` | A strong password of your choice |
-| `MEILISEARCH_KEY` | A strong key of your choice |
-| `SESSION_DOMAIN` | Your public domain (or leave empty for a host-only cookie) |
-| `SANCTUM_STATEFUL_DOMAINS` | Your public domain, e.g. `dtms.devbry.online` |
-| `CLOUDFLARE_TUNNEL_TOKEN` | Your Cloudflare tunnel token (required for public access) |
-| `SESSION_SECURE_COOKIE` | `true` behind HTTPS, `false` for plain-HTTP LAN access |
+   > Do **not** add an empty `APP_KEY=` line — the entrypoint only generates the key
+   > when the file has no `APP_KEY=` line.
 
-### 3b. Backend `.env` (APP_KEY persistence)
+## 2. Start the stack
 
-The backend auto-generates `APP_KEY` on first run and writes it to the
-bind-mounted file at `${DOCKER_BASE_PATH}/backend/.env`. Create it before
-starting the stack (it may be empty):
-
-```bash
-mkdir -p /volume1/docker/dts/backend/storage
-touch /volume1/docker/dts/backend/.env
-```
-
-> **Important**: `docker compose` refuses to start if this file is missing,
-> because it is declared with `env_file`. Do not put an empty
-> `APP_KEY=` line in it — the backend will generate and persist a real key
-> for you on first boot.
-
-DSM Control Panel → Network → Network Interface
-
-## 4. Start the Stack
+The canonical deploy (pull → build → start, in that order):
 
 ```bash
-cd /volume1/docker/dts-project
-docker compose -f docker-compose.synology.yml up -d --build
+cd /volume1/docker/dts
+git pull --ff-only
+sudo docker compose -f docker-compose.synology.yml build
+sudo docker compose -f docker-compose.synology.yml up -d
 ```
 
-### Deploying updates over SSH
+> **Important**: use a bare `up -d` (no service list). Enumerating services
+> (e.g. `up -d backend frontend ...`) can tear down `cloudflared` and leave the
+> tunnel down.
+>
+> Migrations run automatically on backend boot (entrypoint). On a brand-new
+> install, seed default data once:
+> `sudo docker compose -f docker-compose.synology.yml exec backend php artisan db:seed --force`
 
-Once the project is on the NAS, the one-liner deploy script does everything:
-pull latest code, ensure env files, build, start, wait for health, migrate:
+### One-liner from your machine
+
+For routine updates you can run the included deploy script from your workstation.
+It SSHes into the NAS, pulls, builds, starts, waits for health, and migrates:
 
 ```bash
-# from your machine (host, path, user)
-./deploy-synology.sh bfp-r2-nas1 /volume1/docker/dts bfpr2
-
-# seed the database on a fresh install
-SEED=1 ./deploy-synology.sh
+./deploy-synology.sh                       # defaults: bfpr2.tw4.quickconnect.to, /volume1/docker/dts, bfpr2
+./deploy-synology.sh 192.168.1.10 /volume1/docker/dts bfpr2
+SEED=1 ./deploy-synology.sh                # seed on a fresh install
 ```
 
-Defaults: `bfpr2.tw4.quickconnect.to`, `/volume1/docker/dts`, user `bfpr2`.
+## 3. After every deploy: clear the Cloudflare cache
 
-Check the status:
+Cloudflare caches `index.html`, so a new frontend build will not appear until the
+cache is purged. In the Cloudflare dashboard:
+
+1. **Caching → Purge Everything** (or purge `https://your-domain/` and `https://your-domain/index.html`).
+2. **Caching → Configuration → Cache Rules**: add a rule for `your-domain.com/index.html`
+   with **Bypass cache**, so future deploys show immediately.
+
+If the site still shows the old build after purging, hard-refresh (Ctrl+Shift+R) once.
+
+## 4. Services and ports
+
+| Service | Image | Host port | Purpose |
+|---|---|---|---|
+| `frontend` | `dts-frontend:latest` (built) | `${FRONTEND_PORT:-80}` | Nginx + built SPA |
+| `backend` | `dts-backend:latest` (built) | `${BACKEND_PORT:-8000}` | Laravel API (health `/api/health`) |
+| `postgres` | `postgres:16-alpine` | — | Database (`dts_database`) |
+| `redis` | `redis:7-alpine` | — | Sessions/cache/queues |
+| `meilisearch` | `getmeili/meilisearch:v1.10` | — | Full-text search |
+| `cloudflared` | `cloudflare/cloudflared:latest` | — | Public HTTPS tunnel |
+
+`backend/storage` is bind-mounted to `/volume1/docker/dts/backend/storage`, so DB
+backups and uploads persist on the NAS.
+
+## 5. Database backups (built-in)
+
+The app has a built-in backup/restore tool (no manual `pg_dump` needed):
+
+- **UI**: Settings → Database → **Create Backup**, plus Download / Restore / Delete.
+- **Nightly**: a `db:backup` schedule runs at **03:00 Asia/Manila**; old backups are
+  pruned automatically to `DB_BACKUP_RETENTION` (default 14).
+- **Location**: `storage/app/backups/` → `/volume1/docker/dts/backend/storage/app/backups/`
+  on the NAS.
+
+Manual backup from the command line:
 
 ```bash
-docker compose -f docker-compose.synology.yml ps
-docker compose -f docker-compose.synology.yml logs -f --tail 50
+sudo docker compose -f docker-compose.synology.yml exec backend php artisan db:backup
 ```
 
-## 5. Run Database Migrations
-
-Wait for `postgres` to be healthy (≈30s), then:
+Verify the file landed on the NAS:
 
 ```bash
-docker compose -f docker-compose.synology.yml exec backend \
-  php artisan migrate --force
+ls -lh /volume1/docker/dts/backend/storage/app/backups/
 ```
 
-For a fresh install (seeds default data):
+> Restore is destructive (it drops and re-imports); the UI asks for confirmation.
+> The NAS keeps the files locally — copy the folder off-box (e.g. Hyper Backup) if
+> you want off-site redundancy.
 
-```bash
-docker compose -f docker-compose.synology.yml exec backend \
-  php artisan db:seed --force
-```
+## 6. Access
 
-## 6. Access the Application
+- **LAN**: `http://YOUR_NAS_IP:${FRONTEND_PORT}` (default `http://YOUR_NAS_IP:80`)
+- **API**: `http://YOUR_NAS_IP:${BACKEND_PORT}/api`
+- **Public**: `https://your-domain.com` (Cloudflare tunnel → `http://localhost:80`)
 
-- **Frontend**: `http://YOUR_NAS_IP:${FRONTEND_PORT}` (default `80`)
-- **Backend API**: `http://YOUR_NAS_IP:${BACKEND_PORT}/api` (default port `8000`)
-- **Public HTTPS** (via Cloudflare tunnel): `https://YOUR_TUNNEL_HOSTNAME`
-
-> The tunnel token is read from `CLOUDFLARE_TUNNEL_TOKEN` in `.env`. In the
-> Cloudflare Zero Trust dashboard, make the tunnel's ingress (Public
-> Hostname) point to `http://localhost:80`.
-
-### Default Credentials
+Default accounts (seed):
 
 | Role | Email | Password |
 |---|---|---|
@@ -140,169 +161,92 @@ docker compose -f docker-compose.synology.yml exec backend \
 | Approver | `approver@dts.gov.ph` | `password` |
 | HR Head | `hrhead@dts.gov.ph` | `password` |
 
-## Common Tasks
-
-### View Logs
+## 7. Common tasks
 
 ```bash
-# All services
-docker compose -f docker-compose.synology.yml logs -f --tail 100
+cd /volume1/docker/dts
+CF="docker compose -f docker-compose.synology.yml"
 
-# Specific service (e.g., backend)
-docker compose -f docker-compose.synology.yml logs -f backend
+# Status / logs
+$CF ps
+$CF logs -f --tail 100
+$CF logs -f backend
+
+# Rebuild after code changes (same as canonical deploy)
+git pull --ff-only && sudo $CF build && sudo $CF up -d
+
+# Restart everything
+sudo $CF restart
+
+# Tinker (PHP REPL)
+$CF exec backend php artisan tinker
+
+# Run a backup manually
+$CF exec backend php artisan db:backup
 ```
 
-### Stop / Restart
+Environment-variable changes in `.env` require recreating the affected container:
 
 ```bash
-docker compose -f docker-compose.synology.yml down
-docker compose -f docker-compose.synology.yml up -d --build
+sudo $CF up -d --force-recreate backend
 ```
 
-### Rebuild After Code Changes
+## 8. Custom domain / HTTPS
 
-```bash
-docker compose -f docker-compose.synology.yml up -d --build --force-recreate
-```
+The public path is a Cloudflare **tunnel** (token-based). In Cloudflare Zero Trust,
+the tunnel's Public Hostname must route to `http://localhost:80`. The frontend nginx
+proxies `/api` and `/app` (websocket) to the backend automatically.
 
-### Tinker (PHP REPL)
+If you instead use a Synology reverse proxy or direct port:
 
-```bash
-docker compose -f docker-compose.synology.yml exec backend php artisan tinker
-```
+| Field | Value |
+|---|---|
+| Source | `http://YOUR_NAS_IP` (or `https://` with a certificate) |
+| Destination | `http://localhost:${FRONTEND_PORT:-80}` |
 
-### Backup the Database
+Then set `APP_URL`, `FRONTEND_URL`, `SANCTUM_STATEFUL_DOMAINS`, `SESSION_DOMAIN` to
+the public hostname and recreate the backend container.
 
-```bash
-docker compose -f docker-compose.synology.yml exec -T postgres \
-  pg_dump -U dts_user dts_database > backup_$(date +%F).sql
-```
+## 9. Troubleshooting
 
-### Restore the Database
+### Stale frontend after deploy
+Cloudflare is serving a cached `index.html`. Purge Everything + add the `/index.html`
+bypass rule (see section 3).
 
-```bash
-docker compose -f docker-compose.synology.yml exec -T postgres \
-  psql -U dts_user dts_database < backup_file.sql
-```
-
-## Using a Custom Domain or HTTPS
-
-### Option A: Synology Reverse Proxy (HTTP/HTTPS)
-
-1. **Control Panel** → **Application Portal** → **Reverse Proxy**
-2. Click **Create** to add a rule:
-
-   | Field | Value |
-   |---|---|
-   | Description | DTS |
-   | Source | `http://YOUR_NAS_IP` (or your domain) |
-   | Destination | `http://localhost:80` |
-
-   For HTTPS, add a certificate and use `https://` on the source.
-
-   3. After setting up the proxy, update `.env`:
-      - Set `APP_URL=https://your-domain.com`
-      - Set `SANCTUM_STATEFUL_DOMAINS=your-domain.com`
-      - Set `SESSION_DOMAIN=your-domain.com`
-
-   4. Restart the stack for changes to take effect:
-
-   ```bash
-   docker compose -f docker-compose.synology.yml up -d --build --force-recreate
-   ```
-
-   > **Note**: Environment variables in `.env` are read at container build/start time, so you must recreate containers after changing them.
-
-### Option B: Direct Port Mapping
-
-If you prefer to run the frontend on a custom port, set `FRONTEND_PORT` in `.env`:
-
-```
-FRONTEND_PORT=8080
-```
-
-Then access at `http://YOUR_NAS_IP:8080`.
-
-## Troubleshooting
-
-### Permission Errors on Shared Folders
-
-Ensure the `docker` shared folder is accessible:
-
-1. **Control Panel** → **Shared Folder** → select `docker` → **Edit** → **Permissions**
-2. Ensure your user and the `users` group have **Read/Write** access
-
-### Health Check Failures
-
-If `postgres` or `redis` health checks fail:
-
-```bash
-# Check individual service logs
-docker compose -f docker-compose.synology.yml logs postgres
-docker compose -f docker-compose.synology.yml logs redis
-
-# Verify data directories
-ls -la /volume1/docker/dts/postgres/data
-ls -la /volume1/docker/dts/redis/data
-```
-
-### Port Already in Use
-
-If port 80 or 8000 is taken (e.g., by another Container Manager project or Synology DSM):
-
-```
-FRONTEND_PORT=8080
-BACKEND_PORT=8200
-```
-
-### Websocket (Reverb) Connection Issues
-
-- Ensure `REVERB_HOST`, `REVERB_SCHEME`, and `REVERB_PORT` in `.env` match your `APP_URL`
-- The frontend proxies `/app` websocket paths through nginx automatically
-- Behind an HTTPS reverse proxy, set `REVERB_SCHEME=https`
-
-### App Key Persistence
-
-The backend auto-generates APP_KEY on first startup and saves it to the
-bind-mounted `.env` file at `/volume1/docker/dts/backend/.env`.
-Inspect or modify it via SSH:
-
-```bash
-cat /volume1/docker/dts/backend/.env
-```
-
-### Backend Returns 500 / "No application encryption key has been specified"
-
-The entrypoint only generates `APP_KEY` when the `.env` file has no
-`APP_KEY=base64:` line. If you copied a template containing an empty
-`APP_KEY=` line into `backend/.env`, delete that line (or the whole file)
-and recreate the container:
-
-```bash
-sed -i '/^APP_KEY=/d' /volume1/docker/dts/backend/.env
-docker compose -f docker-compose.synology.yml up -d --force-recreate backend
-```
-
-### Compose Fails: "Couldn't find env file"
-
-The backend service requires `/volume1/docker/dts/backend/.env` to exist:
+### "Couldn't find env file"
+`backend/.env` is missing. Recreate it (empty is fine) and restart:
 
 ```bash
 mkdir -p /volume1/docker/dts/backend/storage
 touch /volume1/docker/dts/backend/.env
+sudo docker compose -f docker-compose.synology.yml up -d
 ```
 
-### Login Fails / Sessions Don't Persist
+### Backend 500 / "No application encryption key"
+An empty `APP_KEY=` line exists in `backend/.env`. Remove it and recreate:
 
-Check `.env` — `SESSION_DOMAIN`, `SANCTUM_STATEFUL_DOMAINS`, `APP_URL` and
-`FRONTEND_URL` must match the hostname you actually browse with. For HTTPS
-access, `SESSION_SECURE_COOKIE=true`; for plain HTTP access on the LAN, set
-it to `false` and recreate the backend container.
+```bash
+sed -i '/^APP_KEY=/d' /volume1/docker/dts/backend/.env
+sudo docker compose -f docker-compose.synology.yml up -d --force-recreate backend
+```
 
-### Tunnel Not Working
+### Login fails / sessions don't persist
+`SESSION_DOMAIN`, `SANCTUM_STATEFUL_DOMAINS`, `APP_URL` and `FRONTEND_URL` must match
+the hostname you browse with. `SESSION_SECURE_COOKIE=true` for HTTPS, `false` for LAN
+HTTP — then recreate the backend.
 
-- Confirm `CLOUDFLARE_TUNNEL_TOKEN` is set in `.env` (no `--url` is used
-  with token-based tunnels).
-- In Cloudflare Zero Trust, the tunnel's Public Hostname must route to
-  `http://localhost:80`.
-- Check tunnel logs: `docker compose -f docker-compose.synology.yml logs cloudflared`.
+### Port already in use
+Set `FRONTEND_PORT` / `BACKEND_PORT` in `.env` to free ports, then `up -d --force-recreate`.
+
+### Tunnel not working
+- Confirm `CLOUDFLARE_TUNNEL_TOKEN` is set in `.env` (token tunnels do **not** use `--url`).
+- Verify the tunnel Public Hostname → `http://localhost:80` in Cloudflare Zero Trust.
+- Check logs: `sudo docker compose -f docker-compose.synology.yml logs cloudflared`.
+- Make sure you did not run `up -d <service-list>` (this can remove `cloudflared`).
+
+### Health-check failures
+```bash
+sudo docker compose -f docker-compose.synology.yml logs postgres
+sudo docker compose -f docker-compose.synology.yml logs redis
+ls -la /volume1/docker/dts/postgres/data
+```

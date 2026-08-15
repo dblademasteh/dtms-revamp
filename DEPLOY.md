@@ -19,17 +19,22 @@ Defaults: host `bfpr2.tw4.quickconnect.to`, path `/volume1/docker/dts`, user `bf
 To SSH into the NAS and deploy by hand instead:
 
 ```bash
-ssh bfpr2@bfp-r2-nas1
+ssh bfpr2@bfpr2.tw4.quickconnect.to
 cd /volume1/docker/dts
-git pull
+git pull --ff-only
 cp .env.synology .env 2>/dev/null || true   # first time only, then edit it
 mkdir -p backend/storage
 touch backend/.env
 export COMPOSE_FILE=docker-compose.synology.yml
-docker compose up -d --build
+docker compose build
+docker compose up -d
 docker compose ps
 docker compose logs -f --tail 50 backend
 ```
+
+> Use a bare `up -d` — listing services can tear down `cloudflared`. After the
+> frontend is updated, **Purge the Cloudflare cache** (Caching → Purge Everything)
+> or add a Bypass rule for `/index.html`, otherwise users see the old build.
 
 Requirements:
 
@@ -74,7 +79,7 @@ docker compose ps                                   # container status
 docker compose logs -f --tail 100 backend           # backend logs
 docker compose logs -f --tail 50 cloudflared        # tunnel logs
 docker compose exec -T backend php artisan tinker   # Laravel REPL
-docker compose exec -T postgres pg_dump -U dts_user dts_database > backup.sql   # DB backup
+docker compose exec -T backend php artisan db:backup      # built-in DB backup (also runs nightly at 03:00; managed via Settings → Database)
 docker compose down && docker compose up -d --build # full restart
 ```
 
@@ -87,6 +92,7 @@ docker compose down && docker compose up -d --build # full restart
 | Compose: "Couldn't find env file" | Create `mkdir -p backend/storage && touch backend/.env` |
 | Login fails / sessions drop | `SESSION_DOMAIN`, `SANCTUM_STATEFUL_DOMAINS`, `APP_URL` don't match your browser host; check `SESSION_SECURE_COOKIE` |
 | Tunnel down | `CLOUDFLARE_TUNNEL_TOKEN` set? Tunnel ingress → `http://localhost:80`? `docker compose logs cloudflared` |
+| Old build shown after deploy | Purge the Cloudflare cache / add the `/index.html` bypass rule |
 | Port 80 in use (DSM) | Set `FRONTEND_PORT=8080` in `.env` and redeploy |
 
 See [`SYNLOGY_DEPLOY.md`](SYNLOGY_DEPLOY.md) for the full step-by-step guide.
