@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(BfpRegion2Seeder::class);
+        $this->call(DropdownOptionSeeder::class);
 
         // ---------------------------------------------------------------------
         // Legacy generic demo data (kept for local development / smoke tests).

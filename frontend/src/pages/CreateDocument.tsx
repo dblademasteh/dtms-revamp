@@ -14,10 +14,74 @@ import {
   Plus,
   Building2,
   Users,
+  AlertTriangle,
+  AlertCircle,
+  FileSpreadsheet,
+  FileImage,
+  File,
+  Trash2,
 } from 'lucide-react'
 import MultiSelect, { type Option } from '@/components/MultiSelect'
 import SearchableSelect from '@/components/SearchableSelect'
 import { useDropdownGroup } from '@/hooks/useDropdownOptions'
+
+function getPriorityBadge(priority: string) {
+  switch (priority) {
+    case 'low':
+      return 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+    case 'normal':
+      return 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-500/30'
+    case 'high':
+      return 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-500/30'
+    case 'urgent':
+      return 'bg-red-50 text-red-800 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-500/30'
+    default:
+      return 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+  }
+}
+
+function getPriorityBtn(priority: string, isSelected: boolean) {
+  const badge = getPriorityBadge(priority)
+  const ringMap: Record<string, string> = {
+    low: 'ring-slate-400',
+    normal: 'ring-blue-400',
+    high: 'ring-amber-400',
+    urgent: 'ring-red-400',
+  }
+  const ring = ringMap[priority] || 'ring-slate-400'
+  return isSelected
+    ? `${badge} ring-2 ring-offset-1 ${ring} dark:ring-offset-slate-900`
+    : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300 text-slate-900 dark:text-white'
+}
+
+const priorityIcons: Record<string, JSX.Element> = {
+  low: <FileText className="w-3.5 h-3.5" />,
+  normal: <FileText className="w-3.5 h-3.5" />,
+  high: <AlertTriangle className="w-3.5 h-3.5" />,
+  urgent: <AlertCircle className="w-3.5 h-3.5" />,
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  return `${(bytes / 1024).toFixed(1)} KB`
+}
+
+function fileTypeMeta(file: File) {
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
+  if (ext === 'pdf') {
+    return { icon: <FileText className="w-4 h-4" />, cls: 'bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-300', label: 'PDF' }
+  }
+  if (['doc', 'docx'].includes(ext)) {
+    return { icon: <FileText className="w-4 h-4" />, cls: 'bg-blue-100 text-blue-600 dark:bg-blue-950/60 dark:text-blue-300', label: 'Word' }
+  }
+  if (['xls', 'xlsx', 'csv'].includes(ext)) {
+    return { icon: <FileSpreadsheet className="w-4 h-4" />, cls: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-300', label: 'Excel' }
+  }
+  if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) {
+    return { icon: <FileImage className="w-4 h-4" />, cls: 'bg-purple-100 text-purple-600 dark:bg-purple-950/60 dark:text-purple-300', label: 'Image' }
+  }
+  return { icon: <File className="w-4 h-4" />, cls: 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300', label: 'File' }
+}
 
 
 
@@ -272,25 +336,27 @@ export default function CreateDocument() {
                 Priority <span className="text-danger-500">*</span>
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {priorities.map(opt => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setPriority(opt.value)}
-                    className={`p-3 rounded-lg border-2 text-left transition-all ${
-                      priority === opt.value
-                        ? 'border-primary-500 dark:border-primary-600 bg-primary-50 dark:bg-primary-900/30'
-                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 bg-white dark:bg-slate-800'
-                    }`}
-                  >
-                    <p className={`text-sm font-medium ${
-                      priority === opt.value ? 'text-primary-700 dark:text-primary-300' : 'text-slate-900 dark:text-slate-100'
-                    }`}>
-                      {opt.label}
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{String(opt.meta?.desc ?? '')}</p>
-                  </button>
-                ))}
+                {priorities.map(opt => {
+                  const isSelected = priority === opt.value
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setPriority(opt.value)}
+                      className={`p-3 rounded-lg border-2 text-left transition-all flex flex-col gap-1 ${getPriorityBtn(opt.value, isSelected)}`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full flex-shrink-0">
+                          {priorityIcons[opt.value] || <FileText className="w-3.5 h-3.5" />}
+                        </span>
+                        <p className="text-sm font-semibold truncate">{opt.label}</p>
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-tight">
+                        {String(opt.meta?.desc ?? '')}
+                      </p>
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
@@ -537,54 +603,83 @@ export default function CreateDocument() {
               onDragEnter={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+              className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer ${
                 isDragging
-                  ? 'border-primary-400 bg-primary-50'
-                  : 'border-slate-200 hover:border-primary-300'
+                  ? 'border-primary-400 bg-primary-50 dark:bg-primary-900/20'
+                  : 'border-slate-200 dark:border-slate-700 hover:border-primary-300 dark:hover:border-slate-600'
               }`}
             >
+              <input
+                type="file"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                multiple
+                onChange={handleFileChange}
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+              />
               <Upload className={`mx-auto h-8 w-8 mb-2 ${isDragging ? 'text-primary-500' : 'text-slate-400'}`} />
-              <p className="text-sm text-slate-600 mb-1">
-                <label className="font-medium text-primary-600 hover:text-primary-700 cursor-pointer">
-                  Click to upload
-                  <input
-                    type="file"
-                    className="hidden"
-                    multiple
-                    onChange={handleFileChange}
-                    accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
-                  />
-                </label>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                <span className="font-medium text-primary-600 dark:text-primary-400">Click to upload</span>
                 {' '}or drag and drop
               </p>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                 PDF, Word, Excel, or images up to 10MB each
               </p>
+              {files.length > 0 && (
+                <p className="text-xs font-semibold text-primary-600 dark:text-primary-400 mt-2">
+                  {files.length} file{files.length > 1 ? 's' : ''} selected
+                </p>
+              )}
             </div>
 
             {files.length > 0 && (
-              <div className="mt-4 space-y-2">
-                {files.map((file, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-3 p-2.5 bg-slate-50 rounded-lg border border-slate-100"
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Selected Files ({files.length})
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setFiles([])}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-danger-600 transition-colors"
                   >
-                    <FileText className="w-4 h-4 text-primary-600 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900 truncate">{file.name}</p>
-                      <p className="text-xs text-slate-400">
-                        {(file.size / 1024).toFixed(1)} KB
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeFile(index)}
-                      className="p-1 text-slate-400 hover:text-danger-600 hover:bg-danger-50 rounded transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Clear all
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {files.map((file, index) => {
+                    const ftype = fileTypeMeta(file)
+                    return (
+                      <div
+                        key={index}
+                        className="group flex items-center gap-3 p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-100 dark:border-slate-700/60 hover:border-slate-200 dark:hover:border-slate-600 transition-colors"
+                      >
+                        <span className={`flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${ftype.cls}`}>
+                          {ftype.icon}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{file.name}</p>
+                          <p className="text-xs text-slate-400 dark:text-slate-500">
+                            {formatFileSize(file.size)} · {ftype.label}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(index)}
+                          aria-label={`Remove ${file.name}`}
+                          className="p-1.5 text-slate-400 hover:text-danger-600 hover:bg-danger-50 dark:hover:bg-danger-950/40 rounded-md transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
+                  Total size: {formatFileSize(files.reduce((sum, f) => sum + f.size, 0))}
+                </p>
               </div>
             )}
           </div>

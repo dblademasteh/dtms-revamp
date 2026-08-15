@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/services/api'
 import toast from 'react-hot-toast'
-import { X, Save } from 'lucide-react'
+import { X, Save, FileText, AlertTriangle, AlertCircle } from 'lucide-react'
 import ModalPortal from '@/components/ModalPortal'
 import { useDropdownGroup } from '@/hooks/useDropdownOptions'
 
@@ -28,6 +28,13 @@ const PRIORITY_STYLES: Record<string, { badgeClass: string; activeStyle: string 
 const DEFAULT_PRIORITY_STYLE = {
   badgeClass: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
   activeStyle: 'border-slate-500 bg-slate-50 dark:bg-slate-800/60 ring-2 ring-slate-400/30',
+}
+
+const priorityIcons: Record<string, JSX.Element> = {
+  low: <FileText className="w-3.5 h-3.5" />,
+  normal: <FileText className="w-3.5 h-3.5" />,
+  high: <AlertTriangle className="w-3.5 h-3.5" />,
+  urgent: <AlertCircle className="w-3.5 h-3.5" />,
 }
 
 export default function EditDocumentModal({
@@ -188,7 +195,8 @@ export default function EditDocumentModal({
                           : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800'
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-1 mb-1">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        {priorityIcons[opt.value] || <FileText className="w-3.5 h-3.5" />}
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold border uppercase tracking-wider ${style.badgeClass}`}>
                           {opt.label}
                         </span>
