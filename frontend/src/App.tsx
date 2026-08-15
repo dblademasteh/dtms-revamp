@@ -2,43 +2,55 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import { useAuthStore } from '@/stores/authStore'
-import Login from '@/pages/Login'
-import ChangePassword from '@/pages/ChangePassword'
-import Dashboard from '@/pages/Dashboard'
-import Documents from '@/pages/Documents'
-import DocumentDetail from '@/pages/DocumentDetail'
-import CreateDocument from '@/pages/CreateDocument'
-import EditDocument from '@/pages/EditDocument'
-import Reports from '@/pages/Reports'
-import Users from '@/pages/Users'
-import Settings from '@/pages/Settings'
-import Track from '@/pages/Track'
-import AgencyGateway from '@/pages/AgencyGateway'
-import CreateDocumentPublic from '@/pages/CreateDocumentPublic'
-import ForgotPassword from '@/pages/ForgotPassword'
-import ResetPassword from '@/pages/ResetPassword'
-import VerifyEmail from '@/pages/VerifyEmail'
-import RoutingTemplates from '@/pages/RoutingTemplates'
-import Offices from '@/pages/Offices'
-import ActivityLog from '@/pages/ActivityLog'
-import Personnel from '@/pages/Personnel'
-import Storage from '@/pages/Storage'
-import Announcements from '@/pages/Announcements'
-import AdminSuggestions from '@/pages/AdminSuggestions'
-import Mailbox from '@/pages/Mailbox'
-import OfficeProfile from '@/pages/OfficeProfile'
-import Help from '@/pages/Help'
-import NotFound from '@/pages/NotFound'
-import Dropdowns from '@/pages/admin/Dropdowns'
 import Layout from '@/components/Layout'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import PrivacyNotice from '@/components/PrivacyNotice'
 import { useRealtime } from '@/hooks/useRealtime'
 import { useDropdownOptions } from '@/hooks/useDropdownOptions'
 
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
+
+const Login = lazy(() => import('@/pages/Login'))
+const ChangePassword = lazy(() => import('@/pages/ChangePassword'))
+const Dashboard = lazy(() => import('@/pages/Dashboard'))
+const Documents = lazy(() => import('@/pages/Documents'))
+const DocumentDetail = lazy(() => import('@/pages/DocumentDetail'))
+const CreateDocument = lazy(() => import('@/pages/CreateDocument'))
+const EditDocument = lazy(() => import('@/pages/EditDocument'))
+const Reports = lazy(() => import('@/pages/Reports'))
+const Users = lazy(() => import('@/pages/Users'))
+const Settings = lazy(() => import('@/pages/Settings'))
+const Track = lazy(() => import('@/pages/Track'))
+const AgencyGateway = lazy(() => import('@/pages/AgencyGateway'))
+const CreateDocumentPublic = lazy(() => import('@/pages/CreateDocumentPublic'))
+const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'))
+const ResetPassword = lazy(() => import('@/pages/ResetPassword'))
+const VerifyEmail = lazy(() => import('@/pages/VerifyEmail'))
+const RoutingTemplates = lazy(() => import('@/pages/RoutingTemplates'))
+const Offices = lazy(() => import('@/pages/Offices'))
+const ActivityLog = lazy(() => import('@/pages/ActivityLog'))
+const Personnel = lazy(() => import('@/pages/Personnel'))
+const Storage = lazy(() => import('@/pages/Storage'))
+const Announcements = lazy(() => import('@/pages/Announcements'))
+const AdminSuggestions = lazy(() => import('@/pages/AdminSuggestions'))
+const Mailbox = lazy(() => import('@/pages/Mailbox'))
+const OfficeProfile = lazy(() => import('@/pages/OfficeProfile'))
+const Help = lazy(() => import('@/pages/Help'))
+const NotFound = lazy(() => import('@/pages/NotFound'))
+const Dropdowns = lazy(() => import('@/pages/admin/Dropdowns'))
 
 const queryClient = new QueryClient()
+
+function PageFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
+        <p className="text-sm text-slate-400">Loading…</p>
+      </div>
+    </div>
+  )
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, user } = useAuthStore()
@@ -127,7 +139,8 @@ function App() {
       {unlocked && <DropdownOptionsLoader />}
       <ErrorBoundary>
         <BrowserRouter>
-          <Routes>
+          <Suspense fallback={<PageFallback />}>
+            <Routes>
           <Route path="/login" element={<Login />} />
            <Route path="/track" element={<Track />} />
            <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -166,6 +179,7 @@ function App() {
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
         </BrowserRouter>
       </ErrorBoundary>
       <Toaster position="top-right" />
