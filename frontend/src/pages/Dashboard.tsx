@@ -15,7 +15,6 @@ import {
   Shield,
   CheckCircle2,
   Inbox,
-  ClipboardList,
   LayoutList,
   Building2,
 } from 'lucide-react'
@@ -159,9 +158,7 @@ export default function Dashboard() {
   ]
 
   const deskCards = [
-    { name: 'My Documents', value: stats.my_documents || 0, icon: FileText, iconCls: 'stat-icon-primary', link: '/documents' },
     ...(user?.role === 'office_station' ? [{ name: 'My Office Inbox', value: stats.my_office_pending || 0, icon: Inbox, iconCls: 'stat-icon-amber', link: '/documents' }] : []),
-    { name: 'Awaiting Acknowledgment', value: stats.pending_acknowledgements || 0, icon: ClipboardList, iconCls: 'stat-icon-cyan', link: '/documents' },
   ]
 
   const quickActions = [
@@ -220,21 +217,43 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* My Desk */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
-        {deskCards.map((card) => (
-          <Link key={card.name} to={card.link} className="card p-4 hover:shadow-md transition-shadow flex items-center gap-3">
-            <div className={`stat-icon ${card.iconCls}`}>
-              <card.icon className="w-5 h-5" />
+      {/* Quick Actions */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-5">
+        {quickActions.map((action) => (
+          <Link
+            key={action.name}
+            to={action.link}
+            className="card p-3 sm:p-5 hover:shadow-md transition-shadow cursor-pointer flex items-center gap-2 sm:gap-3"
+          >
+            <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${action.cls}`}>
+              <action.icon className={`w-5 h-5 ${action.iconCls}`} />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="stat-label">{card.name}</p>
-              <p className="stat-value">{card.value}</p>
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm font-semibold text-slate-900 leading-tight truncate">{action.name}</p>
+              <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5 hidden sm:block truncate">{action.desc}</p>
             </div>
-            <ArrowRight className="w-4 h-4 text-slate-300 flex-shrink-0" />
+            <ArrowRight className="w-4 h-4 text-slate-400 ml-auto hidden sm:block flex-shrink-0" />
           </Link>
         ))}
       </div>
+
+      {/* My Desk */}
+      {deskCards.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
+          {deskCards.map((card) => (
+            <Link key={card.name} to={card.link} className="card p-4 hover:shadow-md transition-shadow flex items-center gap-3">
+              <div className={`stat-icon ${card.iconCls}`}>
+                <card.icon className="w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="stat-label">{card.name}</p>
+                <p className="stat-value">{card.value}</p>
+              </div>
+              <ArrowRight className="w-4 h-4 text-slate-300 flex-shrink-0" />
+            </Link>
+          ))}
+        </div>
+      )}
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -357,26 +376,6 @@ export default function Dashboard() {
             )}
           </div>
         </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-5">
-        {quickActions.map((action) => (
-          <Link
-            key={action.name}
-            to={action.link}
-            className="card p-3 sm:p-5 hover:shadow-md transition-shadow cursor-pointer flex items-center gap-2 sm:gap-3"
-          >
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${action.cls}`}>
-              <action.icon className={`w-5 h-5 ${action.iconCls}`} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs sm:text-sm font-semibold text-slate-900 leading-tight truncate">{action.name}</p>
-              <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5 hidden sm:block truncate">{action.desc}</p>
-            </div>
-            <ArrowRight className="w-4 h-4 text-slate-400 ml-auto hidden sm:block flex-shrink-0" />
-          </Link>
-        ))}
       </div>
 
       {/* Announcements Bulletin */}

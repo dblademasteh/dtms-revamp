@@ -1064,9 +1064,11 @@ class DocumentController extends Controller
         }
 
         return response()->json([
+            'id' => $document->id,
             'tracking_number' => $document->tracking_number,
             'subject' => $document->subject,
             'status' => $document->status,
+            'document_type' => $document->document_type,
             'current_location' => $document->currentOffice->name,
             'last_updated' => $document->updated_at,
             'history' => $document->routingHistory->sortByDesc('timestamp'),

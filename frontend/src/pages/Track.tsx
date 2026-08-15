@@ -111,11 +111,13 @@ export default function Track() {
   const getCurrentStepIndex = (status: string) => {
     const s = status?.toLowerCase() || ''
     if (s === 'created') return 0
-    if (s === 'received') return 1
-    if (s === 'in_review') return 2
+    if (s === 'received' || s === 'returned') return 1
+    if (s === 'in_review' || s === 'rejected') return 2
     if (s === 'approved' || s === 'released' || s === 'filed') return 3
     return 1
   }
+
+  const isTerminal = (status: string) => ['rejected', 'returned'].includes(status?.toLowerCase() || '')
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200 pb-16">
@@ -283,21 +285,34 @@ export default function Track() {
               <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
                 <div className="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400 mb-3">
                   <span>Routing Workflow Progress</span>
-                  <span className="text-blue-600 dark:text-blue-400 font-mono">Stage {getCurrentStepIndex(data.status) + 1} of 4</span>
+                  {isTerminal(data.status) ? (
+                    <span className={`font-mono ${data.status?.toLowerCase() === 'rejected' ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                      {statusLabels[data.status] || data.status}
+                    </span>
+                  ) : (
+                    <span className="text-blue-600 dark:text-blue-400 font-mono">Stage {getCurrentStepIndex(data.status) + 1} of 4</span>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-4 gap-2">
                   {steps.map((st, idx) => {
                     const activeIdx = getCurrentStepIndex(data.status)
-                    const isCompleted = idx <= activeIdx
+                    const terminal = isTerminal(data.status) && idx === activeIdx
+                    const isCompleted = terminal || idx < activeIdx
                     return (
                       <div key={st.key} className="space-y-1.5">
                         <div
                           className={`h-2 rounded-full transition-all duration-300 ${
-                            isCompleted ? 'bg-blue-600 dark:bg-gradient-to-r dark:from-blue-500 dark:to-indigo-500 shadow-sm shadow-blue-500/50' : 'bg-slate-200 dark:bg-slate-800'
+                            terminal
+                              ? data.status?.toLowerCase() === 'rejected'
+                                ? 'bg-red-500 shadow-sm shadow-red-500/50'
+                                : 'bg-amber-500 shadow-sm shadow-amber-500/50'
+                              : isCompleted
+                                ? 'bg-blue-600 dark:bg-gradient-to-r dark:from-blue-500 dark:to-indigo-500 shadow-sm shadow-blue-500/50'
+                                : 'bg-slate-200 dark:bg-slate-800'
                           }`}
                         />
-                        <p className={`text-[11px] font-medium hidden sm:block truncate ${isCompleted ? 'text-slate-900 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600'}`}>
+                        <p className={`text-[11px] font-medium hidden sm:block truncate ${terminal ? 'text-red-600 dark:text-red-400' : isCompleted ? 'text-slate-900 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600'}`}>
                           {st.label}
                         </p>
                       </div>
