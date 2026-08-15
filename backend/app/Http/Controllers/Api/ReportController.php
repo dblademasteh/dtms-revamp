@@ -380,14 +380,14 @@ class ReportController extends Controller
             ->when(!$user->isAdmin(), fn ($q) => $q->visibleTo($user))
             ->groupBy('status')
             ->get()
-            ->pluck('count', 'status');
+            ->mapWithKeys(fn ($row) => [$row->status->value => (int) $row->count]);
 
         $typeCounts = Document::selectRaw('document_type, COUNT(*) as count')
             ->when(!$user->isAdmin(), fn ($q) => $q->visibleTo($user))
             ->groupBy('document_type')
             ->orderByDesc('count')
             ->get()
-            ->pluck('count', 'document_type');
+            ->mapWithKeys(fn ($row) => [$row->document_type => (int) $row->count]);
 
         $topOffices = Document::select('offices.id', 'offices.name')
             ->selectRaw('COUNT(*) as count')
