@@ -142,7 +142,6 @@ services:
     image: cloudflare/cloudflared:latest
     container_name: cloudflared
     restart: unless-stopped
-    network_mode: service:frontend
     depends_on:
       - frontend
     command: ["tunnel", "--no-autoupdate", "run", "--protocol", "http2", "--token=${CLOUDFLARE_TUNNEL_TOKEN}"]
