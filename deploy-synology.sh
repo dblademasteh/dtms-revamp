@@ -9,16 +9,23 @@
 #
 # Examples:
 #   ./deploy-synology.sh
-#   ./deploy-synology.sh 192.168.1.10 /volume1/docker/dts bfpr2
+#   ./deploy-synology.sh 192.168.1.10 /volume1/docker/dts-project bfpr2
 #
 # Environment:
 #   SEED=1   Run "php artisan db:seed --force" after deploy
+#
+# SSH:
+#   Default host is the NAS Tailscale name (bfp-r2-nas1). A ~/.ssh/config
+#   entry can also route the QuickConnect host over Tailscale:
+#       Host bfpr2.tw4.quickconnect.to bfp-r2-nas1
+#           HostName bfp-r2-nas1
+#           User bfpr2
 # ==========================================
 
 set -euo pipefail
 
-SSH_HOST="${1:-bfpr2.tw4.quickconnect.to}"
-PROJECT_PATH="${2:-/volume1/docker/dts}"
+SSH_HOST="${1:-bfp-r2-nas1}"
+PROJECT_PATH="${2:-/volume1/docker/dts-project}"
 SSH_USER="${3:-bfpr2}"
 REPO_URL="https://github.com/dblademasteh/dtms-revamp.git"
 COMPOSE_FILE="docker-compose.synology.yml"

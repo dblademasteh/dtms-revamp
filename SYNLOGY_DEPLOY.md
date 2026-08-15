@@ -5,8 +5,10 @@ in **Container Manager**. The stack runs entirely on the NAS and is served publi
 through a Cloudflare tunnel.
 
 - **Repo**: `https://github.com/dblademasteh/dtms-revamp.git` (branch `master`)
-- **NAS path**: `/volume1/docker/dts`
+- **Code path**: `/volume1/docker/dts-project` (git checkout + compose file)
+- **Data path**: `/volume1/docker/dts` (`DOCKER_BASE_PATH` — DB, Redis, Meili, uploads)
 - **Compose file**: `docker-compose.synology.yml`
+- **SSH**: connect over Tailscale with `ssh bfpr2@bfp-r2-nas1`
 
 ## Prerequisites
 
@@ -20,12 +22,16 @@ through a Cloudflare tunnel.
 
 ### Clone the repository
 
+> Keep the git checkout and the data folder **separate**. Code goes in
+> `/volume1/docker/dts-project`; persistent data stays in `/volume1/docker/dts`
+> (the compose `DOCKER_BASE_PATH`), so pulls/reclones never touch your data.
+
 ```bash
-ssh bfpr2@YOUR_NAS_IP
+ssh bfpr2@bfp-r2-nas1
 sudo -i
 cd /volume1/docker
-git clone https://github.com/dblademasteh/dtms-revamp.git dts
-cd dts
+git clone https://github.com/dblademasteh/dtms-revamp.git dts-project
+cd dts-project
 ```
 
 ### Environment files
@@ -43,6 +49,7 @@ Two `.env` files are needed:
 
    | Variable | What to set |
    |---|---|
+   | `DOCKER_BASE_PATH` | **Data** folder (keep out of the git checkout), e.g. `/volume1/docker/dts` |
    | `APP_URL` | Public URL, e.g. `https://dtms.devbry.online` |
    | `FRONTEND_URL` | Same public URL |
    | `DB_PASSWORD` | A strong password of your choice |
@@ -55,7 +62,8 @@ Two `.env` files are needed:
    | `FRONTEND_PORT` / `BACKEND_PORT` | Only change if 80/8000 are taken |
 
 2. **Backend `.env`** (APP_KEY persistence) — must exist or compose refuses to start.
-   It can be empty; the backend generates and persists `APP_KEY` on first boot:
+   It can be empty; the backend generates and persists `APP_KEY` on first boot.
+   It lives **under `DOCKER_BASE_PATH`**, not inside the git checkout:
 
    ```bash
    mkdir -p /volume1/docker/dts/backend/storage
@@ -70,7 +78,7 @@ Two `.env` files are needed:
 The canonical deploy (pull → build → start, in that order):
 
 ```bash
-cd /volume1/docker/dts
+cd /volume1/docker/dts-project
 git pull --ff-only
 sudo docker compose -f docker-compose.synology.yml build
 sudo docker compose -f docker-compose.synology.yml up -d
@@ -87,12 +95,21 @@ sudo docker compose -f docker-compose.synology.yml up -d
 ### One-liner from your machine
 
 For routine updates you can run the included deploy script from your workstation.
-It SSHes into the NAS, pulls, builds, starts, waits for health, and migrates:
+It SSHes into the NAS (via Tailscale), pulls, builds, starts, waits for health, and migrates:
 
 ```bash
-./deploy-synology.sh                       # defaults: bfpr2.tw4.quickconnect.to, /volume1/docker/dts, bfpr2
-./deploy-synology.sh 192.168.1.10 /volume1/docker/dts bfpr2
+./deploy-synology.sh                       # defaults: bfp-r2-nas1, /volume1/docker/dts-project, bfpr2
+./deploy-synology.sh 192.168.1.10 /volume1/docker/dts-project bfpr2
 SEED=1 ./deploy-synology.sh                # seed on a fresh install
+```
+
+To connect over Tailscale add this to `~/.ssh/config` (also makes the old
+QuickConnect hostname work):
+
+```
+Host bfpr2.tw4.quickconnect.to bfp-r2-nas1
+    HostName bfp-r2-nas1
+    User bfpr2
 ```
 
 ## 3. After every deploy: clear the Cloudflare cache
@@ -164,7 +181,7 @@ Default accounts (seed):
 ## 7. Common tasks
 
 ```bash
-cd /volume1/docker/dts
+cd /volume1/docker/dts-project
 CF="docker compose -f docker-compose.synology.yml"
 
 # Status / logs

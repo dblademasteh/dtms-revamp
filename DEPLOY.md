@@ -2,27 +2,47 @@
 
 One script updates the NAS with the latest code and redeploys the full stack.
 
+> **Path layout on the NAS**
+> - **Code (git checkout + compose file):** `/volume1/docker/dts-project`
+> - **Persistent data (DB, Redis, Meili, uploads):** `/volume1/docker/dts` — this is
+>   the compose `DOCKER_BASE_PATH`, so it is **not** the git checkout.
+
 ## Quick Start
 
 From your **local machine** (simplest — the script handles everything over SSH):
 
 ```bash
-./deploy-synology.sh                                    # defaults below
-./deploy-synology.sh bfp-r2-nas1 /volume1/docker/dts bfpr2
-SEED=1 ./deploy-synology.sh                             # seed the DB after a fresh install
+./deploy-synology.sh                                       # defaults below
+./deploy-synology.sh bfp-r2-nas1 /volume1/docker/dts-project bfpr2
+SEED=1 ./deploy-synology.sh                                # seed the DB after a fresh install
 ```
 
-Defaults: host `bfpr2.tw4.quickconnect.to`, path `/volume1/docker/dts`, user `bfpr2`.
+Defaults: host `bfp-r2-nas1` (Tailscale), path `/volume1/docker/dts-project`, user `bfpr2`.
+
+### One-time SSH setup (passwordless deploys)
+
+```bash
+# 1. Optional: add an SSH config entry so the old QuickConnect host also works
+#    and deploys route over Tailscale. Put this in ~/.ssh/config:
+#        Host bfpr2.tw4.quickconnect.to bfp-r2-nas1
+#            HostName bfp-r2-nas1
+#            User bfpr2
+
+# 2. Optional: passwordless SSH key
+ssh-keygen -t ed25519
+cat ~/.ssh/id_ed25519.pub | ssh bfpr2@bfp-r2-nas1 'mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys'
+```
 
 ### Manual SSH Commands
 
 To SSH into the NAS and deploy by hand instead:
 
 ```bash
-ssh bfpr2@bfpr2.tw4.quickconnect.to
-cd /volume1/docker/dts
+ssh bfpr2@bfp-r2-nas1
+cd /volume1/docker/dts-project
 git pull --ff-only
 cp .env.synology .env 2>/dev/null || true   # first time only, then edit it
+# In .env ensure DOCKER_BASE_PATH points at the DATA folder, e.g. /volume1/docker/dts
 mkdir -p backend/storage
 touch backend/.env
 export COMPOSE_FILE=docker-compose.synology.yml
@@ -46,13 +66,18 @@ Requirements:
 
 | Step | Action |
 |---|---|
-| 1 | Clone the repo on first run |
+| 1 | Clone the repo on first run (into `PROJECT_PATH`, e.g. `/volume1/docker/dts-project`) |
 | 2 | `git pull --ff-only` (resets to upstream if that fails) |
-| 3 | Ensure `.env` exists; create `backend/.env` (empty; APP_KEY generated on first boot) |
+| 3 | Ensure `.env` exists; create `${DOCKER_BASE_PATH}/backend/.env` (empty; APP_KEY generated on first boot) |
 | 4 | `docker compose build` |
 | 5 | `docker compose up -d --build` |
 | 6 | Wait for the backend container to become healthy |
 | 7 | Run migrations (or `db:seed --force` when `SEED=1`) |
+
+> The git checkout/project folder and the compose data folder are different:
+> `PROJECT_PATH` (code) is where `docker-compose.synology.yml` lives, while
+> `DOCKER_BASE_PATH` (from `.env`) is where postgres/redis/meili data and
+> `backend/storage` are persisted. On this NAS: code = `dts-project`, data = `dts`.
 
 ## Environment Files
 
@@ -60,8 +85,15 @@ Two files control the deployment:
 
 | File | Purpose |
 |---|---|
-| `./.env` (from `.env.synology`) | Compose variables: `DOCKER_BASE_PATH`, ports, domain, `CLOUDFLARE_TUNNEL_TOKEN`, DB passwords |
+| `./.env` (from `.env.synology`) | Compose variables: `DOCKER_BASE_PATH` (data folder), ports, domain, `CLOUDFLARE_TUNNEL_TOKEN`, DB passwords |
 | `${DOCKER_BASE_PATH}/backend/.env` | Laravel env; `APP_KEY` is generated and persisted here by the entrypoint |
+
+`DOCKER_BASE_PATH` is the **data** folder only — keep it out of the git checkout so
+a `git pull`/reclone never touches your data. Example:
+
+```
+DOCKER_BASE_PATH=/volume1/docker/dts      # data (postgres/, redis/, meilisearch/, backend/storage)
+```
 
 Must-haves before the first deploy:
 
@@ -72,7 +104,7 @@ Must-haves before the first deploy:
 ## Useful Commands on the NAS
 
 ```bash
-cd /volume1/docker/dts
+cd /volume1/docker/dts-project
 export COMPOSE_FILE=docker-compose.synology.yml
 
 docker compose ps                                   # container status
