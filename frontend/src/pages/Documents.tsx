@@ -37,9 +37,14 @@ export default function Documents() {
   const documentTypes = useDropdownGroup('document_types')
   const priorities = useDropdownGroup('priorities')
   const [searchParams] = useSearchParams()
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(searchParams.get('q') || '')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [status, setStatus] = useState(searchParams.get('status') || '')
+
+  useEffect(() => {
+    setSearch(searchParams.get('q') || '')
+    setPage(1)
+  }, [searchParams.get('q')])
   const [priority, setPriority] = useState('')
   const [docType, setDocType] = useState('')
   const [mineOnly, setMineOnly] = useState(false)

@@ -21,9 +21,12 @@ import {
   MapPin,
   ChevronsUpDown,
   LifeBuoy,
-  HelpCircle
+  HelpCircle,
+  ChevronDown,
+  ChevronRight,
+  Globe
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import NotificationBell from '@/components/NotificationBell'
 import ConfirmModal from '@/components/ConfirmModal'
 import HelpWidget from '@/components/HelpWidget'
@@ -71,9 +74,25 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const profileRef = useRef<HTMLDivElement>(null)
   const [logoFailed, setLogoFailed] = useState(false)
   const branding = useBranding()
   const { toggleTheme } = useTheme()
+
+  useEffect(() => {
+    if (!profileOpen) return
+    const handler = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) setProfileOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [profileOpen])
+
+  useEffect(() => {
+    if (!location.pathname.startsWith('/documents')) setSearchQuery('')
+  }, [location.pathname])
 
   const handleLogout = () => {
     setShowLogoutConfirm(true)
@@ -87,8 +106,36 @@ export default function Layout() {
 
   const isActive = (href: string) => {
     if (href === '/') return location.pathname === '/'
-    return location.pathname.startsWith(href)
+    return location.pathname === href || location.pathname.startsWith(href + '/')
   }
+
+  const submitSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    const q = searchQuery.trim()
+    navigate(q ? `/documents?q=${encodeURIComponent(q)}` : '/documents')
+  }
+
+  const breadcrumbs = useMemo(() => {
+    const p = location.pathname
+    if (p.startsWith('/documents/new')) return ['Documents', 'New Document']
+    if (p.startsWith('/documents/')) {
+      return p.endsWith('/edit') ? ['Documents', 'Edit Document'] : ['Documents', 'Document Details']
+    }
+    if (p.startsWith('/admin/')) {
+      const adminTitles: Record<string, string> = {
+        '/admin/users': 'Users',
+        '/admin/templates': 'Routing Templates',
+        '/admin/offices': 'Offices',
+        '/admin/storage': 'Storage',
+        '/admin/activity': 'Activity Log',
+        '/admin/suggestions': 'Suggestions',
+        '/admin/dropdowns': 'Dropdown Options',
+      }
+      const t = adminTitles[p.split('?')[0]]
+      return t ? ['Administration', t] : null
+    }
+    return null
+  }, [location.pathname])
 
   const getPageMeta = (pathname: string) => {
     if (pathname.startsWith('/documents/new')) {
@@ -103,7 +150,7 @@ export default function Layout() {
     const meta: Record<string, { title: string; description: string }> = {
       '/': { title: 'Dashboard', description: 'Overview of documents, tasks, and activity' },
       '/documents': { title: 'Documents', description: 'Manage and track your documents' },
-      '/gateway': { title: 'Agency Gateway', description: 'Admin: public tracking & document creation hub' },
+      '/gateway': { title: 'Agency Gateway', description: 'Public tracking and agency document submission hub' },
       '/announcements': { title: 'Announcements', description: 'Browse announcements and circulars' },
       '/reports': { title: 'Reports', description: 'Generate and view reports' },
       '/personnel': { title: 'Personnel', description: 'Manage personnel records' },
@@ -203,7 +250,7 @@ export default function Layout() {
               }`}
               onClick={() => setSidebarOpen(false)}
             >
-              <MapPin className="w-5 h-5 flex-shrink-0" />
+              <Globe className="w-5 h-5 flex-shrink-0" />
               Agency Gateway
             </Link>
             <Link
@@ -325,12 +372,16 @@ export default function Layout() {
 
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-blue-600 dark:bg-blue-600 flex items-center justify-center overflow-hidden flex-shrink-0 text-white shadow-xs">
-                <img
-                  src={branding.sidebar_logo || '/logo.png?v=2'}
-                  alt="DTMS logo"
-                  className="w-7 h-7 object-contain"
-                  draggable={false}
-                />
+                {!logoFailed ? (
+                  <img
+                    src={branding.sidebar_logo || '/logo.png?v=2'}
+                    alt="DTMS logo"
+                    className="w-7 h-7 object-contain"
+                    draggable={false}
+                  />
+                ) : (
+                  <Shield className="w-4 h-4 text-white" />
+                )}
               </div>
               <span className="font-extrabold text-slate-900 dark:text-white text-base tracking-tight">{branding.system_title}</span>
             </div>
@@ -338,21 +389,35 @@ export default function Layout() {
 
           <div className="min-w-0 flex-1 hidden lg:block mr-4">
             <h1 className="text-lg font-bold text-slate-900 dark:text-white leading-tight truncate">{pageMeta.title}</h1>
-            <p className="text-[13px] text-slate-500 dark:text-slate-400 leading-tight truncate">{pageMeta.description}</p>
+            {breadcrumbs ? (
+              <nav className="flex items-center gap-1 text-[12px] text-slate-400 dark:text-slate-500 leading-tight truncate" aria-label="Breadcrumb">
+                {breadcrumbs.map((b, i) => (
+                  <span key={i} className="flex items-center gap-1">
+                    {i > 0 && <ChevronRight className="h-3 w-3 text-slate-300 dark:text-slate-600" />}
+                    <span className={i === breadcrumbs.length - 1 ? 'text-slate-600 dark:text-slate-300 font-medium' : ''}>{b}</span>
+                  </span>
+                ))}
+              </nav>
+            ) : (
+              <p className="text-[13px] text-slate-500 dark:text-slate-400 leading-tight truncate">{pageMeta.description}</p>
+            )}
           </div>
 
           <div className="flex items-center gap-x-3 ml-auto">
             {/* Search */}
-            <div className="hidden sm:block w-64 md:w-80">
+            <form onSubmit={submitSearch} className="hidden sm:block w-64 md:w-80" role="search">
               <div className="relative w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <input
                   type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search documents..."
+                  aria-label="Search documents"
                   className="w-full pl-9 pr-4 py-2 text-sm bg-slate-100 dark:bg-slate-800 border-0 rounded-lg focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 transition-all"
                 />
               </div>
-            </div>
+            </form>
 
             {/* Notifications */}
             <NotificationBell />
@@ -386,9 +451,20 @@ export default function Layout() {
               </button>
             )}
 
-            {/* Profile: account number + role, with logout */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2.5">
+            {/* Profile: dropdown with account info and actions */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setProfileOpen((v) => !v)}
+                aria-haspopup="menu"
+                aria-expanded={profileOpen}
+                title="Account menu"
+                className={`flex items-center gap-2.5 pl-1 pr-2 py-1 rounded-lg transition-colors ${
+                  profileOpen
+                    ? 'bg-slate-100 dark:bg-slate-800'
+                    : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
                 <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 ring-1 ring-blue-200 dark:ring-blue-700 flex items-center justify-center overflow-hidden flex-shrink-0">
                   {user?.avatar ? (
                     <img src={user.avatar} alt="" className="w-full h-full object-cover" />
@@ -398,7 +474,7 @@ export default function Layout() {
                     </span>
                   )}
                 </div>
-                <div className="hidden sm:flex flex-col leading-tight">
+                <div className="hidden sm:flex flex-col leading-tight text-left">
                   <span className="text-sm font-semibold text-slate-900 dark:text-white font-mono">
                     {user?.accnt_no || '—'}
                   </span>
@@ -406,14 +482,60 @@ export default function Layout() {
                     {user?.role?.replace('_', ' ')}
                   </span>
                 </div>
-              </div>
-              <button
-                onClick={handleLogout}
-                title="Sign out"
-                className="flex items-center justify-center w-9 h-9 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 dark:hover:text-red-400 transition-colors"
-              >
-                <LogOut className="h-5 w-5" />
+                <ChevronDown
+                  className={`hidden sm:block h-4 w-4 text-slate-400 transition-transform ${profileOpen ? 'rotate-180' : ''}`}
+                />
               </button>
+
+              {profileOpen && (
+                <div
+                  ref={profileRef}
+                  role="menu"
+                  className="absolute right-0 top-full mt-2 w-60 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl z-50 overflow-hidden"
+                >
+                  <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+                    <div className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                      {user?.name || 'User'}
+                    </div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                      {user?.accnt_no || '—'} · {user?.role?.replace('_', ' ')}
+                    </div>
+                  </div>
+                  <div className="py-1">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => { setProfileOpen(false); navigate('/settings') }}
+                      className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                    >
+                      <Settings className="h-4 w-4" />
+                      Settings
+                    </button>
+                    {user?.role !== 'superadmin' && (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => { setProfileOpen(false); setHelpOpen(true) }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                      >
+                        <HelpCircle className="h-4 w-4" />
+                        Help & Feedback
+                      </button>
+                    )}
+                  </div>
+                  <div className="border-t border-slate-100 dark:border-slate-800 py-1">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => { setProfileOpen(false); handleLogout() }}
+                      className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

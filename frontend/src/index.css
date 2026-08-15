@@ -306,7 +306,7 @@ html.font-jetbrains-mono, html.font-jetbrains-mono body, html.font-jetbrains-mon
   }
 
   .nav-item-active {
-    @apply bg-blue-50 text-blue-700 font-bold border border-blue-200/60 shadow-sm dark:bg-blue-500/15 dark:text-blue-400 dark:border-blue-500/30;
+    @apply bg-primary-50 text-primary-700 font-bold border border-primary-200/60 shadow-sm dark:bg-primary-500/15 dark:text-primary-400 dark:border-primary-500/30;
   }
 
   .nav-item-inactive {
