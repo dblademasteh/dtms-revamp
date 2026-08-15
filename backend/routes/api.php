@@ -40,6 +40,9 @@ Route::get('/branding', [App\Http\Controllers\Api\BrandingController::class, 'pu
 // Public PWA manifest (branded name/description/icons) for install & splash
 Route::get('/manifest.webmanifest', [App\Http\Controllers\Api\BrandingController::class, 'manifest']);
 
+// Health check (no DB dependency) used by container healthchecks
+Route::get('/health', fn () => response()->json(['status' => 'ok']));
+
 // Protected routes
 Route::middleware(['auth:sanctum', 'force-password-change'])->group(function () {
     // Auth routes

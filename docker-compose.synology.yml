@@ -67,7 +67,7 @@ services:
       - ${DOCKER_BASE_PATH:-/volume1/docker/dts}/backend/storage:/var/www/html/storage
       - ${DOCKER_BASE_PATH:-/volume1/docker/dts}/backend/bootstrap/cache:/var/www/html/bootstrap/cache
     healthcheck:
-      test: [ "CMD-SHELL", "curl -fsS -o /dev/null http://localhost:8000/ || exit 1" ]
+      test: [ "CMD-SHELL", "curl -fsS -o /dev/null http://localhost:8000/api/health || exit 1" ]
       interval: 15s
       timeout: 5s
       retries: 5
