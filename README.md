@@ -149,13 +149,17 @@ A Synology-ready Docker Compose file is provided. See [`SYNLOGY_DEPLOY.md`](SYNL
 Quick start:
 
 ```bash
-# 1. Copy the template and edit your NAS IP / passwords
+# 1. Copy the template and edit your domain / passwords / tunnel token
 cp .env.synology .env
 
-# 2. Build and start (APP_KEY is auto-generated on first run)
+# 2. Create the backend env file (compose requires it; APP_KEY is generated into it)
+mkdir -p backend/storage
+touch backend/.env
+
+# 3. Build and start (APP_KEY is auto-generated on first run)
 docker compose -f docker-compose.synology.yml up -d --build
 
-# 3. Run migrations
+# 4. Migrations (also runs automatically on first boot)
 docker compose -f docker-compose.synology.yml exec backend php artisan migrate --force
 ```
 

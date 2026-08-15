@@ -29,6 +29,10 @@ Or use **File Station** to drag-and-drop the project folder into the `docker` sh
 
 ## 3. Configure Environment Variables
 
+Two `.env` files are needed:
+
+### 3a. Root `.env` (compose variables)
+
 Create the `.env` file from the template:
 
 ```bash
@@ -46,20 +50,29 @@ vi .env
 
 | Variable | What to set |
 |---|---|
-| `APP_URL` | `http://YOUR_NAS_IP` (no port, no trailing slash) |
+| `APP_URL` | Your public URL, e.g. `https://dtms.devbry.online` |
 | `DB_PASSWORD` | A strong password of your choice |
 | `MEILISEARCH_KEY` | A strong key of your choice |
-| `SESSION_DOMAIN` | `YOUR_NAS_IP` (just the IP or domain) |
-| `SANCTUM_STATEFUL_DOMAINS` | `YOUR_NAS_IP:80` (include port if non-standard) |
+| `SESSION_DOMAIN` | Your public domain (or leave empty for a host-only cookie) |
+| `SANCTUM_STATEFUL_DOMAINS` | Your public domain, e.g. `dtms.devbry.online` |
+| `CLOUDFLARE_TUNNEL_TOKEN` | Your Cloudflare tunnel token (required for public access) |
+| `SESSION_SECURE_COOKIE` | `true` behind HTTPS, `false` for plain-HTTP LAN access |
 
-> **App Key**: The backend auto-generates `APP_KEY` on first run and stores it in a bind-mounted `.env` file at `${DOCKER_BASE_PATH}/backend/.env`, so it persists across restarts. No manual key generation is required.
+### 3b. Backend `.env` (APP_KEY persistence)
 
-Optionally, pre-create the data directories on your Synology:
+The backend auto-generates `APP_KEY` on first run and writes it to the
+bind-mounted file at `${DOCKER_BASE_PATH}/backend/.env`. Create it before
+starting the stack (it may be empty):
 
 ```bash
-mkdir -p /volume1/docker/dts/{backend,postgres,redis,meilisearch}/data
 mkdir -p /volume1/docker/dts/backend/storage
+touch /volume1/docker/dts/backend/.env
 ```
+
+> **Important**: `docker compose` refuses to start if this file is missing,
+> because it is declared with `env_file`. Do not put an empty
+> `APP_KEY=` line in it — the backend will generate and persist a real key
+> for you on first boot.
 
 DSM Control Panel → Network → Network Interface
 
@@ -69,6 +82,21 @@ DSM Control Panel → Network → Network Interface
 cd /volume1/docker/dts-project
 docker compose -f docker-compose.synology.yml up -d --build
 ```
+
+### Deploying updates over SSH
+
+Once the project is on the NAS, the one-liner deploy script does everything:
+pull latest code, ensure env files, build, start, wait for health, migrate:
+
+```bash
+# from your machine (host, path, user)
+./deploy-synology.sh bfp-r2-nas1 /volume1/docker/dts bfpr2
+
+# seed the database on a fresh install
+SEED=1 ./deploy-synology.sh
+```
+
+Defaults: `bfpr2.tw4.quickconnect.to`, `/volume1/docker/dts`, user `bfpr2`.
 
 Check the status:
 
@@ -95,8 +123,13 @@ docker compose -f docker-compose.synology.yml exec backend \
 
 ## 6. Access the Application
 
-- **Frontend**: `http://YOUR_NAS_IP` (port 80)
-- **Backend API**: `http://YOUR_NAS_IP:8000/api`
+- **Frontend**: `http://YOUR_NAS_IP:${FRONTEND_PORT}` (default `80`)
+- **Backend API**: `http://YOUR_NAS_IP:${BACKEND_PORT}/api` (default port `8000`)
+- **Public HTTPS** (via Cloudflare tunnel): `https://YOUR_TUNNEL_HOSTNAME`
+
+> The tunnel token is read from `CLOUDFLARE_TUNNEL_TOKEN` in `.env`. In the
+> Cloudflare Zero Trust dashboard, make the tunnel's ingress (Public
+> Hostname) point to `http://localhost:80`.
 
 ### Default Credentials
 
@@ -230,11 +263,46 @@ BACKEND_PORT=8200
 
 ### App Key Persistence
 
-The backend auto-generates APP_KEY on first startup and saves it to a bind-mounted .env file.
-Locate it on your Synology at:
+The backend auto-generates APP_KEY on first startup and saves it to the
+bind-mounted `.env` file at `/volume1/docker/dts/backend/.env`.
+Inspect or modify it via SSH:
 
-  /volume1/docker/dts/backend/.env
+```bash
+cat /volume1/docker/dts/backend/.env
+```
 
-You can inspect or modify it via SSH:
+### Backend Returns 500 / "No application encryption key has been specified"
 
-  cat /volume1/docker/dts/backend/.env
+The entrypoint only generates `APP_KEY` when the `.env` file has no
+`APP_KEY=base64:` line. If you copied a template containing an empty
+`APP_KEY=` line into `backend/.env`, delete that line (or the whole file)
+and recreate the container:
+
+```bash
+sed -i '/^APP_KEY=/d' /volume1/docker/dts/backend/.env
+docker compose -f docker-compose.synology.yml up -d --force-recreate backend
+```
+
+### Compose Fails: "Couldn't find env file"
+
+The backend service requires `/volume1/docker/dts/backend/.env` to exist:
+
+```bash
+mkdir -p /volume1/docker/dts/backend/storage
+touch /volume1/docker/dts/backend/.env
+```
+
+### Login Fails / Sessions Don't Persist
+
+Check `.env` — `SESSION_DOMAIN`, `SANCTUM_STATEFUL_DOMAINS`, `APP_URL` and
+`FRONTEND_URL` must match the hostname you actually browse with. For HTTPS
+access, `SESSION_SECURE_COOKIE=true`; for plain HTTP access on the LAN, set
+it to `false` and recreate the backend container.
+
+### Tunnel Not Working
+
+- Confirm `CLOUDFLARE_TUNNEL_TOKEN` is set in `.env` (no `--url` is used
+  with token-based tunnels).
+- In Cloudflare Zero Trust, the tunnel's Public Hostname must route to
+  `http://localhost:80`.
+- Check tunnel logs: `docker compose -f docker-compose.synology.yml logs cloudflared`.

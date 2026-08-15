@@ -33,3 +33,8 @@ backend/bootstrap/cache/*.php
 # Local DB / OS temp
 db_items.txt
 
+# Old/obsolete deployment artifacts
+test.js
+dts-project-synology.zip
+IRMS_Implementation_Plan.pdf
+

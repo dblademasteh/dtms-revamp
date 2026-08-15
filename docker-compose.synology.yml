@@ -5,12 +5,14 @@ services:
       dockerfile: Dockerfile
     image: dts-backend:latest
     pull_policy: never
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
     environment:
       - APP_NAME=${APP_NAME:-DTS - Document Tracking System}
       - APP_ENV=production
       - APP_DEBUG=false
       - APP_TIMEZONE=Asia/Manila
-      - APP_URL=${APP_URL:-http://localhost:8000}
+      - APP_URL=${APP_URL:-https://dtms.devbry.online}
       - FRONTEND_URL=${FRONTEND_URL:-https://dtms.devbry.online}
       - DB_CONNECTION=pgsql
       - DB_HOST=postgres
@@ -20,8 +22,8 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-dts_password_2024}
       - SESSION_DRIVER=redis
       - SESSION_LIFETIME=120
-      - SESSION_DOMAIN=${SESSION_DOMAIN:-localhost}
-      - SANCTUM_STATEFUL_DOMAINS=${SANCTUM_STATEFUL_DOMAINS:-localhost:3000}
+      - SESSION_DOMAIN=${SESSION_DOMAIN:-}
+      - SANCTUM_STATEFUL_DOMAINS=${SANCTUM_STATEFUL_DOMAINS:-dtms.devbry.online}
       - CACHE_DRIVER=redis
       - QUEUE_CONNECTION=redis
       - REDIS_HOST=redis
@@ -47,7 +49,7 @@ services:
       - LOG_LEVEL=warning
       - BCRYPT_ROUNDS=12
       - TRUSTED_PROXIES=*
-      - SESSION_SECURE_COOKIE=true
+      - SESSION_SECURE_COOKIE=${SESSION_SECURE_COOKIE:-true}
       - LOGIN_MAX_ATTEMPTS=${LOGIN_MAX_ATTEMPTS:-5}
       - LOGIN_LOCKOUT_MINUTES=${LOGIN_LOCKOUT_MINUTES:-15}
     depends_on:
@@ -61,8 +63,15 @@ services:
     env_file:
       - ${DOCKER_BASE_PATH:-/volume1/docker/dts}/backend/.env
     volumes:
+      - ${DOCKER_BASE_PATH:-/volume1/docker/dts}/backend/.env:/var/www/html/.env
       - ${DOCKER_BASE_PATH:-/volume1/docker/dts}/backend/storage:/var/www/html/storage
       - ${DOCKER_BASE_PATH:-/volume1/docker/dts}/backend/bootstrap/cache:/var/www/html/bootstrap/cache
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -fsS -o /dev/null http://localhost:8000/ || exit 1" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
 
   frontend:
     build:
@@ -77,8 +86,11 @@ services:
         VITE_REVERB_APP_KEY: ${VITE_REVERB_APP_KEY:-dts-reverb-key}
     image: dts-frontend:latest
     pull_policy: never
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
 
   postgres:
@@ -131,4 +143,6 @@ services:
     container_name: cloudflared
     restart: unless-stopped
     network_mode: service:frontend
-    command: ["tunnel", "--no-autoupdate", "run", "--url=http://localhost:80", "--token=eyJhIjoiY2Q3YWUzNzZlNzRjMmEwMjkxOTQ1YWNmZThhNTAyYmUiLCJ0IjoiOGE5ZjNiNDMtODUzZC00NWZjLTkxMWEtNzE2NGZhOTJmNzQ3IiwicyI6Ik1qUTJNalU1WkRZdFlqTmxNeTAwTlRVNUxXRTNNREV0TXpsa05tRXpNVFEzTlRSaSJ9"]
+    depends_on:
+      - frontend
+    command: ["tunnel", "--no-autoupdate", "run", "--token=${CLOUDFLARE_TUNNEL_TOKEN}"]
