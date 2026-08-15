@@ -11,6 +11,7 @@ const GROUP_META: { key: string; label: string; hint: string }[] = [
   { key: 'classifications', label: 'Classifications', hint: 'Document security classification levels' },
   { key: 'modes_of_transmittal', label: 'Modes of Transmittal', hint: 'How documents are transmitted' },
   { key: 'action_requested', label: 'Action Requested', hint: 'Standard routing-slip actions' },
+  { key: 'agencies', label: 'Agencies', hint: 'Sending agencies in the public agency portal' },
   { key: 'routing_dispositions', label: 'Routing Dispositions', hint: 'Disposition actions when routing documents' },
   { key: 'document_statuses', label: 'Document Statuses', hint: 'Document lifecycle statuses' },
   { key: 'office_types', label: 'Office Types', hint: 'Office classification types' },

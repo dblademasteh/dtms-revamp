@@ -13,21 +13,18 @@ import {
   Upload,
   X,
   MapPin,
+  EyeOff,
+  Paperclip,
+  Trash2,
+  FileSpreadsheet,
+  FileImage,
+  File as FileIcon,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import MultiSelect, { type Option } from '@/components/MultiSelect'
 import SearchableSelect from '@/components/SearchableSelect'
 import { useDropdownGroup } from '@/hooks/useDropdownOptions'
-import { BFP_OFFICES_FALLBACK } from '@/constants/documentOptions'
-
-const AGENCY_OPTIONS: Option[] = [
-  { value: 'rcs', label: 'RCS - Civil Security' },
-  { value: 'fcos', label: 'FCOS - Fire Code Operations' },
-  { value: 'dnd', label: 'DND - National Defense' },
-  { value: 'doj', label: 'DOJ - Justice' },
-  { value: 'dotr', label: 'DOTr - Transportation' },
-  { value: 'other', label: 'Other Agency' },
-]
+import { BFP_OFFICES_FALLBACK, gatewayTargetOffices } from '@/constants/documentOptions'
 
 function getPriorityBadge(priority: string) {
   switch (priority) {
@@ -65,20 +62,40 @@ const priorityIcons: Record<string, JSX.Element> = {
   urgent: <AlertCircle className="w-3.5 h-3.5" />,
 }
 
+function formatFileSize(bytes: number) {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  return `${(bytes / 1024).toFixed(1)} KB`
+}
+
+function fileTypeMeta(file: File) {
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
+  if (ext === 'pdf') {
+    return { icon: <FileText className="w-5 h-5" />, cls: 'bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-300', label: 'PDF' }
+  }
+  if (['doc', 'docx'].includes(ext)) {
+    return { icon: <FileText className="w-5 h-5" />, cls: 'bg-blue-100 text-blue-600 dark:bg-blue-950/60 dark:text-blue-300', label: 'Word' }
+  }
+  if (['xls', 'xlsx', 'csv'].includes(ext)) {
+    return { icon: <FileSpreadsheet className="w-5 h-5" />, cls: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-300', label: 'Excel' }
+  }
+  if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) {
+    return { icon: <FileImage className="w-5 h-5" />, cls: 'bg-purple-100 text-purple-600 dark:bg-purple-950/60 dark:text-purple-300', label: 'Image' }
+  }
+  return { icon: <FileIcon className="w-5 h-5" />, cls: 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300', label: 'File' }
+}
+
 export default function CreateDocumentPublic() {
   const queryClient = useQueryClient()
 
   const documentTypes = useDropdownGroup('document_types')
   const modes = useDropdownGroup('modes_of_transmittal')
-  const actionOptions = useDropdownGroup('action_requested')
   const priorities = useDropdownGroup('priorities')
+  const agencies = useDropdownGroup('agencies')
 
   const [subject, setSubject] = useState('')
   const [documentType, setDocumentType] = useState('')
   const [modeOfTransmittal, setModeOfTransmittal] = useState('internal')
-  const [actionRequested, setActionRequested] = useState<Option[]>([])
   const [priority, setPriority] = useState('normal')
-  const [description, setDescription] = useState('')
   const [ccSelection, setCcSelection] = useState<Option[]>([])
   const [bccSelection, setBccSelection] = useState<Option[]>([])
   const [showCc, setShowCc] = useState(false)
@@ -90,6 +107,10 @@ export default function CreateDocumentPublic() {
   const [agency, setAgency] = useState('')
   const [createSuccess, setCreateSuccess] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const [postedAt] = useState(() => new Date())
+  const postedDate = postedAt.toLocaleDateString('en-CA')
+  const postedTime = postedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
 
   const { data: officesRaw } = useQuery({
     queryKey: ['offices-min'],
@@ -174,6 +195,22 @@ export default function CreateDocumentPublic() {
     if (e.dataTransfer.files?.length) addFiles(Array.from(e.dataTransfer.files))
   }
 
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!isDragging) setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }
+
+  const removeFile = (index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index))
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!agency) {
@@ -189,13 +226,11 @@ export default function CreateDocumentPublic() {
     formData.append('document_type', documentType)
     formData.append('subject', subject)
     if (modeOfTransmittal) formData.append('mode_of_transmittal', modeOfTransmittal)
-    if (actionRequested[0]) formData.append('action_requested', actionRequested[0].value)
     formData.append('priority', priority || 'normal')
     formData.append('recipient_type', recipientMode)
     formData.append('recipient_id', recipientSelection)
     ccSelection.forEach((o) => formData.append('cc_list[]', `${recipientMode}:${o.value}`))
     bccSelection.forEach((o) => formData.append('bcc_list[]', `${recipientMode}:${o.value}`))
-    if (description) formData.append('description', description)
     files.forEach((file) => formData.append('attachments[]', file))
     createMutation.mutate(formData)
   }
@@ -206,9 +241,7 @@ export default function CreateDocumentPublic() {
     setSubject('')
     setDocumentType('')
     setModeOfTransmittal('internal')
-    setActionRequested([])
     setPriority('normal')
-    setDescription('')
     setShowCc(false)
     setShowBcc(false)
     setCcSelection([])
@@ -294,7 +327,36 @@ export default function CreateDocumentPublic() {
               <label className="block text-[12px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
                 Sending Agency <span className="text-red-500">*</span>
               </label>
-              <SearchableSelect options={AGENCY_OPTIONS} value={agency} onChange={setAgency} placeholder="Select your agency..." />
+              <SearchableSelect options={agencies} value={agency} onChange={setAgency} placeholder="Select or type your agency..." allowCreate />
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Pick from the list or type a custom agency name.</p>
+            </div>
+
+            {/* Post Date & Time (auto) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[12px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                  Date <span className="font-normal normal-case text-slate-400 dark:text-slate-500">(auto)</span>
+                </label>
+                <input
+                  type="date"
+                  value={postedDate}
+                  disabled
+                  title="Set automatically"
+                  className="w-full px-3 py-2.5 text-sm text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none disabled:cursor-not-allowed disabled:opacity-70"
+                />
+              </div>
+              <div>
+                <label className="block text-[12px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                  Time <span className="font-normal normal-case text-slate-400 dark:text-slate-500">(auto)</span>
+                </label>
+                <input
+                  type="time"
+                  value={postedTime}
+                  disabled
+                  title="Set automatically"
+                  className="w-full px-3 py-2.5 text-sm text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none disabled:cursor-not-allowed disabled:opacity-70"
+                />
+              </div>
             </div>
 
             {/* Subject Field */}
@@ -392,40 +454,72 @@ export default function CreateDocumentPublic() {
                 To {recipientMode === 'office' ? 'Office' : 'Personnel'} <span className="text-red-500">*</span>
               </label>
               <SearchableSelect
-                options={recipientMode === 'office' ? officeOptions : personnelOptions}
+                options={recipientMode === 'office' ? gatewayTargetOffices(officeOptions) : personnelOptions}
                 value={recipientSelection}
                 onChange={setRecipientSelection}
-                placeholder={recipientMode === 'office' ? 'Select recipient office...' : 'Select recipient...'}
+                placeholder={recipientMode === 'office' ? 'Select recipient office (RCS / FCOS)...' : 'Select recipient...'}
               />
             </div>
 
             {/* CC / BCC */}
-            <div className="flex items-center gap-4 text-xs font-semibold text-slate-700 dark:text-slate-300">
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showCc}
-                  onChange={(e) => setShowCc(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 text-blue-600 focus:ring-blue-500"
-                />
-                <span>CC</span>
-              </label>
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showBcc}
-                  onChange={(e) => setShowBcc(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 text-blue-600 focus:ring-blue-500"
-                />
-                <span>BCC</span>
-              </label>
+            {/* CC / BCC Toggles */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowCc((v) => !v)}
+                aria-pressed={showCc}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all ${
+                  showCc
+                    ? 'bg-sky-50 dark:bg-sky-950/40 border-sky-300 dark:border-sky-500/50 text-sky-700 dark:text-sky-300 shadow-sm'
+                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-sky-300 dark:hover:border-sky-600 hover:text-sky-600 dark:hover:text-sky-300'
+                }`}
+              >
+                <Copy className="w-3.5 h-3.5" />
+                CC
+                {ccSelection.length > 0 && (
+                  <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-sky-500 text-white text-[10px] font-bold flex items-center justify-center">
+                    {ccSelection.length}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowBcc((v) => !v)}
+                aria-pressed={showBcc}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all ${
+                  showBcc
+                    ? 'bg-violet-50 dark:bg-violet-950/40 border-violet-300 dark:border-violet-500/50 text-violet-700 dark:text-violet-300 shadow-sm'
+                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-violet-300 dark:hover:border-violet-600 hover:text-violet-600 dark:hover:text-violet-300'
+                }`}
+              >
+                <EyeOff className="w-3.5 h-3.5" />
+                BCC
+                {bccSelection.length > 0 && (
+                  <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-violet-500 text-white text-[10px] font-bold flex items-center justify-center">
+                    {bccSelection.length}
+                  </span>
+                )}
+              </button>
             </div>
 
             {showCc && (
-              <div>
-                <label className="block text-[12px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                  CC {recipientMode === 'office' ? 'Office' : 'Personnel'}
-                </label>
+              <div className="rounded-xl border border-sky-200 dark:border-sky-800/60 bg-sky-50/40 dark:bg-sky-950/20 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="inline-flex items-center gap-1.5 text-[12px] font-bold text-sky-700 dark:text-sky-300 uppercase tracking-wider">
+                    <Copy className="w-3.5 h-3.5" />
+                    CC {recipientMode === 'office' ? 'Offices' : 'Personnel'}
+                  </span>
+                  {ccSelection.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setCcSelection([])}
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-red-500 transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                      Clear
+                    </button>
+                  )}
+                </div>
                 <MultiSelect
                   options={recipientMode === 'office' ? officeOptions : personnelOptions}
                   value={ccSelection}
@@ -436,10 +530,23 @@ export default function CreateDocumentPublic() {
             )}
 
             {showBcc && (
-              <div>
-                <label className="block text-[12px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                  BCC {recipientMode === 'office' ? 'Office' : 'Personnel'}
-                </label>
+              <div className="rounded-xl border border-violet-200 dark:border-violet-800/60 bg-violet-50/40 dark:bg-violet-950/20 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="inline-flex items-center gap-1.5 text-[12px] font-bold text-violet-700 dark:text-violet-300 uppercase tracking-wider">
+                    <EyeOff className="w-3.5 h-3.5" />
+                    BCC {recipientMode === 'office' ? 'Offices' : 'Personnel'}
+                  </span>
+                  {bccSelection.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setBccSelection([])}
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-red-500 transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                      Clear
+                    </button>
+                  )}
+                </div>
                 <MultiSelect
                   options={recipientMode === 'office' ? officeOptions : personnelOptions}
                   value={bccSelection}
@@ -449,75 +556,101 @@ export default function CreateDocumentPublic() {
               </div>
             )}
 
-            {/* Description */}
-            <div>
-              <label className="block text-[12px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Description / Action Requested
-              </label>
-              <div className="space-y-1.5">
-                <SearchableSelect
-                  options={actionOptions}
-                  value={actionRequested[0]?.value || ''}
-                  onChange={(val) => val ? setActionRequested([{ value: val, label: actionOptions.find((o) => String(o.value) === String(val))?.label || val }]) : setActionRequested([])}
-                  placeholder="Select action..."
-                  isClearable
-                />
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Additional details or special instructions..."
-                  className="w-full px-3 py-2.5 text-sm text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-y min-h-[60px] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                />
-              </div>
-            </div>
-
-            {/* File Upload */}
-            <div>
-              <label className="block text-[12px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Attachments
-              </label>
-              <div
-                className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all ${
-                  isDragging
-                    ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/20'
-                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
-                }`}
-                onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
-                onDragLeave={(e) => { e.preventDefault(); setIsDragging(false) }}
-                onDrop={handleDrop}
-              >
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  multiple
-                />
-                <Upload className="w-8 h-8 mx-auto text-slate-400 mb-2" />
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Drag & drop files here, or click to browse
-                </p>
-                <p className="text-[10px] text-slate-500 dark:text-slate-500 mt-1">
-                  {files.length > 0 && `${files.length} file(s) selected`}
-                </p>
-              </div>
-              {files.length > 0 && (
-                <div className="mt-2 space-y-1">
-                  {files.map((file, i) => (
-                    <div key={i} className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
-                      <FileText className="w-3 h-3" />
-                      <span className="truncate">{file.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
-                        className="ml-auto p-1 text-slate-400 hover:text-slate-600"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
+            {/* Attachments */}
+            <div className="card">
+              <div className="card-header flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Paperclip className="w-4 h-4 text-slate-500" />
+                  <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
+                    Attachments
+                  </h2>
                 </div>
-              )}
+                <div className="flex items-center gap-2">
+                  {files.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setFiles([])}
+                      className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-danger-600 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Clear all
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold shadow-sm transition-colors"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    Upload
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    multiple
+                    onChange={handleFileChange}
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                  />
+                </div>
+              </div>
+              <div className="card-body">
+                <div
+                  onDragOver={handleDragOver}
+                  onDragEnter={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`rounded-xl border-2 border-dashed px-5 py-4 flex items-center justify-center text-center transition-all ${
+                    isDragging
+                      ? 'border-primary-400 bg-primary-50 dark:bg-primary-900/20'
+                      : 'border-slate-200 dark:border-slate-700'
+                  }`}
+                >
+                  <p className="text-xs text-slate-400 dark:text-slate-500">
+                    Drag &amp; drop files here, or use the <span className="font-medium text-primary-600 dark:text-primary-400">Upload</span> button
+                  </p>
+                </div>
+
+                {files.length > 0 ? (
+                  <div className="mt-4 space-y-3">
+                    {files.map((file, index) => {
+                      const ftype = fileTypeMeta(file)
+                      return (
+                        <div
+                          key={index}
+                          className="group flex items-center gap-4 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600 transition-colors"
+                        >
+                          <span className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${ftype.cls}`}>
+                            {ftype.icon}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[15px] font-semibold text-slate-900 dark:text-slate-100 truncate">{file.name}</p>
+                            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                              {formatFileSize(file.size)} · {ftype.label}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeFile(index)}
+                            aria-label={`Remove ${file.name}`}
+                            className="p-2 text-slate-400 hover:text-danger-600 hover:bg-danger-50 dark:hover:bg-danger-950/40 rounded-lg transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )
+                    })}
+                    <p className="text-xs text-slate-400 dark:text-slate-500 pt-1">
+                      {files.length} file{files.length > 1 ? 's' : ''} · Total{' '}
+                      {formatFileSize(files.reduce((sum, f) => sum + f.size, 0))}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+                    No files attached. PDF, Word, Excel, or images up to 10MB each.
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Action Buttons */}

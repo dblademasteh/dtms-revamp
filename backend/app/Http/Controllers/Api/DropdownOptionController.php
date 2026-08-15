@@ -15,6 +15,7 @@ class DropdownOptionController extends Controller
         'classifications',
         'modes_of_transmittal',
         'action_requested',
+        'agencies',
         'routing_dispositions',
         'document_statuses',
         'office_types',

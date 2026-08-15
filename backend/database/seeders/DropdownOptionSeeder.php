@@ -132,6 +132,14 @@ class DropdownOptionSeeder extends Seeder
                 ['high', 'High', ['desc' => 'Expedited processing']],
                 ['urgent', 'Urgent', ['desc' => 'Immediate attention']],
             ],
+            'agencies' => [
+                ['rcs', 'RCS - Civil Security'],
+                ['fcos', 'FCOS - Fire Code Operations'],
+                ['dnd', 'DND - National Defense'],
+                ['doj', 'DOJ - Justice'],
+                ['dotr', 'DOTr - Transportation'],
+                ['other', 'Other Agency'],
+            ],
             'suggestion_categories' => [
                 ['feature', 'Feature'],
                 ['improvement', 'Improvement'],

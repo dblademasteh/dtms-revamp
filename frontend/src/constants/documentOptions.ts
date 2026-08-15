@@ -274,6 +274,35 @@ export const PRIORITY_OPTIONS: Option[] = [
   { value: 'urgent', label: 'Urgent', meta: { desc: 'Immediate attention' } },
 ]
 
+// Sending agencies available in the public agency portal (admin-managed via
+// Settings > Administration > Dropdown Options). Defaults mirror the original
+// hardcoded list so existing submissions keep their values.
+export const AGENCY_DEFAULTS: Option[] = [
+  { value: 'rcs', label: 'RCS - Civil Security' },
+  { value: 'fcos', label: 'FCOS - Fire Code Operations' },
+  { value: 'dnd', label: 'DND - National Defense' },
+  { value: 'doj', label: 'DOJ - Justice' },
+  { value: 'dotr', label: 'DOTr - Transportation' },
+  { value: 'other', label: 'Other Agency' },
+]
+
+// Recipient offices allowed in the public agency portal. Only FCOS and RCS
+// are valid targets, so the "To" field is gated to them. Fallback list is used
+// when the public offices API is unavailable.
+export const GATEWAY_TARGET_OFFICES: Option[] = [
+  { value: 'bfp-r2-rcs', label: 'Regional Chief of Staff (RCS)' },
+  { value: 'bfp-r2-fcos', label: 'Fire Communications Operations Section (FCOS)' },
+]
+
+export function isGatewayTargetOffice(name: string): boolean {
+  return /\bRCS\b/i.test(name) || /\bFCOS\b/i.test(name)
+}
+
+export function gatewayTargetOffices(options: Option[]): Option[] {
+  const filtered = options.filter((o) => isGatewayTargetOffice(o.label))
+  return filtered.length ? filtered : GATEWAY_TARGET_OFFICES
+}
+
 export const SUGGESTION_CATEGORIES: Option[] = [
   { value: 'feature', label: 'Feature' },
   { value: 'improvement', label: 'Improvement' },
@@ -305,6 +334,7 @@ export const DEFAULT_GROUPS: Record<string, Option[]> = {
   ranks: BFP_RANKS,
   designations: DESIGNATIONS,
   priorities: PRIORITY_OPTIONS,
+  agencies: AGENCY_DEFAULTS,
   suggestion_categories: SUGGESTION_CATEGORIES,
   suggestion_statuses: SUGGESTION_STATUSES,
 }
