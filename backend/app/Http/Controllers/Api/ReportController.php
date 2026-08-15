@@ -398,6 +398,20 @@ class ReportController extends Controller
             ->limit(5)
             ->get();
 
+        // Volume series (same as /reports/volume default: last 30 days, monthly)
+        $volumeSeries = Document::selectRaw("DATE_TRUNC('month', created_at) as period, COUNT(*) as total, COUNT(CASE WHEN status = 'released' THEN 1 END) as released, COUNT(CASE WHEN status IN ('received', 'in_review') THEN 1 END) as pending")
+            ->whereBetween('created_at', [now()->subDays(30), now()]);
+        $this->officeScope($volumeSeries, $user);
+        $volumeSeries = $volumeSeries->groupBy('period')->orderBy('period')->get();
+
+        // Latest public announcements (same as the frontend's /documents?is_public=1 feed)
+        $announcements = Document::with('currentOffice:id,name')
+            ->where('is_public', true)
+            ->when(!$user->isAdmin(), fn ($q) => $q->visibleTo($user))
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get();
+
         // Recent documents (scoped to the user's permission, same as the document list)
         $recentDocuments = Document::with(['originator', 'currentOffice'])
             ->when(!$user->isAdmin(), fn ($q) => $q->visibleTo($user))
@@ -410,6 +424,8 @@ class ReportController extends Controller
             'status_counts' => $statusCounts,
             'type_counts' => $typeCounts,
             'top_offices' => $topOffices,
+            'volume_series' => $volumeSeries,
+            'announcements' => $announcements,
             'recent_documents' => $recentDocuments,
         ]);
     }

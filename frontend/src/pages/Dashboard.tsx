@@ -97,16 +97,6 @@ export default function Dashboard() {
     queryFn: () => api.get('/reports/dashboard').then(res => res.data),
   })
 
-  const { data: volumeData } = useQuery({
-    queryKey: ['reports-volume'],
-    queryFn: () => api.get('/reports/volume').then(res => res.data),
-  })
-
-  const { data: announcements } = useQuery({
-    queryKey: ['announcements'],
-    queryFn: () => api.get('/documents', { params: { is_public: 1, per_page: 5 } }).then(res => res.data?.data || res.data || []),
-  })
-
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -133,6 +123,7 @@ export default function Dashboard() {
 
   const stats = dashboardData?.stats || {}
   const recentDocs = dashboardData?.recent_documents || []
+  const announcements = dashboardData?.announcements || []
 
   const statusCounts: Record<string, number> = dashboardData?.status_counts || {}
   const pieData = Object.entries(statusCounts)
@@ -155,7 +146,7 @@ export default function Dashboard() {
   const topOffices: Array<{ id: number; name: string; count: number }> = dashboardData?.top_offices || []
   const maxOffice = Math.max(...topOffices.map(o => Number(o.count) || 0), 1)
 
-  const barData = (volumeData || []).map((v: any) => ({
+  const barData = (dashboardData?.volume_series || []).map((v: any) => ({
     period: v.period?.split('T')[0] || v.period,
     total: Number(v.total) || 0,
     released: Number(v.released) || 0,
