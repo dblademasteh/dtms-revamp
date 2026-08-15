@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Document;
 use App\Models\DocumentAcknowledgment;
+use App\Models\Office;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -374,6 +375,29 @@ class ReportController extends Controller
 
         $stats['my_documents'] = Document::where('originator_id', $user->id)->count();
 
+        // Corpus-wide aggregates, scoped to the user's permission
+        $statusCounts = Document::selectRaw('status, COUNT(*) as count')
+            ->when(!$user->isAdmin(), fn ($q) => $q->visibleTo($user))
+            ->groupBy('status')
+            ->get()
+            ->pluck('count', 'status');
+
+        $typeCounts = Document::selectRaw('document_type, COUNT(*) as count')
+            ->when(!$user->isAdmin(), fn ($q) => $q->visibleTo($user))
+            ->groupBy('document_type')
+            ->orderByDesc('count')
+            ->get()
+            ->pluck('count', 'document_type');
+
+        $topOffices = Document::select('offices.id', 'offices.name')
+            ->selectRaw('COUNT(*) as count')
+            ->join('offices', 'documents.current_office_id', '=', 'offices.id')
+            ->when(!$user->isAdmin(), fn ($q) => $q->visibleTo($user))
+            ->groupBy('offices.id', 'offices.name')
+            ->orderByDesc('count')
+            ->limit(5)
+            ->get();
+
         // Recent documents (scoped to the user's permission, same as the document list)
         $recentDocuments = Document::with(['originator', 'currentOffice'])
             ->when(!$user->isAdmin(), fn ($q) => $q->visibleTo($user))
@@ -383,6 +407,9 @@ class ReportController extends Controller
 
         return response()->json([
             'stats' => $stats,
+            'status_counts' => $statusCounts,
+            'type_counts' => $typeCounts,
+            'top_offices' => $topOffices,
             'recent_documents' => $recentDocuments,
         ]);
     }
