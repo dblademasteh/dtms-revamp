@@ -44,6 +44,18 @@ function formatBytes(bytes: number): string {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`
 }
 
+function formatPhoneIntl(value: string): string {
+  const digits = value.replace(/\D/g, '')
+  let body = ''
+  if (digits.startsWith('63')) body = digits.slice(2)
+  else if (digits.startsWith('0')) body = digits.slice(1)
+  else body = digits
+  if (body.length > 10) body = body.slice(0, 10)
+  if (!body) return ''
+  const parts = [body.slice(0, 3), body.slice(3, 6), body.slice(6, 10)].filter(Boolean)
+  return `+63 ${parts.join(' ')}`
+}
+
 export default function Settings() {
   const { user, setUser } = useAuthStore()
   const queryClient = useQueryClient()
@@ -59,7 +71,7 @@ export default function Settings() {
   const [rank, setRank] = useState(user?.rank || '')
   const [designation, setDesignation] = useState(user?.designation || '')
   const [officeId, setOfficeId] = useState<string>(user?.office_id ? String(user.office_id) : '')
-  const [phone, setPhone] = useState(user?.phone || '')
+  const [phone, setPhone] = useState(user?.phone ? formatPhoneIntl(user.phone) : '')
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [profileErrors, setProfileErrors] = useState<Record<string, string>>({})
@@ -388,12 +400,19 @@ export default function Settings() {
     name: 'Display name',
   }
 
+  const validatePhone = (value: string) => {
+    if (!value.trim()) return ''
+    return /^\+63 \d{3} \d{3} \d{4}$/.test(value)
+      ? ''
+      : 'Enter a valid mobile number in international format (e.g. +63 912 345 6789)'
+  }
+
   const validateField = (field: string, value: string) =>
     requiredFields[field] && !value.trim() ? `${requiredFields[field]} is required` : ''
 
   const onFieldBlur = (field: string, value: string) => {
     setTouched((t) => ({ ...t, [field]: true }))
-    const err = validateField(field, value)
+    const err = field === 'phone' ? validatePhone(value) : validateField(field, value)
     setProfileErrors((prev) => {
       const next = { ...prev }
       if (err) next[field] = err
@@ -410,8 +429,10 @@ export default function Settings() {
       const err = validateField(field, value)
       if (err) errs[field] = err
     })
+    const phoneErr = validatePhone(phone)
+    if (phoneErr) errs.phone = phoneErr
     setProfileErrors(errs)
-    setTouched({ firstName: true, lastName: true, name: true })
+    setTouched({ firstName: true, lastName: true, name: true, phone: true })
     if (Object.keys(errs).length > 0) return
     profileMutation.mutate({
       name,
@@ -433,7 +454,7 @@ export default function Settings() {
     setRank(user?.rank || '')
     setDesignation(user?.designation || '')
     setOfficeId(user?.office_id ? String(user.office_id) : '')
-    setPhone(user?.phone || '')
+    setPhone(user?.phone ? formatPhoneIntl(user.phone) : '')
     setTouched({})
     setProfileErrors({})
   }
@@ -784,7 +805,20 @@ export default function Settings() {
                   </div>
                   <div>
                     <label htmlFor="profile-phone" className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Phone</label>
-                    <input id="profile-phone" type="tel" className="input !py-1.5 !text-sm" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Optional" />
+                    <input
+                      id="profile-phone"
+                      type="tel"
+                      inputMode="tel"
+                      className={`input !py-1.5 !text-sm ${profileErrors.phone && touched.phone ? '!border-danger-400 focus:!ring-danger-500' : ''}`}
+                      value={phone}
+                      onChange={(e) => setPhone(formatPhoneIntl(e.target.value))}
+                      onBlur={(e) => onFieldBlur('phone', e.target.value)}
+                      placeholder="+63 912 345 6789"
+                    />
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">International format (e.g. +63 912 345 6789)</p>
+                    {touched.phone && profileErrors.phone && (
+                      <p role="alert" className="text-xs text-danger-600 dark:text-danger-400 mt-1">{profileErrors.phone}</p>
+                    )}
                   </div>
                   <div>
                     <label htmlFor="profile-designation" className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Designation</label>
