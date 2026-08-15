@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
 import { useState } from 'react'
 import Select from 'react-select'
+import CreatableSelect from 'react-select/creatable'
 import { buildSelectStyles } from '@/utils/selectStyles'
 import { useRanks } from '@/hooks/useRanks'
 import { useDropdownGroup } from '@/hooks/useDropdownOptions'
@@ -610,13 +611,6 @@ export default function Settings() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      {/* Designation suggestions (pick-or-type datalist) */}
-      <datalist id="designation-options">
-        {designations.map((d) => (
-          <option key={d.value} value={d.label} />
-        ))}
-      </datalist>
-
       {/* Tabs */}
       <div className="flex flex-wrap gap-1 border-b border-slate-200">
         {tabs.map((t) => (
@@ -794,7 +788,16 @@ export default function Settings() {
                   </div>
                   <div>
                     <label htmlFor="profile-designation" className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Designation</label>
-                    <input id="profile-designation" className="input !py-1.5 !text-sm" list="designation-options" value={designation} onChange={(e) => setDesignation(e.target.value)} placeholder="e.g. System Administrator" />
+                    <CreatableSelect
+                      id="profile-designation"
+                      className="text-sm"
+                      styles={buildSelectStyles()}
+                      options={designations.map((d: any) => ({ value: d.label, label: d.label }))}
+                      isClearable
+                      placeholder="Type or pick..."
+                      value={designation ? { value: designation, label: designation } : null}
+                      onChange={(opt: any) => setDesignation(opt ? (opt.label ?? '') : '')}
+                    />
                   </div>
                 </div>
 
