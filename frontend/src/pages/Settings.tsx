@@ -1754,12 +1754,12 @@ className="flex items-center justify-between px-3 py-2 rounded-lg border border-
             <div className="flex items-center gap-2 mb-2">
               <ShieldAlert className="w-4 h-4 text-slate-500" />
               <p className="text-[13px] font-bold text-slate-600 uppercase tracking-wider">
-                Available Backups ({info.backups?.length ?? 0})
+                Available Backups ({info?.backups?.length ?? 0})
               </p>
             </div>
-            {info.backups?.length ? (
+            {info?.backups?.length ? (
               <div className="space-y-2">
-                {info.backups.map((b: any) => (
+                {info?.backups.map((b: any) => (
                   <div
                     key={b.file}
                     className="flex items-center gap-3 px-3 py-2 rounded-lg border border-slate-200 bg-white dark:bg-slate-800"
@@ -1798,7 +1798,7 @@ className="flex items-center justify-between px-3 py-2 rounded-lg border border-
                 ))}
                 <p className="text-xs text-slate-400 pt-1">
                   Automatic daily backups run at 03:00 (Asia/Manila) and only the newest{' '}
-                  {info.retention ?? 14} backups are kept.
+                  {info?.retention ?? 14} backups are kept.
                 </p>
               </div>
             ) : (
