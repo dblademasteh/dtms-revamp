@@ -1590,6 +1590,24 @@ function DatabaseManagement() {
     onError: (e: any) => toast.error(e.response?.data?.message || 'Optimize failed'),
   })
 
+  const restoreMutation = useMutation({
+    mutationFn: (file: string) => api.post(`/admin/database/restore/${encodeURIComponent(file)}`),
+    onSuccess: (res) => {
+      toast.success(res.data.message || 'Database restored')
+      infoQuery.refetch()
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Restore failed'),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (file: string) => api.delete(`/admin/database/delete/${encodeURIComponent(file)}`),
+    onSuccess: (res) => {
+      toast.success(res.data.message || 'Backup deleted')
+      infoQuery.refetch()
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Delete failed'),
+  })
+
   const downloadBackup = (file: string) => {
     window.open(`${api.defaults.baseURL}/admin/database/download/${encodeURIComponent(file)}`, '_blank')
   }
@@ -1598,6 +1616,20 @@ function DatabaseManagement() {
     setBusy(id)
     fn()
     setTimeout(() => setBusy(null), 1500)
+  }
+
+  const confirmRestore = (file: string) => {
+    if (window.confirm(`Restore the database from "${file}"?\n\nThis overwrites the current data and may take a while.`)) {
+      setBusy('restore')
+      restoreMutation.mutate(file)
+      setTimeout(() => setBusy(null), 1500)
+    }
+  }
+
+  const confirmDelete = (file: string) => {
+    if (window.confirm(`Delete backup "${file}"?`)) {
+      deleteMutation.mutate(file)
+    }
   }
 
   const info = infoQuery.data
@@ -1620,7 +1652,7 @@ function DatabaseManagement() {
           {info && (
             <>
               {/* Connection summary */}
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
                 <div>
                   <p className="text-slate-500">Database</p>
                   <p className="font-medium text-slate-900">{info.database}</p>
@@ -1632,6 +1664,14 @@ function DatabaseManagement() {
                 <div>
                   <p className="text-slate-500">Tables</p>
                   <p className="font-medium text-slate-900">{info.tables?.length ?? 0}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500">Total Size</p>
+                  <p className="font-medium text-slate-900">{formatBytes(info.size_bytes ?? 0)}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500">Backups Kept</p>
+                  <p className="font-medium text-slate-900">{info.retention ?? 14}</p>
                 </div>
                 <div>
                   <p className="text-slate-500">Last Backup</p>
@@ -1655,7 +1695,7 @@ function DatabaseManagement() {
               {/* Table list */}
               <div>
                 <p className="text-[13px] font-bold text-slate-600 mb-2 uppercase tracking-wider">
-                  Tables &amp; Row Counts
+                  Tables &amp; Row Counts (approximate)
                 </p>
                 <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1">
                   {(info.tables || []).map((t: any) => (
@@ -1680,7 +1720,7 @@ className="flex items-center justify-between px-3 py-2 rounded-lg border border-
                 <p className="text-sm font-semibold text-slate-900">Backup Database</p>
               </div>
               <p className="text-xs text-slate-500 mb-3">
-                Create a point-in-time SQL dump (pg_dump) to storage/app/backups.
+                Create a compressed point-in-time dump (pg_dump) to the NAS backup folder.
               </p>
               <button
                 className="btn btn-primary btn-sm w-full"
@@ -1714,21 +1754,57 @@ className="flex items-center justify-between px-3 py-2 rounded-lg border border-
             <div className="flex items-center gap-2 mb-2">
               <ShieldAlert className="w-4 h-4 text-slate-500" />
               <p className="text-[13px] font-bold text-slate-600 uppercase tracking-wider">
-                Available Backups
+                Available Backups ({info.backups?.length ?? 0})
               </p>
             </div>
-            {info?.last_backup ? (
-              <div className="flex items-center justify-between px-3 py-2 rounded-lg border border-slate-200 bg-white dark:bg-slate-800">
-                <span className="text-sm font-medium text-slate-900">{info.last_backup}</span>
-                <button
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => downloadBackup(info.last_backup)}
-                >
-                  <Download className="w-3.5 h-3.5" /> Download
-                </button>
+            {info.backups?.length ? (
+              <div className="space-y-2">
+                {info.backups.map((b: any) => (
+                  <div
+                    key={b.file}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg border border-slate-200 bg-white dark:bg-slate-800"
+                  >
+                    <Database className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-900 truncate">{b.file}</p>
+                      <p className="text-xs text-slate-500">
+                        {formatBytes(b.size)} · {b.format} ·{' '}
+                        {new Date(b.modified_at * 1000).toLocaleString()}
+                      </p>
+                    </div>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => downloadBackup(b.file)}
+                      title="Download backup"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      className="btn btn-ghost btn-sm text-slate-500 hover:text-blue-600"
+                      onClick={() => confirmRestore(b.file)}
+                      disabled={busy === 'restore'}
+                      title="Restore from this backup"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      className="btn btn-ghost btn-sm text-slate-400 hover:text-danger-600"
+                      onClick={() => confirmDelete(b.file)}
+                      title="Delete backup"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+                <p className="text-xs text-slate-400 pt-1">
+                  Automatic daily backups run at 03:00 (Asia/Manila) and only the newest{' '}
+                  {info.retention ?? 14} backups are kept.
+                </p>
               </div>
             ) : (
-              <p className="text-xs text-slate-500">No backups created yet.</p>
+              <p className="text-xs text-slate-500">
+                No backups created yet. Use "Create Backup" or wait for the nightly schedule.
+              </p>
             )}
           </div>
         </div>

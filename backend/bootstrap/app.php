@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('mailbox:sync-all')->everyFiveMinutes()->withoutOverlapping();
         $schedule->command('sla:check')->everySixHours()->withoutOverlapping();
         $schedule->command('retention:run')->dailyAt('02:00')->withoutOverlapping();
+        $schedule->command('db:backup')->dailyAt('03:00')->withoutOverlapping();
     })
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->validateCsrfTokens(except: [

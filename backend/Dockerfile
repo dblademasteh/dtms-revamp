@@ -3,6 +3,7 @@ FROM php:8.4-fpm-alpine
 RUN apk add --no-cache \
     nginx \
     postgresql-dev \
+    postgresql-client \
     libpng-dev \
     libjpeg-turbo-dev \
     freetype-dev \
