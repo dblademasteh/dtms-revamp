@@ -13,7 +13,6 @@ import {
   Megaphone,
   ChevronRight,
   Shield,
-  Plus,
   CheckCircle2,
   Inbox,
   ClipboardList,
@@ -186,10 +185,6 @@ export default function Dashboard() {
             {ROLE_LABELS[user?.role || ''] || user?.role} · {todayLabel}
           </p>
         </div>
-        <Link to="/documents/new" className="btn btn-primary btn-sm">
-          <Plus className="w-4 h-4" />
-          New Document
-        </Link>
       </div>
 
       {user?.role === 'office_station' && !user?.office_id && !user?.office && (
