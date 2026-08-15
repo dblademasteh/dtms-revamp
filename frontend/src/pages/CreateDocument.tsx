@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import api from '@/services/api'
@@ -69,18 +69,18 @@ function formatFileSize(bytes: number) {
 function fileTypeMeta(file: File) {
   const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
   if (ext === 'pdf') {
-    return { icon: <FileText className="w-4 h-4" />, cls: 'bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-300', label: 'PDF' }
+    return { icon: <FileText className="w-5 h-5" />, cls: 'bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-300', label: 'PDF' }
   }
   if (['doc', 'docx'].includes(ext)) {
-    return { icon: <FileText className="w-4 h-4" />, cls: 'bg-blue-100 text-blue-600 dark:bg-blue-950/60 dark:text-blue-300', label: 'Word' }
+    return { icon: <FileText className="w-5 h-5" />, cls: 'bg-blue-100 text-blue-600 dark:bg-blue-950/60 dark:text-blue-300', label: 'Word' }
   }
   if (['xls', 'xlsx', 'csv'].includes(ext)) {
-    return { icon: <FileSpreadsheet className="w-4 h-4" />, cls: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-300', label: 'Excel' }
+    return { icon: <FileSpreadsheet className="w-5 h-5" />, cls: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-300', label: 'Excel' }
   }
   if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) {
-    return { icon: <FileImage className="w-4 h-4" />, cls: 'bg-purple-100 text-purple-600 dark:bg-purple-950/60 dark:text-purple-300', label: 'Image' }
+    return { icon: <FileImage className="w-5 h-5" />, cls: 'bg-purple-100 text-purple-600 dark:bg-purple-950/60 dark:text-purple-300', label: 'Image' }
   }
-  return { icon: <File className="w-4 h-4" />, cls: 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300', label: 'File' }
+  return { icon: <File className="w-5 h-5" />, cls: 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300', label: 'File' }
 }
 
 
@@ -107,6 +107,7 @@ export default function CreateDocument() {
   const [recipientSelection, setRecipientSelection] = useState('')
   const [files, setFiles] = useState<File[]>([])
   const [isDragging, setIsDragging] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { data: officesRaw } = useQuery({
     queryKey: ['offices-min'],
@@ -591,11 +592,41 @@ export default function CreateDocument() {
 
         {/* Row 3 — Attachments */}
         <div className="card">
-          <div className="card-header flex items-center gap-2">
-            <Paperclip className="w-4 h-4 text-slate-500" />
-            <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
-              Attachments
-            </h2>
+          <div className="card-header flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Paperclip className="w-4 h-4 text-slate-500" />
+              <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
+                Attachments
+              </h2>
+            </div>
+            <div className="flex items-center gap-2">
+              {files.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setFiles([])}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-danger-600 transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Clear all
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold shadow-sm transition-colors"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                Upload
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                multiple
+                onChange={handleFileChange}
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+              />
+            </div>
           </div>
           <div className="card-body">
             <div
@@ -603,84 +634,55 @@ export default function CreateDocument() {
               onDragEnter={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer ${
+              className={`rounded-xl border-2 border-dashed px-5 py-4 flex items-center justify-center text-center transition-all ${
                 isDragging
                   ? 'border-primary-400 bg-primary-50 dark:bg-primary-900/20'
-                  : 'border-slate-200 dark:border-slate-700 hover:border-primary-300 dark:hover:border-slate-600'
+                  : 'border-slate-200 dark:border-slate-700'
               }`}
             >
-              <input
-                type="file"
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                multiple
-                onChange={handleFileChange}
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
-              />
-              <Upload className={`mx-auto h-8 w-8 mb-2 ${isDragging ? 'text-primary-500' : 'text-slate-400'}`} />
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                <span className="font-medium text-primary-600 dark:text-primary-400">Click to upload</span>
-                {' '}or drag and drop
+              <p className="text-xs text-slate-400 dark:text-slate-500">
+                Drag &amp; drop files here, or use the <span className="font-medium text-primary-600 dark:text-primary-400">Upload</span> button
               </p>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                PDF, Word, Excel, or images up to 10MB each
-              </p>
-              {files.length > 0 && (
-                <p className="text-xs font-semibold text-primary-600 dark:text-primary-400 mt-2">
-                  {files.length} file{files.length > 1 ? 's' : ''} selected
-                </p>
-              )}
             </div>
 
-            {files.length > 0 && (
-              <div className="mt-4">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                    Selected Files ({files.length})
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setFiles([])}
-                    className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-danger-600 transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    Clear all
-                  </button>
-                </div>
-
-                <div className="space-y-2">
-                  {files.map((file, index) => {
-                    const ftype = fileTypeMeta(file)
-                    return (
-                      <div
-                        key={index}
-                        className="group flex items-center gap-3 p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-100 dark:border-slate-700/60 hover:border-slate-200 dark:hover:border-slate-600 transition-colors"
-                      >
-                        <span className={`flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${ftype.cls}`}>
-                          {ftype.icon}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{file.name}</p>
-                          <p className="text-xs text-slate-400 dark:text-slate-500">
-                            {formatFileSize(file.size)} · {ftype.label}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeFile(index)}
-                          aria-label={`Remove ${file.name}`}
-                          className="p-1.5 text-slate-400 hover:text-danger-600 hover:bg-danger-50 dark:hover:bg-danger-950/40 rounded-md transition-colors"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
+            {files.length > 0 ? (
+              <div className="mt-4 space-y-3">
+                {files.map((file, index) => {
+                  const ftype = fileTypeMeta(file)
+                  return (
+                    <div
+                      key={index}
+                      className="group flex items-center gap-4 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600 transition-colors"
+                    >
+                      <span className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${ftype.cls}`}>
+                        {ftype.icon}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[15px] font-semibold text-slate-900 dark:text-slate-100 truncate">{file.name}</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                          {formatFileSize(file.size)} · {ftype.label}
+                        </p>
                       </div>
-                    )
-                  })}
-                </div>
-
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
-                  Total size: {formatFileSize(files.reduce((sum, f) => sum + f.size, 0))}
+                      <button
+                        type="button"
+                        onClick={() => removeFile(index)}
+                        aria-label={`Remove ${file.name}`}
+                        className="p-2 text-slate-400 hover:text-danger-600 hover:bg-danger-50 dark:hover:bg-danger-950/40 rounded-lg transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )
+                })}
+                <p className="text-xs text-slate-400 dark:text-slate-500 pt-1">
+                  {files.length} file{files.length > 1 ? 's' : ''} · Total{' '}
+                  {formatFileSize(files.reduce((sum, f) => sum + f.size, 0))}
                 </p>
               </div>
+            ) : (
+              <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+                No files attached. PDF, Word, Excel, or images up to 10MB each.
+              </p>
             )}
           </div>
         </div>
