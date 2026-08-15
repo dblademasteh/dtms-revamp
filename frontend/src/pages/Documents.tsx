@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/services/api'
-import { useAuthStore } from '@/stores/authStore'
 import {
   Plus,
   Search,
@@ -16,7 +15,6 @@ import {
   X,
   Copy,
   Check,
-  AlertCircle,
   SlidersHorizontal
 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -26,7 +24,6 @@ import SearchableSelect from '@/components/SearchableSelect'
 
 export default function Documents() {
   const navigate = useNavigate()
-  const { user } = useAuthStore()
   const documentTypes = useDropdownGroup('document_types')
   const priorities = useDropdownGroup('priorities')
   const [searchParams] = useSearchParams()
@@ -38,10 +35,9 @@ export default function Documents() {
     setSearch(searchParams.get('q') || '')
     setPage(1)
   }, [searchParams.get('q')])
+
   const [priority, setPriority] = useState('')
   const [docType, setDocType] = useState('')
-  const [mineOnly, setMineOnly] = useState(false)
-  const [forMeOnly, setForMeOnly] = useState(false)
   const [officeFilter, setOfficeFilter] = useState('')
   const [personnelFilter, setPersonnelFilter] = useState('')
   const [page, setPage] = useState(1)
@@ -50,7 +46,7 @@ export default function Documents() {
   const [sortBy, setSortBy] = useState('created_at')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
-  const hasActiveFilters = Boolean(search || officeFilter || personnelFilter || status || priority || docType || mineOnly || forMeOnly)
+  const hasActiveFilters = Boolean(search || officeFilter || personnelFilter || status || priority || docType)
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 300)
@@ -66,8 +62,6 @@ export default function Documents() {
     setStatus('')
     setPriority('')
     setDocType('')
-    setMineOnly(false)
-    setForMeOnly(false)
     setPage(1)
   }
 
@@ -99,7 +93,7 @@ export default function Documents() {
   ], [personnelOptions])
 
   const { data, isLoading } = useQuery({
-    queryKey: ['documents', debouncedSearch, status, priority, docType, page, mineOnly, forMeOnly, officeFilter, personnelFilter, sortBy, sortDir],
+    queryKey: ['documents', debouncedSearch, status, priority, docType, page, officeFilter, personnelFilter, sortBy, sortDir],
     queryFn: () => api.get('/documents', {
       params: { 
         search: debouncedSearch || undefined, 
@@ -110,8 +104,6 @@ export default function Documents() {
         personnel_id: personnelFilter || undefined, 
         page, 
         per_page: 10, 
-        mine: mineOnly || undefined, 
-        for_me: forMeOnly || undefined,
         sort_by: sortBy,
         sort_dir: sortDir
       }
@@ -213,7 +205,7 @@ export default function Documents() {
         onClick={() => toggleSort(k)}
         className={`inline-flex items-center gap-1 uppercase tracking-wider transition-colors ${
           sortBy === k
-            ? 'text-blue-600 dark:text-blue-400'
+            ? 'text-primary-600 dark:text-primary-400'
             : 'hover:text-slate-900 dark:hover:text-slate-100'
         }`}
       >
@@ -229,17 +221,6 @@ export default function Documents() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
-      {/* Header */}
-      <div className="flex items-center justify-end">
-        <Link
-          to="/documents/new"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition-all hover:scale-[1.02]"
-        >
-          <Plus className="w-4 h-4 stroke-[3]" />
-          <span>New Document</span>
-        </Link>
-      </div>
-
       {/* Filter Control Card */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
         {/* Row 1: Search & Quick Tab Pills */}
@@ -250,7 +231,7 @@ export default function Documents() {
             <input
               type="text"
               placeholder="Search by tracking number or subject title..."
-              className="w-full pl-10 pr-9 py-2.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white placeholder:text-slate-400"
+              className="w-full pl-10 pr-9 py-2.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 text-slate-900 dark:text-white placeholder:text-slate-400"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1) }}
             />
@@ -267,48 +248,25 @@ export default function Documents() {
           {/* Quick Filter Tabs */}
           <div className="grid grid-cols-2 gap-1.5 md:flex md:flex-nowrap md:items-center md:gap-1.5 md:overflow-x-auto md:pb-1 md:scrollbar-none">
             <button
-              onClick={() => { setMineOnly(false); setForMeOnly(false); setPage(1) }}
-              className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                !mineOnly && !forMeOnly
-                  ? 'bg-slate-900 text-white dark:bg-blue-600 dark:text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
+              onClick={() => { setPage(1) }}
+              className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all bg-slate-900 text-white dark:bg-primary-600 dark:text-white shadow-sm`}
             >
               All Documents
             </button>
 
-            {user && (
-              <>
-                <button
-                  onClick={() => { setMineOnly(!mineOnly); setForMeOnly(false); setPage(1) }}
-                  className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                    mineOnly
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  My Documents
-                </button>
-
-                <button
-                  onClick={() => { setForMeOnly(!forMeOnly); setMineOnly(false); setPage(1) }}
-                  className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold md:whitespace-nowrap transition-all ${
-                    forMeOnly
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  <AlertCircle className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Action Required (For Me)</span>
-                </button>
-              </>
-            )}
+            <Link
+              to="/documents/new"
+              className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all bg-primary-600 hover:bg-primary-700 text-white shadow-sm`}
+            >
+              <Plus className="w-3.5 h-3.5 stroke-[3]" />
+              <span>New Document</span>
+            </Link>
 
             <button
               onClick={() => setShowAdvancedFilters(v => !v)}
               className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                 showAdvancedFilters || advancedFilterCount > 0
-                  ? 'bg-blue-600 text-white shadow-sm'
+                  ? 'bg-primary-600 text-white shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >

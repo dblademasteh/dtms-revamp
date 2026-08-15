@@ -4,7 +4,7 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import api from '@/services/api'
 import toast from 'react-hot-toast'
 import {
-  ArrowLeft,
+  ChevronLeft,
   FileText,
   FilePlus2,
   Upload,
@@ -14,52 +14,25 @@ import {
   Plus,
   Building2,
   Users,
-  AlertTriangle,
-  AlertCircle,
   FileSpreadsheet,
   FileImage,
   File,
   Trash2,
+  Shield,
 } from 'lucide-react'
 import MultiSelect, { type Option } from '@/components/MultiSelect'
 import SearchableSelect from '@/components/SearchableSelect'
 import { useDropdownGroup } from '@/hooks/useDropdownOptions'
-
-function getPriorityBadge(priority: string) {
-  switch (priority) {
-    case 'low':
-      return 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
-    case 'normal':
-      return 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-500/30'
-    case 'high':
-      return 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-500/30'
-    case 'urgent':
-      return 'bg-red-50 text-red-800 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-500/30'
-    default:
-      return 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
-  }
-}
-
-function getPriorityBtn(priority: string, isSelected: boolean) {
-  const badge = getPriorityBadge(priority)
-  const ringMap: Record<string, string> = {
-    low: 'ring-slate-400',
-    normal: 'ring-blue-400',
-    high: 'ring-amber-400',
-    urgent: 'ring-red-400',
-  }
-  const ring = ringMap[priority] || 'ring-slate-400'
-  return isSelected
-    ? `${badge} ring-2 ring-offset-1 ${ring} dark:ring-offset-slate-900`
-    : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300 text-slate-900 dark:text-white'
-}
-
-const priorityIcons: Record<string, JSX.Element> = {
-  low: <FileText className="w-3.5 h-3.5" />,
-  normal: <FileText className="w-3.5 h-3.5" />,
-  high: <AlertTriangle className="w-3.5 h-3.5" />,
-  urgent: <AlertCircle className="w-3.5 h-3.5" />,
-}
+import { CLASSIFICATIONS } from '@/constants/documentOptions'
+import {
+  prioritySelectionClass,
+  priorityIcon,
+  classificationSelectionClass,
+  classificationTextClass,
+  classificationDescClass,
+  classificationDesc,
+  classificationWarning,
+} from '@/utils/documentStyles'
 
 function formatFileSize(bytes: number) {
   if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
@@ -83,8 +56,6 @@ function fileTypeMeta(file: File) {
   return { icon: <File className="w-5 h-5" />, cls: 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300', label: 'File' }
 }
 
-
-
 export default function CreateDocument() {
   const navigate = useNavigate()
   const documentTypes = useDropdownGroup('document_types')
@@ -93,6 +64,7 @@ export default function CreateDocument() {
   const priorities = useDropdownGroup('priorities')
   const [subject, setSubject] = useState('')
   const [documentType, setDocumentType] = useState('')
+  const [classification, setClassification] = useState('official')
   const [modeOfTransmittal, setModeOfTransmittal] = useState('internal')
   const [actionRequested, setActionRequested] = useState<Option[]>([])
   const [priority, setPriority] = useState('normal')
@@ -108,6 +80,7 @@ export default function CreateDocument() {
   const [files, setFiles] = useState<File[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   const { data: officesRaw } = useQuery({
     queryKey: ['offices-min'],
@@ -141,6 +114,7 @@ export default function CreateDocument() {
       return {
         value: String(p.id),
         label: showTail ? `${head} - ${tail}` : head,
+        meta: { desc: tail },
       }
     })
 
@@ -149,7 +123,8 @@ export default function CreateDocument() {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
     onSuccess: (res) => {
-      toast.success('Document created. Send it to its recipient from the document page.')
+      const tracking = res.data?.document?.tracking_number
+      toast.success(tracking ? `Document created: ${tracking}` : 'Document created successfully')
       navigate(`/documents/${res.data.document.id}`)
     },
     onError: (error: any) => {
@@ -157,19 +132,37 @@ export default function CreateDocument() {
     },
   })
 
+  const setError = (field: string, message = '') => {
+    setErrors((prev) => {
+      if (!message) {
+        const { [field]: _removed, ...rest } = prev
+        return rest
+      }
+      return { ...prev, [field]: message }
+    })
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!subject || !documentType || !recipientSelection) {
+    const nextErrors: Record<string, string> = {}
+    if (!subject.trim()) nextErrors.subject = 'Subject is required'
+    if (!documentType) nextErrors.documentType = 'Document type is required'
+    if (!recipientSelection) nextErrors.recipient = 'Please select a recipient'
+    setErrors(nextErrors)
+    if (Object.keys(nextErrors).length > 0) {
       toast.error('Please fill in all required fields')
       return
     }
 
     const formData = new FormData()
     formData.append('document_type', documentType)
-    formData.append('subject', subject)
+    formData.append('subject', subject.trim())
+    formData.append('classification', classification)
     if (modeOfTransmittal) formData.append('mode_of_transmittal', modeOfTransmittal)
-    if (actionRequested[0]) formData.append('action_requested', actionRequested[0].value)
+    if (actionRequested.length > 0) {
+      formData.append('action_requested', actionRequested[0].value)
+    }
     formData.append('priority', priority || 'normal')
     formData.append('recipient_type', recipientMode)
     formData.append('recipient_id', recipientSelection)
@@ -234,24 +227,16 @@ export default function CreateDocument() {
     }
   }
 
-  const [refPreview] = useState(() => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-    let code = ''
-    for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)]
-    return `BFP-${new Date().getFullYear()}-${code}`
-  })
-  const dateToday = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
-  const timeNow = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
         <button
           onClick={() => navigate('/documents')}
-          className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
         >
-          <ArrowLeft className="h-5 w-5" />
+          <ChevronLeft className="h-4 w-4" />
+          <span>Back to Documents</span>
         </button>
       </div>
 
@@ -273,9 +258,10 @@ export default function CreateDocument() {
                 <SearchableSelect
                   options={documentTypes}
                   value={documentType}
-                  onChange={setDocumentType}
+                  onChange={(v) => { setDocumentType(v); if (errors.documentType) setError('documentType') }}
                   placeholder="Select type..."
                 />
+                {errors.documentType && <p className="text-xs text-danger-600 mt-1">{errors.documentType}</p>}
               </div>
 
               <div>
@@ -285,36 +271,71 @@ export default function CreateDocument() {
                 <input
                   type="text"
                   className="input bg-slate-50 text-slate-500 cursor-not-allowed"
-                  value={refPreview}
+                  value={`BFP-${new Date().getFullYear()}-XXXXXX`}
                   disabled
                 />
-                <p className="text-xs text-slate-400 mt-1">Auto-assigned on creation</p>
+                <p className="text-xs text-slate-400 mt-1">Format sample — auto-assigned on creation</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div>
-                <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
-                  Date
+                <label className="block text-[13px] font-medium text-slate-700 mb-2">
+                  Classification <span className="text-danger-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  className="input bg-slate-50 text-slate-500 cursor-not-allowed"
-                  value={dateToday}
-                  disabled
-                />
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {CLASSIFICATIONS.map((opt) => {
+                    const isSelected = classification === opt.value
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => { setClassification(opt.value); setError('classification') }}
+                        className={`p-2.5 rounded-lg border-2 text-left transition-all ${classificationSelectionClass(opt.value, isSelected)}`}
+                      >
+                        <p className={`text-sm font-semibold ${classificationTextClass(opt.value)}`}>{opt.label}</p>
+                        <p className={`text-xs leading-tight ${classificationDescClass(opt.value)}`}>
+                          {classificationDesc(opt.value)}
+                        </p>
+                      </button>
+                    )
+                  })}
+                </div>
+                {classificationWarning(classification) ? (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1.5 flex items-center gap-1">
+                    <Shield className="w-3.5 h-3.5" />
+                    {classificationWarning(classification)}
+                  </p>
+                ) : null}
               </div>
 
               <div>
-                <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
-                  Time
+                <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Priority <span className="text-danger-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  className="input bg-slate-50 text-slate-500 cursor-not-allowed"
-                  value={timeNow}
-                  disabled
-                />
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {priorities.map(opt => {
+                    const isSelected = priority === opt.value
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setPriority(opt.value)}
+                        className={`p-2.5 rounded-lg border-2 text-left transition-all flex items-center gap-1.5 ${prioritySelectionClass(opt.value, isSelected)}`}
+                      >
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full flex-shrink-0">
+                          {priorityIcon(opt.value)}
+                        </span>
+                        <div>
+                          <p className="text-sm font-semibold truncate">{opt.label}</p>
+                          <p className="text-[11px] leading-tight text-slate-500 dark:text-slate-400">
+                            {String(opt.meta?.desc ?? '')}
+                          </p>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
             </div>
 
@@ -324,40 +345,15 @@ export default function CreateDocument() {
               </label>
               <input
                 type="text"
-                className="input"
+                maxLength={255}
+                className={`input ${errors.subject ? 'border-danger-300' : ''}`}
                 placeholder="Brief description of the document..."
                 value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                required
+                onChange={(e) => { setSubject(e.target.value); if (errors.subject) setError('subject') }}
               />
-            </div>
-
-            <div>
-              <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Priority <span className="text-danger-500">*</span>
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {priorities.map(opt => {
-                  const isSelected = priority === opt.value
-                  return (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => setPriority(opt.value)}
-                      className={`p-3 rounded-lg border-2 text-left transition-all flex flex-col gap-1 ${getPriorityBtn(opt.value, isSelected)}`}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full flex-shrink-0">
-                          {priorityIcons[opt.value] || <FileText className="w-3.5 h-3.5" />}
-                        </span>
-                        <p className="text-sm font-semibold truncate">{opt.label}</p>
-                      </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-tight">
-                        {String(opt.meta?.desc ?? '')}
-                      </p>
-                    </button>
-                  )
-                })}
+              <div className="flex items-center justify-between mt-1">
+                <p className="text-xs text-danger-600">{errors.subject}</p>
+                <p className="text-xs text-slate-400 ml-auto">{subject.length}/255</p>
               </div>
             </div>
 
@@ -418,7 +414,7 @@ export default function CreateDocument() {
                 <div className="flex flex-wrap items-center gap-1.5">
                   <button
                     type="button"
-                    onClick={() => { setRecipientMode('office'); setRecipientSelection('') }}
+                    onClick={() => { setRecipientMode('office'); setRecipientSelection(''); setError('recipient') }}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
                       recipientMode === 'office'
                         ? 'bg-blue-50 text-blue-700 ring-2 ring-blue-200'
@@ -430,7 +426,7 @@ export default function CreateDocument() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setRecipientMode('personnel'); setRecipientSelection('') }}
+                    onClick={() => { setRecipientMode('personnel'); setRecipientSelection(''); setError('recipient') }}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
                       recipientMode === 'personnel'
                         ? 'bg-emerald-50 text-emerald-700 ring-2 ring-emerald-200'
@@ -477,10 +473,11 @@ export default function CreateDocument() {
                         !bccSelection.some((b) => b.value === o.value)
                     )}
                     value={recipientSelection}
-                    onChange={setRecipientSelection}
+                    onChange={(v) => { setRecipientSelection(v); if (errors.recipient) setError('recipient') }}
                     placeholder={recipientMode === 'personnel' ? 'Search personnel by name, rank, unit...' : 'Search offices...'}
                   />
                 </div>
+                {errors.recipient && <p className="text-xs text-danger-600 mt-1">{errors.recipient}</p>}
               </div>
             </div>
 
@@ -510,7 +507,7 @@ export default function CreateDocument() {
                         ccMode === 'personnel'
                           ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
                           : 'text-slate-400 hover:text-slate-600'
-                      }`}
+                    }`}
                     >
                       <Users className="w-3 h-3" /> Personnel
                     </button>
@@ -551,7 +548,7 @@ export default function CreateDocument() {
                         bccMode === 'office'
                           ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
                           : 'text-slate-400 hover:text-slate-600'
-                      }`}
+                    }`}
                     >
                       <Building2 className="w-3 h-3" /> Office
                     </button>
@@ -562,7 +559,7 @@ export default function CreateDocument() {
                         bccMode === 'personnel'
                           ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
                           : 'text-slate-400 hover:text-slate-600'
-                      }`}
+                    }`}
                     >
                       <Users className="w-3 h-3" /> Personnel
                     </button>

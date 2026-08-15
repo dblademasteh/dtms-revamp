@@ -139,7 +139,7 @@ export default function Layout() {
 
   const getPageMeta = (pathname: string) => {
     if (pathname.startsWith('/documents/new')) {
-      return { title: 'New Document', description: 'Create and route a new document' }
+      return { title: 'Create New Document', description: 'Create and route a new document' }
     }
     if (pathname.startsWith('/documents/')) {
       if (pathname.endsWith('/edit')) {
