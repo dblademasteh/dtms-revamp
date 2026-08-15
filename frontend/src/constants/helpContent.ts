@@ -12,6 +12,7 @@ import {
   Shield,
   Settings,
   Wrench,
+  Globe,
 } from 'lucide-react'
 
 export interface HelpSection {
@@ -53,6 +54,36 @@ export const HELP_SECTIONS: HelpSection[] = [
     ],
   },
   {
+    id: 'agency-gateway',
+    icon: Globe,
+    title: 'Agency Gateway',
+    tagline: 'Track or create documents without an account.',
+    link: '/gateway',
+    linkLabel: 'Open Agency Gateway',
+    steps: [
+      {
+        title: 'Open the Agency Gateway',
+        body: 'Visit the Agency Gateway or the public "Create Document" page. No login is required — anyone can track a document or submit one on behalf of an agency.',
+      },
+      {
+        title: 'Track a document',
+        body: 'Choose "Track a Document", enter the tracking number (or scan the QR code), and view the live status and full routing history.',
+      },
+      {
+        title: 'Create a document for your agency',
+        body: 'Choose "Create Document for Agency", select or type your agency name, then fill in the subject, document type, priority, and the office the document should go to. You can add Cc/Bcc recipients and attachments.',
+      },
+      {
+        title: 'Get your tracking number',
+        body: 'Submit the form and the system assigns a tracking number you can use to follow the document. The date and time of submission are recorded automatically.',
+      },
+    ],
+    notes: [
+      'Documents submitted through the gateway are routed to the Regional Chief of Staff (RCS) or Fire Communications Operations Section (FCOS) for processing.',
+      'You can also reach the gateway from the login page via the "Track or Create" hub.',
+    ],
+  },
+  {
     id: 'dashboard',
     icon: LayoutDashboard,
     title: 'Dashboard',
@@ -88,7 +119,7 @@ export const HELP_SECTIONS: HelpSection[] = [
     steps: [
       {
         title: 'Fill in the details',
-        body: 'Provide the subject, choose the document type (Memorandum, Endorsement, etc.), classification (Public, Official, Restricted, Confidential), and priority (Low, Normal, High, Urgent).',
+        body: 'Provide the subject, choose the document type (Memorandum, Endorsement, etc.), and set the priority (Low, Normal, High, Urgent).',
       },
       {
         title: 'Set the mode of transmittal',
@@ -104,8 +135,8 @@ export const HELP_SECTIONS: HelpSection[] = [
       },
     ],
     notes: [
+      'Documents are created as Official by default. The classification (Public, Official, Restricted, Confidential) can be changed when editing a document.',
       'Documents marked Confidential are only visible to authorized personnel.',
-      'You can set a routing template to auto-fill the intended route.',
     ],
   },
   {
@@ -379,6 +410,12 @@ export const FAQ_ITEMS: FaqItem[] = [
     link: '/track',
   },
   {
+    q: 'Can I create or track a document without logging in?',
+    a: 'Yes. The Agency Gateway lets you track any document by tracking number and submit a new document on behalf of your agency without an account.',
+    link: '/gateway',
+    linkLabel: 'Open Agency Gateway',
+  },
+  {
     q: 'What do the document statuses mean?',
     a: 'Created, Received, In Review, Approved, Declined, Returned, Released, and Filed. See the "Document Statuses" section above for a plain-language explanation of each one.',
     link: '/help#statuses',
@@ -401,7 +438,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     q: 'What are routing templates?',
-    a: 'Routing templates are pre-built routes you can reuse. Super Admin manages them under Administration → Templates, and you can apply one when creating a document.',
+    a: 'Routing templates are pre-built routes managed by Super Admin under Administration → Templates. They help standardize how documents flow between offices.',
   },
   {
     q: 'How do I use the Mailbox?',
@@ -419,7 +456,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     q: 'Who can see my documents?',
-    a: 'It depends on the classification. Public documents are visible to everyone, Official documents to system users, and Restricted/Confidential documents to authorized personnel only.',
+    a: 'It depends on the classification. Documents are created as Official by default. Public documents are visible to everyone, Official documents to system users, and Restricted/Confidential documents to authorized personnel only.',
   },
   {
     q: 'How do I report a problem or suggest a feature?',
@@ -445,6 +482,15 @@ export const CHATBOT_KB: ChatbotEntry[] = [
       'Go to Documents → New Document (or the quick action on the Dashboard). Fill in the subject, document type, classification, priority, mode of transmittal, recipient, and attachments, then submit. A tracking number is assigned automatically.',
     link: '/documents/new',
     linkLabel: 'Open New Document',
+  },
+  {
+    id: 'agency-gateway',
+    keywords: ['agency', 'gateway', 'without login', 'no login', 'public', 'agency document', 'create for agency', 'external'],
+    question: 'Can I create a document for my agency without logging in?',
+    answer:
+      'Yes. Open the Agency Gateway, choose "Create Document for Agency", and fill in your agency, subject, document type, and recipient. No login is required, and the system assigns a tracking number on submission.',
+    link: '/gateway',
+    linkLabel: 'Open Agency Gateway',
   },
   {
     id: 'track',
@@ -476,7 +522,7 @@ export const CHATBOT_KB: ChatbotEntry[] = [
     keywords: ['classification', 'confidential', 'restricted', 'public', 'official', 'sensitive'],
     question: 'What do document classifications mean?',
     answer:
-      'Public (visible to everyone), Official (visible to system users), Restricted (limited to authorized personnel), and Confidential (only authorized personnel can see it). Choose based on how sensitive the content is.',
+      'Public (visible to everyone), Official (visible to system users), Restricted (limited to authorized personnel), and Confidential (only authorized personnel can see it). Documents are created as Official by default and the classification can be changed when editing a document.',
   },
   {
     id: 'mode',
@@ -540,7 +586,7 @@ export const CHATBOT_KB: ChatbotEntry[] = [
     keywords: ['template', 'routing template', 'route template'],
     question: 'What are routing templates?',
     answer:
-      'Routing templates are reusable, pre-built routes. Super Admin manages them under Administration → Templates. You can apply a template when creating a document to auto-fill the route.',
+      'Routing templates are reusable, pre-built routes managed by Super Admin under Administration → Templates. They help standardize how documents flow between offices.',
   },
   {
     id: 'attachments',
