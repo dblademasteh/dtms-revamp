@@ -105,7 +105,18 @@ class DocumentController extends Controller
             $query->where('is_public', filter_var($request->is_public, FILTER_VALIDATE_BOOLEAN));
         }
 
-        $documents = $query->orderBy('created_at', 'desc')
+        $allowedSorts = ['created_at', 'subject', 'status', 'priority'];
+        $sortBy = $request->get('sort_by', 'created_at');
+        $sortDir = strtolower($request->get('sort_dir', 'desc'));
+        if (!in_array($sortBy, $allowedSorts, true)) {
+            $sortBy = 'created_at';
+        }
+        if (!in_array($sortDir, ['asc', 'desc'], true)) {
+            $sortDir = 'desc';
+        }
+
+        $documents = $query->orderBy($sortBy, $sortDir)
+                         ->orderBy('id', $sortDir === 'asc' ? 'asc' : 'desc')
                          ->paginate(min((int) $request->get('per_page', 15), 100));
 
         return response()->json($documents);

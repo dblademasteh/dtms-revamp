@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/services/api'
@@ -10,19 +10,20 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
   CheckCircle,
   RotateCcw,
   Trash2,
   Building2,
-  Clock,
   Send,
   X,
   Copy,
   Check,
   AlertCircle,
   ShieldCheck,
-  SlidersHorizontal,
-  User
+  SlidersHorizontal
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { documentTypeLabel, statusLabel } from '@/constants/documentOptions'
@@ -54,6 +55,8 @@ export default function Documents() {
   const [page, setPage] = useState(1)
   const [copiedId, setCopiedId] = useState<number | null>(null)
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [sortBy, setSortBy] = useState('created_at')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
   // Selection & Bulk Action
   const [selected, setSelected] = useState<Set<number>>(new Set())
@@ -110,7 +113,7 @@ export default function Documents() {
   ], [personnelOptions])
 
   const { data, isLoading } = useQuery({
-    queryKey: ['documents', debouncedSearch, status, priority, docType, page, mineOnly, forMeOnly, officeFilter, personnelFilter],
+    queryKey: ['documents', debouncedSearch, status, priority, docType, page, mineOnly, forMeOnly, officeFilter, personnelFilter, sortBy, sortDir],
     queryFn: () => api.get('/documents', {
       params: { 
         search: debouncedSearch || undefined, 
@@ -122,7 +125,9 @@ export default function Documents() {
         page, 
         per_page: 10, 
         mine: mineOnly || undefined, 
-        for_me: forMeOnly || undefined 
+        for_me: forMeOnly || undefined,
+        sort_by: sortBy,
+        sort_dir: sortDir
       }
     }).then(res => res.data),
   })
@@ -177,6 +182,76 @@ export default function Documents() {
     setTimeout(() => setCopiedId(null), 2000)
   }
 
+  const toggleSort = (key: string) => {
+    if (sortBy === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortBy(key)
+      setSortDir(key === 'created_at' ? 'desc' : 'asc')
+    }
+  }
+
+  const initialsOf = (name?: string | null) =>
+    (name || 'U')
+      .split(' ')
+      .map((w) => w.charAt(0))
+      .filter(Boolean)
+      .slice(0, 2)
+      .join('')
+      .toUpperCase()
+
+  const pageIds = useMemo(() => documents.map((d: any) => d.id), [documents])
+  const allPageSelected = documents.length > 0 && documents.every((d: any) => selected.has(d.id))
+
+  const toggleSelect = (id: number) =>
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+
+  const toggleSelectPage = () =>
+    setSelected((prev) =>
+      allPageSelected ? new Set() : new Set([...prev, ...pageIds])
+    )
+
+  const selectAllRef = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = selected.size > 0 && !allPageSelected
+    }
+  }, [selected, allPageSelected])
+
+  const statusDotCls = (st: string) => {
+    switch (st) {
+      case 'released':
+      case 'approved':
+      case 'filed':
+        return 'bg-emerald-500'
+      case 'received':
+      case 'in_review':
+        return 'bg-blue-500'
+      case 'rejected':
+        return 'bg-red-500'
+      case 'returned':
+        return 'bg-amber-500'
+      default:
+        return 'bg-slate-400'
+    }
+  }
+
+  const priorityDotCls = (pr: string) => {
+    switch (pr) {
+      case 'urgent':
+        return 'bg-red-500 animate-pulse'
+      case 'high':
+        return 'bg-amber-500'
+      default:
+        return 'bg-slate-300 dark:bg-slate-600'
+    }
+  }
+
   const handleBulkAction = () => {
     if (!bulkRemarks.trim()) return
     const payload: any = {
@@ -220,16 +295,26 @@ export default function Documents() {
     }
   }
 
-  const priorityBadgeStyle = (pr: string) => {
-    switch (pr) {
-      case 'urgent':
-        return 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300 border-red-200 dark:border-red-800 font-extrabold animate-pulse'
-      case 'high':
-        return 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800 font-bold'
-      default:
-        return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700'
-    }
-  }
+  const SortableTh = ({ label, k, className }: { label: string; k: string; className?: string }) => (
+    <th className={`py-3.5 px-4 whitespace-nowrap ${className || ''}`}>
+      <button
+        type="button"
+        onClick={() => toggleSort(k)}
+        className={`inline-flex items-center gap-1 uppercase tracking-wider transition-colors ${
+          sortBy === k
+            ? 'text-blue-600 dark:text-blue-400'
+            : 'hover:text-slate-900 dark:hover:text-slate-100'
+        }`}
+      >
+        {label}
+        {sortBy === k ? (
+          sortDir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+        ) : (
+          <ChevronsUpDown className="w-3 h-3 opacity-40" />
+        )}
+      </button>
+    </th>
+  )
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
@@ -394,10 +479,73 @@ export default function Documents() {
 
       {/* Documents Data Table Card */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden">
+        {/* Results meta bar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3.5 border-b border-slate-200/80 dark:border-slate-800">
+          {selected.size > 0 ? (
+            <>
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                <span className="font-bold text-blue-600 dark:text-blue-400">{selected.size}</span> selected
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setBulkAction('approved'); setShowBulkModal(true) }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors"
+                >
+                  <CheckCircle className="w-3.5 h-3.5" /> Approve
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setBulkAction('returned'); setShowBulkModal(true) }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition-colors"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" /> Return
+                </button>
+                {isSuperadmin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm(`Delete ${selected.size} selected document(s)? This cannot be undone.`)) {
+                        bulkDeleteMutation.mutate({ document_ids: Array.from(selected) })
+                      }
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-xs transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Delete
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setSelected(new Set())}
+                  title="Clear selection"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+              <span className="font-bold text-slate-900 dark:text-white">{data?.total ?? 0}</span>{' '}
+              document{(data?.total ?? 0) === 1 ? '' : 's'} found
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={clearAllFilters}
+                  className="ml-3 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900 font-semibold transition-colors"
+                >
+                  <X className="w-3 h-3" /> Reset filters
+                </button>
+              )}
+            </p>
+          )}
+        </div>
+
         {isLoading ? (
           <div className="p-8 space-y-4">
             {[...Array(5)].map((_, i) => (
               <div key={i} className="flex items-center gap-4 animate-pulse">
+                <div className="h-4 w-10 bg-slate-200 dark:bg-slate-800 rounded" />
                 <div className="h-4 w-28 bg-slate-200 dark:bg-slate-800 rounded" />
                 <div className="h-4 flex-1 bg-slate-200 dark:bg-slate-800 rounded" />
                 <div className="h-6 w-20 bg-slate-200 dark:bg-slate-800 rounded" />
@@ -423,16 +571,27 @@ export default function Documents() {
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50/80 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-800 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  <th className="py-4 pl-6 px-4">Document Details</th>
-                  <th className="py-4 px-4">Sender</th>
-                  <th className="py-4 px-4">Status</th>
-                  <th className="py-4 px-4">Type &amp; Priority</th>
-                  <th className="py-4 px-4">Current Location</th>
-                  <th className="py-4 pr-6 px-4 text-right">Quick Actions</th>
+          <div className="max-h-[62vh] overflow-auto">
+            <table className="w-full text-left border-collapse min-w-[1080px]">
+              <thead className="sticky top-0 z-10">
+                <tr className="bg-slate-50/95 dark:bg-slate-800/95 backdrop-blur-sm border-b border-slate-200/80 dark:border-slate-700 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  <th className="py-3.5 pl-6 pr-2 w-10">
+                    <input
+                      ref={selectAllRef}
+                      type="checkbox"
+                      checked={allPageSelected}
+                      onChange={toggleSelectPage}
+                      aria-label="Select all documents on this page"
+                      className="h-4 w-4 rounded accent-blue-600 cursor-pointer"
+                    />
+                  </th>
+                  <SortableTh label="Document" k="subject" />
+                  <th className="py-3.5 px-4 whitespace-nowrap">Sender</th>
+                  <SortableTh label="Status" k="status" />
+                  <SortableTh label="Priority" k="priority" />
+                  <SortableTh label="Created" k="created_at" />
+                  <th className="py-3.5 px-4 whitespace-nowrap">Location</th>
+                  <th className="py-3.5 pr-6 pl-4 text-right whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
@@ -440,15 +599,33 @@ export default function Documents() {
                   <tr
                     key={doc.id}
                     onClick={() => navigate(`/documents/${doc.id}`)}
-                    className="group cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors"
+                    className={`group cursor-pointer transition-colors ${
+                      selected.has(doc.id)
+                        ? 'bg-blue-50/60 dark:bg-blue-950/30 hover:bg-blue-50 dark:hover:bg-blue-950/40'
+                        : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/50'
+                    }`}
                   >
+                    {/* Checkbox */}
+                    <td className="py-4 pl-6 pr-2 align-middle" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selected.has(doc.id)}
+                        onChange={() => toggleSelect(doc.id)}
+                        aria-label={`Select ${doc.tracking_number}`}
+                        className="h-4 w-4 rounded accent-blue-600 cursor-pointer"
+                      />
+                    </td>
+
                     {/* Document Title & Tracking Number */}
-                    <td className="py-4 pl-6 px-4 min-w-[280px] max-w-md">
+                    <td className="py-4 px-4 min-w-[280px] max-w-md">
                       <div className="space-y-1.5">
                         <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug">
                           {doc.subject}
                         </h4>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700">
+                            {documentTypeLabel(doc.document_type)}
+                          </span>
                           <button
                             onClick={(e) => copyTracking(doc, e)}
                             className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-800/60 font-mono text-[11px] font-bold text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
@@ -467,11 +644,11 @@ export default function Documents() {
 
                     {/* Sender / Originator */}
                     <td className="py-4 px-4 whitespace-nowrap">
-                      <div className="flex items-center gap-1.5 text-xs">
-                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                          <User className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[10px] font-bold text-slate-600 dark:text-slate-300">
+                          {initialsOf(doc.originator?.name)}
                         </span>
-                        <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[160px]" title={doc.originator?.name || 'Unknown'}>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[140px]" title={doc.originator?.name || 'Unknown'}>
                           {doc.originator?.name || 'Unknown'}
                         </span>
                       </div>
@@ -479,40 +656,37 @@ export default function Documents() {
 
                     {/* Status Badge */}
                     <td className="py-4 px-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border font-semibold ${statusBadgeStyle(doc.status)}`}>
-                        <ShieldCheck className="w-3.5 h-3.5" />
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs border font-semibold ${statusBadgeStyle(doc.status)}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${statusDotCls(doc.status)}`} />
                         {statusLabel(doc.status)}
                       </span>
                     </td>
 
-                    {/* Type & Priority */}
+                    {/* Priority */}
                     <td className="py-4 px-4 whitespace-nowrap">
-                      <div className="flex flex-col items-start gap-1">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700">
-                          {documentTypeLabel(doc.document_type)}
-                        </span>
-                        <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full border ${priorityBadgeStyle(doc.priority)}`}>
-                          {doc.priority || 'normal'}
-                        </span>
-                      </div>
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 capitalize">
+                        <span className={`w-2 h-2 rounded-full ${priorityDotCls(doc.priority)}`} />
+                        {doc.priority || 'normal'}
+                      </span>
+                    </td>
+
+                    {/* Created */}
+                    <td className="py-4 px-4 whitespace-nowrap">
+                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        {new Date(doc.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>
                     </td>
 
                     {/* Current Location */}
                     <td className="py-4 px-4 whitespace-nowrap">
-                      <div className="space-y-1 text-xs">
-                        <div className="flex items-center gap-1.5 font-semibold text-slate-800 dark:text-slate-200">
-                          <Building2 className="w-3.5 h-3.5 text-slate-400" />
-                          <span className="truncate max-w-[180px]">{doc.current_office?.name || 'HQ Station'}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-slate-400">
-                          <Clock className="w-3.5 h-3.5" />
-                          <span>{new Date(doc.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                        </div>
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
+                        <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                        <span className="truncate max-w-[160px]">{doc.current_office?.name || 'HQ Station'}</span>
                       </div>
                     </td>
 
                     {/* Quick Action Controls */}
-                    <td className="py-4 pr-6 px-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
+                    <td className="py-4 pr-6 pl-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1.5">
                         {doc.status === 'created' && (
                           <button
