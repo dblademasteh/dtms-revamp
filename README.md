@@ -1,4 +1,4 @@
-# DTS - Document Tracking System
+# DTMS - Document Tracking and Management System
 
 A full-stack Document Tracking System designed for Philippine government agencies, LGUs, and private sector offices.
 
