@@ -23,7 +23,8 @@ import {
   LifeBuoy,
   ChevronDown,
   ChevronRight,
-  Globe
+  Globe,
+  MailWarning
 } from 'lucide-react'
 import { useState, useEffect, useMemo, useRef } from 'react'
 import NotificationBell from '@/components/NotificationBell'
@@ -525,6 +526,20 @@ export default function Layout() {
 
         {/* Page content */}
         <main className="p-4 sm:p-6 lg:p-8">
+          {!user?.email_verified_at && user?.email && (
+            <div className="mb-4 flex items-center gap-3 px-4 py-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl">
+              <MailWarning className="w-5 h-5 text-amber-500 flex-shrink-0" />
+              <p className="text-sm text-amber-700 dark:text-amber-300 flex-1">
+                Your email is not verified. Some features may be limited.
+              </p>
+              <Link
+                to="/settings"
+                className="text-sm font-medium text-amber-700 dark:text-amber-300 underline hover:text-amber-800 dark:hover:text-amber-200 whitespace-nowrap"
+              >
+                Verify now
+              </Link>
+            </div>
+          )}
           <Outlet />
         </main>
       </div>

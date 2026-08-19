@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import api from '@/services/api'
@@ -31,17 +32,20 @@ const STATUS_COLORS: Record<string, string> = {
   filed: '#06b6d4',
 }
 
-const ROLE_LABELS: Record<string, string> = {
-  superadmin: 'System Administrator',
-  admin: 'Administrator',
-  office_station: 'Office Station',
-}
-
 function greeting() {
   const h = new Date().getHours()
   if (h < 12) return 'Good morning'
   if (h < 18) return 'Good afternoon'
   return 'Good evening'
+}
+
+function useClock() {
+  const [time, setTime] = useState(new Date())
+  useEffect(() => {
+    const id = setInterval(() => setTime(new Date()), 1000)
+    return () => clearInterval(id)
+  }, [])
+  return time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
 
 const todayLabel = new Date().toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
@@ -90,6 +94,7 @@ const shortDate = (d: string) => {
 
 export default function Dashboard() {
   const { user } = useAuthStore()
+  const clock = useClock()
   const { data: dashboardData, isLoading } = useQuery({
     queryKey: ['dashboard'],
     queryFn: () => api.get('/reports/dashboard').then(res => res.data),
@@ -166,7 +171,9 @@ export default function Dashboard() {
       ? [{ name: 'Agency Gateway', desc: 'Track & create documents', icon: Shield, cls: 'bg-indigo-50 dark:bg-indigo-900/30', iconCls: 'text-indigo-600 dark:text-indigo-400', link: '/gateway' }]
       : []),
     { name: 'Reports', desc: 'View analytics & reports', icon: TrendingUp, cls: 'bg-primary-50 dark:bg-primary-900/30', iconCls: 'text-primary-600 dark:text-primary-400', link: '/reports' },
-    { name: 'New Document', desc: 'Create a new document', icon: FileText, cls: 'bg-green-50 dark:bg-green-900/30', iconCls: 'text-green-600 dark:text-green-400', link: '/documents/new' },
+    ...(user?.email_verified_at ? [
+      { name: 'New Document', desc: 'Create a new document', icon: FileText, cls: 'bg-green-50 dark:bg-green-900/30', iconCls: 'text-green-600 dark:text-green-400', link: '/documents/new' },
+    ] : []),
     { name: 'Track Document', desc: 'Look up by tracking number', icon: BarChart3, cls: 'bg-amber-50 dark:bg-amber-900/30', iconCls: 'text-amber-600 dark:text-amber-400', link: '/track' },
   ]
 
@@ -176,10 +183,10 @@ export default function Dashboard() {
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
-            {greeting()}{user?.name ? `, ${user.name.split(' ')[0]}` : ''}
+            {greeting()}{user ? `, ${[user.rank, user.full_name || user.name].filter(Boolean).join(' ')}` : ''}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            {ROLE_LABELS[user?.role || ''] || user?.role} · {todayLabel}
+            {todayLabel} · {clock}
           </p>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import api from '@/services/api'
+import { useAuthStore } from '@/stores/authStore'
 import {
   Megaphone,
   Calendar,
@@ -17,7 +18,8 @@ import {
   Clock,
   Filter,
   ArrowUpRight,
-  ShieldAlert
+  ShieldAlert,
+  MailWarning
 } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import toast from 'react-hot-toast'
@@ -42,6 +44,8 @@ const getDocTypeBadgeStyle = (type: string) => {
 
 export default function Announcements() {
   const queryClient = useQueryClient()
+  const user = useAuthStore((s) => s.user)
+  const emailVerified = !!user?.email_verified_at
   const documentTypes = useDropdownGroup('document_types')
   const [searchTerm, setSearchTerm] = useState('')
   const [filter, setFilter] = useState<'all' | 'today' | 'urgent' | 'compliance'>('all')
@@ -171,6 +175,7 @@ export default function Announcements() {
           </div>
 
           <div className="flex items-center gap-3">
+            {emailVerified ? (
             <button
               onClick={() => setShowModal(true)}
               className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold text-sm shadow-lg shadow-blue-500/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
@@ -178,6 +183,22 @@ export default function Announcements() {
               <Plus className="w-4 h-4 stroke-[3]" />
               <span>Post New Announcement</span>
             </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  disabled
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 font-bold text-sm cursor-not-allowed opacity-60"
+                  title="Verify your email to post announcements"
+                >
+                  <Plus className="w-4 h-4 stroke-[3]" />
+                  <span>Post New Announcement</span>
+                </button>
+                <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                  <MailWarning className="w-4 h-4" />
+                  <span>Verify email required</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

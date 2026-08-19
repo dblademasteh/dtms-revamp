@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import api from '@/services/api'
+import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
 import {
   ChevronLeft,
@@ -19,6 +20,7 @@ import {
   File,
   Trash2,
   Shield,
+  MailWarning,
 } from 'lucide-react'
 import MultiSelect, { type Option } from '@/components/MultiSelect'
 import SearchableSelect from '@/components/SearchableSelect'
@@ -58,6 +60,8 @@ function fileTypeMeta(file: File) {
 
 export default function CreateDocument() {
   const navigate = useNavigate()
+  const user = useAuthStore((s) => s.user)
+  const emailVerified = !!user?.email_verified_at
   const documentTypes = useDropdownGroup('document_types')
   const modes = useDropdownGroup('modes_of_transmittal')
   const actionOptions = useDropdownGroup('action_requested')
@@ -239,6 +243,16 @@ export default function CreateDocument() {
           <span>Back to Documents</span>
         </button>
       </div>
+
+      {!emailVerified && (
+        <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl">
+          <MailWarning className="w-5 h-5 text-amber-500 flex-shrink-0" />
+          <p className="text-sm text-amber-700 dark:text-amber-300 flex-1">
+            Verify your email to create documents.{' '}
+            <a href="/settings" className="font-medium underline">Verify now</a>
+          </p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Row 1 — Document Classification */}
@@ -695,8 +709,9 @@ export default function CreateDocument() {
           </button>
           <button
             type="submit"
-            disabled={createMutation.isPending}
+            disabled={createMutation.isPending || !emailVerified}
             className="btn btn-primary"
+            title={!emailVerified ? 'Verify your email to create documents' : ''}
           >
             {createMutation.isPending ? (
               <span className="flex items-center gap-2">

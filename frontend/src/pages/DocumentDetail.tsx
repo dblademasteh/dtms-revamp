@@ -36,6 +36,7 @@ import {
   EyeOff,
   Archive,
   BadgeCheck,
+  MailWarning,
 } from 'lucide-react'
 import { useState, useCallback } from 'react'
 import toast from 'react-hot-toast'
@@ -63,6 +64,7 @@ export default function DocumentDetail() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { user } = useAuthStore()
+  const emailVerified = !!user?.email_verified_at
   const isSuperadmin = useAuthStore((s) => s.isSuperadmin)()
   const dispositions = useDropdownGroup('routing_dispositions')
   useDocumentRealtime(id)
@@ -1037,11 +1039,22 @@ className="flex items-center justify-between w-full text-left"
 </div>
 {collapsedSections['actions'] ? null : (
 <div className="card-body space-y-2.5">
+              {!emailVerified && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg mb-2">
+                  <MailWarning className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                    Verify your email to perform actions.{' '}
+                    <a href="/settings" className="font-medium underline">Verify now</a>
+                  </p>
+                </div>
+              )}
               {document.status === 'created' && (user?.role === 'superadmin' || document.originator_id === user?.id) ? (
                 <>
                   <button
-                    onClick={() => selectAction('send')}
-                    className="w-full btn btn-primary"
+                    onClick={() => emailVerified && selectAction('send')}
+                    disabled={!emailVerified}
+                    className={`w-full btn ${emailVerified ? 'btn-primary' : 'btn-primary opacity-50 cursor-not-allowed'}`}
+                    title={!emailVerified ? 'Verify your email to send documents' : ''}
                   >
                     <Send className="w-4 h-4" />
                     Send Document
@@ -1069,8 +1082,10 @@ className="flex items-center justify-between w-full text-left"
                         </div>
                       )}
                       <button
-                        onClick={() => selectAction('resubmit')}
-                        className="w-full btn btn-primary"
+                        onClick={() => emailVerified && selectAction('resubmit')}
+                        disabled={!emailVerified}
+                        className={`w-full btn ${emailVerified ? 'btn-primary' : 'btn-primary opacity-50 cursor-not-allowed'}`}
+                        title={!emailVerified ? 'Verify your email to resubmit documents' : ''}
                       >
                         <Send className="w-4 h-4" />
                         Resubmit Document
@@ -1079,15 +1094,19 @@ className="flex items-center justify-between w-full text-left"
                   ) : (
                     <>
                       <button
-                        onClick={() => selectAction('approve')}
-                        className="w-full btn btn-success"
+                        onClick={() => emailVerified && selectAction('approve')}
+                        disabled={!emailVerified}
+                        className={`w-full btn ${emailVerified ? 'btn-success' : 'btn-success opacity-50 cursor-not-allowed'}`}
+                        title={!emailVerified ? 'Verify your email to approve documents' : ''}
                       >
                         <CheckCircle className="w-4 h-4" />
                         Approve Document
                       </button>
                       <button
-                        onClick={() => selectAction('return')}
-                        className="w-full btn btn-secondary"
+                        onClick={() => emailVerified && selectAction('return')}
+                        disabled={!emailVerified}
+                        className={`w-full btn ${emailVerified ? 'btn-secondary' : 'btn-secondary opacity-50 cursor-not-allowed'}`}
+                        title={!emailVerified ? 'Verify your email to return documents' : ''}
                       >
                         <RotateCcw className="w-4 h-4" />
                         Return for Revision
@@ -1097,8 +1116,10 @@ className="flex items-center justify-between w-full text-left"
                 </>
               ) : document.status === 'released' ? (
                 <button
-                  onClick={() => selectAction('file')}
-                  className="w-full btn btn-primary"
+                  onClick={() => emailVerified && selectAction('file')}
+                  disabled={!emailVerified}
+                  className={`w-full btn ${emailVerified ? 'btn-primary' : 'btn-primary opacity-50 cursor-not-allowed'}`}
+                  title={!emailVerified ? 'Verify your email to file documents' : ''}
                 >
                   <Archive className="w-4 h-4" />
                   File Document
@@ -1118,8 +1139,10 @@ className="flex items-center justify-between w-full text-left"
               )}
               {['received', 'in_review', 'returned', 'released'].includes(document.status) && (user?.role === 'superadmin' || document.originator_id === user?.id) && (
                 <button
-                  onClick={() => setShowRecallModal(true)}
-                  className="w-full btn btn-warning"
+                  onClick={() => emailVerified && setShowRecallModal(true)}
+                  disabled={!emailVerified}
+                  className={`w-full btn ${emailVerified ? 'btn-warning' : 'btn-warning opacity-50 cursor-not-allowed'}`}
+                  title={!emailVerified ? 'Verify your email to recall documents' : ''}
                 >
                   <Undo2 className="w-4 h-4" />
                   Recall Document

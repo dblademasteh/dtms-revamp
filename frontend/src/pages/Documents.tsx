@@ -18,12 +18,14 @@ import {
   SlidersHorizontal
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useAuthStore } from '@/stores/authStore'
 import { documentTypeLabel, statusLabel } from '@/constants/documentOptions'
 import { useDropdownGroup } from '@/hooks/useDropdownOptions'
 import SearchableSelect from '@/components/SearchableSelect'
 
 export default function Documents() {
   const navigate = useNavigate()
+  const user = useAuthStore((s) => s.user)
   const documentTypes = useDropdownGroup('document_types')
   const priorities = useDropdownGroup('priorities')
   const [searchParams] = useSearchParams()
@@ -254,6 +256,7 @@ export default function Documents() {
               All Documents
             </button>
 
+            {user?.email_verified_at ? (
             <Link
               to="/documents/new"
               className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all bg-primary-600 hover:bg-primary-700 text-white shadow-sm`}
@@ -261,6 +264,15 @@ export default function Documents() {
               <Plus className="w-3.5 h-3.5 stroke-[3]" />
               <span>New Document</span>
             </Link>
+            ) : (
+              <span
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed"
+                title="Verify your email to create documents"
+              >
+                <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                <span>New Document</span>
+              </span>
+            )}
 
             <button
               onClick={() => setShowAdvancedFilters(v => !v)}

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/services/api'
+import { useAuthStore } from '@/stores/authStore'
 import {
   Mail,
   RefreshCw,
@@ -17,6 +18,7 @@ import {
   ChevronRight,
   Plug,
   Loader2,
+  MailWarning,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
@@ -149,6 +151,8 @@ function formatSize(bytes: number | null): string {
 
 export default function Mailbox() {
   const queryClient = useQueryClient()
+  const user = useAuthStore((s) => s.user)
+  const emailVerified = !!user?.email_verified_at
   const [showSettings, setShowSettings] = useState(false)
 
   const configQuery = useQuery({
@@ -184,10 +188,35 @@ export default function Mailbox() {
     <MailboxView
       mailbox={config!.mailbox!}
       initialUnread={config?.unread_count ?? 0}
-      onOpenSettings={() => setShowSettings(true)}
+      onOpenSettings={() => emailVerified && setShowSettings(true)}
+      emailVerified={emailVerified}
     />
-  ) : (
+  ) : emailVerified ? (
     <SetupView onSaved={() => queryClient.invalidateQueries({ queryKey: ['mailbox-config'] })} />
+  ) : (
+    <div className="max-w-3xl mx-auto">
+      <div className="flex items-center gap-3 pb-5 border-b border-slate-200 mb-6">
+        <div className="w-12 h-12 rounded-2xl bg-primary-50 flex items-center justify-center border border-primary-100 shadow-sm text-primary-600">
+          <Mail className="w-6 h-6" />
+        </div>
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold text-slate-900">Connect Your Email</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Sync your personal mailbox (read + send) using an app password
+          </p>
+        </div>
+      </div>
+      <div className="card p-8 text-center">
+        <MailWarning className="w-12 h-12 text-amber-400 mx-auto mb-4" />
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Email Verification Required</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 max-w-md mx-auto">
+          Verify your email address before connecting your mailbox. This ensures notifications and document routing work correctly.
+        </p>
+        <a href="/settings" className="btn btn-primary">
+          Verify Email First
+        </a>
+      </div>
+    </div>
   )
 }
 
@@ -438,7 +467,7 @@ function SetupView({
   )
 }
 
-function MailboxView({ mailbox, initialUnread, onOpenSettings }: { mailbox: MailboxConfig; initialUnread: number; onOpenSettings: () => void }) {
+function MailboxView({ mailbox, initialUnread, onOpenSettings, emailVerified }: { mailbox: MailboxConfig; initialUnread: number; onOpenSettings: () => void; emailVerified: boolean }) {
   const queryClient = useQueryClient()
   const [folder, setFolder] = useState('INBOX')
   const [folders, setFolders] = useState<FolderInfo[]>([
@@ -601,7 +630,9 @@ function MailboxView({ mailbox, initialUnread, onOpenSettings }: { mailbox: Mail
           </button>
           <button
             onClick={onOpenSettings}
-            className="btn btn-sm btn-ghost border border-slate-200 inline-flex items-center gap-1.5 text-slate-600"
+            disabled={!emailVerified}
+            className={`btn btn-sm btn-ghost border border-slate-200 inline-flex items-center gap-1.5 ${emailVerified ? 'text-slate-600' : 'text-slate-400 cursor-not-allowed opacity-50'}`}
+            title={!emailVerified ? 'Verify your email to access mailbox settings' : ''}
           >
             <Settings className="w-4 h-4" />
             Settings

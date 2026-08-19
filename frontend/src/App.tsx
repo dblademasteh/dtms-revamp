@@ -6,10 +6,11 @@ import Layout from '@/components/Layout'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import PrivacyNotice from '@/components/PrivacyNotice'
 import ProfileSetupModal from '@/components/ProfileSetupModal'
+import EmailVerificationModal from '@/components/EmailVerificationModal'
 import { useRealtime } from '@/hooks/useRealtime'
 import { useDropdownOptions } from '@/hooks/useDropdownOptions'
 
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 
 const Login = lazy(() => import('@/pages/Login'))
 const ChangePassword = lazy(() => import('@/pages/ChangePassword'))
@@ -108,10 +109,17 @@ function DropdownOptionsLoader() {
 function App() {
   const { isAuthenticated, user } = useAuthStore()
   const unlocked = isAuthenticated && !user?.must_change_password
-  const needsProfileSetup = unlocked && user && (
-    user.profile_setup_complete === false ||
-    !user.email_verified_at
-  )
+  const needsProfileSetup = unlocked && user && user.profile_setup_complete === false
+  const needsEmailVerification = unlocked && user && user.profile_setup_complete === true && !user.email_verified_at
+  const [showEmailVerification, setShowEmailVerification] = useState(() => {
+    return needsEmailVerification && !sessionStorage.getItem('email-verification-modal-dismissed')
+  })
+
+  useEffect(() => {
+    if (needsEmailVerification && !sessionStorage.getItem('email-verification-modal-dismissed')) {
+      setShowEmailVerification(true)
+    }
+  }, [needsEmailVerification])
 
   useEffect(() => {
     // 1. Theme
@@ -190,6 +198,12 @@ function App() {
       <Toaster position="top-right" />
       <PrivacyNotice />
       {needsProfileSetup && <ProfileSetupModal onComplete={() => {}} />}
+      {showEmailVerification && needsEmailVerification && (
+        <EmailVerificationModal onComplete={() => {
+          sessionStorage.setItem('email-verification-modal-dismissed', '1')
+          setShowEmailVerification(false)
+        }} />
+      )}
     </QueryClientProvider>
   )
 }
