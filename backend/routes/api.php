@@ -53,6 +53,7 @@ Route::middleware(['auth:sanctum', 'force-password-change'])->group(function () 
     Route::delete('/auth/avatar', [AuthController::class, 'deleteAvatar']);
     Route::put('/auth/password', [AuthController::class, 'changePassword']);
     Route::put('/auth/pincode', [AuthController::class, 'changePincode']);
+    Route::put('/auth/profile-setup', [AuthController::class, 'completeProfileSetup']);
     Route::put('/auth/notification-preferences', [AuthController::class, 'updateNotificationPreferences']);
     Route::post('/auth/email/verification/send', [AuthController::class, 'sendEmailVerification']);
 
@@ -414,6 +415,7 @@ Route::middleware(['auth:sanctum', 'force-password-change'])->group(function () 
                 'email' => $request->filled('email') ? $request->email : null,
                 'status' => 'active',
                 'must_change_password' => true,
+                'profile_setup_complete' => true,
             ]);
 
             if ($request->boolean('is_chief') && $request->office_id) {

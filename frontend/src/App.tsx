@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/authStore'
 import Layout from '@/components/Layout'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import PrivacyNotice from '@/components/PrivacyNotice'
+import ProfileSetupModal from '@/components/ProfileSetupModal'
 import { useRealtime } from '@/hooks/useRealtime'
 import { useDropdownOptions } from '@/hooks/useDropdownOptions'
 
@@ -107,6 +108,7 @@ function DropdownOptionsLoader() {
 function App() {
   const { isAuthenticated, user } = useAuthStore()
   const unlocked = isAuthenticated && !user?.must_change_password
+  const needsProfileSetup = unlocked && user && user.profile_setup_complete === false
 
   useEffect(() => {
     // 1. Theme
@@ -184,6 +186,7 @@ function App() {
       </ErrorBoundary>
       <Toaster position="top-right" />
       <PrivacyNotice />
+      {needsProfileSetup && <ProfileSetupModal onComplete={() => {}} />}
     </QueryClientProvider>
   )
 }

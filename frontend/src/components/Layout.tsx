@@ -21,7 +21,6 @@ import {
   MapPin,
   ChevronsUpDown,
   LifeBuoy,
-  HelpCircle,
   ChevronDown,
   ChevronRight,
   Globe
@@ -64,7 +63,6 @@ const navigation = [
   { name: 'Reports', href: '/reports', icon: BarChart3 },
   { name: 'Mailbox', href: '/mailbox', icon: Mail },
   { name: 'Settings', href: '/settings', icon: Settings },
-  { name: 'Help', href: '/help', icon: LifeBuoy },
 ]
 
 export default function Layout() {
@@ -216,6 +214,18 @@ export default function Layout() {
             {item.name}
           </Link>
         ))}
+        {user?.role !== 'superadmin' && (
+          <Link
+            to="/help"
+            className={`nav-item ${
+              isActive('/help') ? 'nav-item-active' : 'nav-item-inactive'
+            }`}
+            onClick={() => setSidebarOpen(false)}
+          >
+            <LifeBuoy className="w-5 h-5 flex-shrink-0" />
+            Help & Feedback
+          </Link>
+        )}
         {user?.role === 'office_station' && (
           <Link
             to="/office-profile"
@@ -434,23 +444,6 @@ export default function Layout() {
               <Moon className="h-5 w-5 hidden dark:inline-block" />
             </button>
 
-            {/* Help & feedback (mobile: moved out of the floating bubble so it never covers page buttons) */}
-            {user?.role !== 'superadmin' && (
-              <button
-                type="button"
-                onClick={() => setHelpOpen((v) => !v)}
-                aria-label="Open help and feedback"
-                title="Help & feedback"
-                className={`lg:hidden flex items-center justify-center w-9 h-9 rounded-lg transition-colors ${
-                  helpOpen
-                    ? 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-950/40'
-                    : 'text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:text-blue-400 dark:hover:bg-blue-950/40'
-                }`}
-              >
-                <HelpCircle className="h-5 w-5" />
-              </button>
-            )}
-
             {/* Profile: dropdown with account info and actions */}
             <div className="relative">
               <button
@@ -495,7 +488,7 @@ export default function Layout() {
                 >
                   <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
                     <div className="text-sm font-semibold text-slate-900 dark:text-white truncate">
-                      {user?.name || 'User'}
+                      {[user?.rank, user?.name || 'User'].filter(Boolean).join(' ')}
                     </div>
                     <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
                       {user?.accnt_no || '—'} · {user?.role?.replace('_', ' ')}
@@ -511,17 +504,7 @@ export default function Layout() {
                       <Settings className="h-4 w-4" />
                       Settings
                     </button>
-                    {user?.role !== 'superadmin' && (
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => { setProfileOpen(false); setHelpOpen(true) }}
-                        className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                      >
-                        <HelpCircle className="h-4 w-4" />
-                        Help & Feedback
-                      </button>
-                    )}
+
                   </div>
                   <div className="border-t border-slate-100 dark:border-slate-800 py-1">
                     <button

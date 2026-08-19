@@ -17,6 +17,7 @@ interface User {
   first_name?: string
   last_name?: string
   middle_name?: string
+  suffix?: string
   item_no?: string
   accnt_no?: string
   unit_assignment?: string
@@ -24,6 +25,7 @@ interface User {
   notification_preferences?: Record<string, boolean>
   has_pincode?: boolean
   must_change_password?: boolean
+  profile_setup_complete?: boolean
   office?: {
     id: number
     name: string

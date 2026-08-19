@@ -12,10 +12,12 @@ export interface User {
   has_pincode?: boolean
   can_view_all_documents?: boolean
   must_change_password?: boolean
+  profile_setup_complete?: boolean
   accnt_no?: string | null
   rank?: string | null
   full_name?: string
   designation?: string | null
+  suffix?: string | null
   unit_assignment?: string | null
   created_at: string
   updated_at: string

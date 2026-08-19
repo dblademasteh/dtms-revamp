@@ -312,13 +312,14 @@ export default function Users() {
                   <th>Assigned Office</th>
                   <th>Role</th>
                   <th>Status</th>
+                  <th>Setup</th>
                   <th className="text-right">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredPersonnel.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="text-center py-8 text-slate-500">
+                    <td colSpan={10} className="text-center py-8 text-slate-500">
                       No personnel accounts found.
                     </td>
                   </tr>
@@ -359,6 +360,17 @@ export default function Users() {
                         <span className={`badge ${getStatusBadge(u.status)}`}>
                           {getStatusLabel(u.status)}
                         </span>
+                      </td>
+                      <td>
+                        {u.profile_setup_complete ? (
+                          <span className="badge bg-green-100 text-green-700 border border-green-200 dark:bg-green-900/40 dark:text-green-400 dark:border-green-800">
+                            Complete
+                          </span>
+                        ) : (
+                          <span className="badge bg-amber-100 text-amber-700 border border-amber-200 dark:bg-amber-900/40 dark:text-amber-400 dark:border-amber-800">
+                            Pending
+                          </span>
+                        )}
                       </td>
                       <td className="text-right">
                         <button

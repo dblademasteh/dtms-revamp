@@ -15,6 +15,7 @@ class EnsurePasswordChanged
         'api/auth/password',
         'api/auth/pincode',
         'api/auth/profile',
+        'api/auth/profile-setup',
         'api/auth/avatar',
         'api/auth/me',
         'api/auth/notification-preferences',
