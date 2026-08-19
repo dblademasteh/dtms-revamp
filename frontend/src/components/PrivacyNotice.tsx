@@ -88,7 +88,7 @@ export default function PrivacyNotice() {
           <div className="max-h-[52vh] overflow-y-auto px-6 pb-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
             <div className="mb-5 rounded-xl border border-primary-100 bg-primary-50/60 px-4 py-3 dark:border-primary-800/60 dark:bg-primary-900/20">
               <p>
-                The <strong>Document Tracking System (DTS)</strong> collects and
+                The <strong>Document Tracking and Management System (DTMS)</strong> collects and
                 processes personal data in accordance with the{' '}
                 <strong>Data Privacy Act of 2012 (RA 10173)</strong> and its
                 Implementing Rules and Regulations, as administered by the National
