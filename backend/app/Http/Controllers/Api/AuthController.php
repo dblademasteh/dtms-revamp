@@ -450,6 +450,7 @@ class AuthController extends Controller
             Mail::to($user->email)->send(new VerifyEmail($user, $token));
         } catch (\Exception $e) {
             \Log::error('Failed to send verification email: ' . $e->getMessage());
+            return response()->json(['message' => 'Failed to send verification email. Please try again later.'], 500);
         }
 
         return response()->json(['message' => 'Verification email sent. Please check your inbox.']);
