@@ -19,7 +19,8 @@ import {
   Filter,
   ArrowUpRight,
   ShieldAlert,
-  MailWarning
+  MailWarning,
+  Trash2
 } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import toast from 'react-hot-toast'
@@ -52,6 +53,7 @@ export default function Announcements() {
   const [docTypeFilter, setDocTypeFilter] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [showModal, setShowModal] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<any>(null)
 
   // Form State
   const [subject, setSubject] = useState('')
@@ -82,6 +84,16 @@ export default function Announcements() {
     onError: (err: any) => {
       toast.error(err.response?.data?.message || 'Failed to post announcement')
     }
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => api.delete(`/documents/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['announcements-all'] })
+      toast.success('Announcement deleted')
+      setDeleteTarget(null)
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Delete failed'),
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -447,6 +459,16 @@ export default function Announcements() {
                       </span>
                     )}
 
+                    {user?.role === 'superadmin' && (
+                      <button
+                        onClick={() => setDeleteTarget(doc)}
+                        className="inline-flex items-center gap-1 px-2 py-1.5 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 hover:text-red-700 transition-all"
+                        title="Delete announcement"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+
                     <Link
                       to={`/documents/${doc.id}`}
                       className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-bold text-xs hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white transition-all shadow-sm"
@@ -512,6 +534,15 @@ export default function Announcements() {
                 </div>
 
                 <div className="flex items-center gap-3 self-end sm:self-center">
+                  {user?.role === 'superadmin' && (
+                    <button
+                      onClick={() => setDeleteTarget(doc)}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 hover:text-red-700 transition-all"
+                      title="Delete announcement"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                   <Link
                     to={`/documents/${doc.id}`}
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-bold text-xs hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white transition-all"
@@ -659,6 +690,35 @@ export default function Announcements() {
                 </button>
               </div>
             </form>
+          </div>
+        </ModalPortal>
+      )}
+      {/* Delete Confirmation Modal */}
+      {deleteTarget && (
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setDeleteTarget(null)} />
+            <div className="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm p-6 border border-slate-200 dark:border-slate-800">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">Delete Announcement</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Are you sure you want to delete <strong>{deleteTarget.subject}</strong>? This action cannot be undone.
+              </p>
+              <div className="flex items-center justify-end gap-2 mt-6">
+                <button
+                  onClick={() => setDeleteTarget(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => deleteMutation.mutate(deleteTarget.id)}
+                  disabled={deleteMutation.isPending}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-red-600 hover:bg-red-700 text-white transition-all disabled:opacity-50"
+                >
+                  {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
           </div>
         </ModalPortal>
       )}

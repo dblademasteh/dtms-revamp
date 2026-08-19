@@ -104,7 +104,7 @@ Route::middleware(['auth:sanctum', 'force-password-change'])->group(function () 
                 continue;
             }
 
-            if (in_array($document->status->value, ['approved', 'released'])) {
+            if (!$user->isSuperadmin() && in_array($document->status->value, ['approved', 'released'])) {
                 $errors[] = ['document_id' => $docId, 'error' => 'Cannot delete approved/released'];
                 continue;
             }

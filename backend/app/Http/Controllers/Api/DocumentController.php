@@ -1148,7 +1148,7 @@ class DocumentController extends Controller
             return response()->json(['message' => 'You are not authorized to delete this document'], 403);
         }
 
-        if (in_array($document->status->value, ['approved', 'released'])) {
+        if (!$user->isSuperadmin() && in_array($document->status->value, ['approved', 'released'])) {
             return response()->json(['message' => 'Cannot delete an approved or released document'], 422);
         }
 
