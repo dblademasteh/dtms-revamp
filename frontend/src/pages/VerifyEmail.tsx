@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import api from '@/services/api'
+import { useAuthStore } from '@/stores/authStore'
 import { Shield, CheckCircle, XCircle, Loader2 } from 'lucide-react'
 import { useBranding } from '@/hooks/useBranding'
 
 export default function VerifyEmail() {
   const [searchParams] = useSearchParams()
   const branding = useBranding()
+  const setUser = useAuthStore((s) => s.setUser)
+  const user = useAuthStore((s) => s.user)
   const [state, setState] = useState<'loading' | 'success' | 'error'>('loading')
   const [message, setMessage] = useState('')
 
@@ -25,6 +28,10 @@ export default function VerifyEmail() {
       .then((res) => {
         setState('success')
         setMessage(res.data.message || 'Email verified successfully.')
+        if (user) {
+          setUser({ ...user, email_verified_at: new Date().toISOString() })
+        }
+        sessionStorage.removeItem('email-verification-modal-dismissed')
       })
       .catch((err: any) => {
         setState('error')

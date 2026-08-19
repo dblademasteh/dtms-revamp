@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import { useAuthStore } from '@/stores/authStore'
@@ -108,6 +108,8 @@ function DropdownOptionsLoader() {
 
 function App() {
   const { isAuthenticated, user } = useAuthStore()
+  const location = useLocation()
+  const onVerifyEmailPage = location.pathname === '/verify-email'
   const unlocked = isAuthenticated && !user?.must_change_password
   const needsProfileSetup = unlocked && user && user.profile_setup_complete === false
   const needsEmailVerification = unlocked && user && user.profile_setup_complete === true && !user.email_verified_at
@@ -197,8 +199,8 @@ function App() {
       </ErrorBoundary>
       <Toaster position="top-right" />
       <PrivacyNotice />
-      {needsProfileSetup && <ProfileSetupModal onComplete={() => {}} />}
-      {showEmailVerification && needsEmailVerification && (
+      {needsProfileSetup && !onVerifyEmailPage && <ProfileSetupModal onComplete={() => {}} />}
+      {showEmailVerification && needsEmailVerification && !onVerifyEmailPage && (
         <EmailVerificationModal onComplete={() => {
           sessionStorage.setItem('email-verification-modal-dismissed', '1')
           setShowEmailVerification(false)
