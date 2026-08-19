@@ -108,7 +108,10 @@ function DropdownOptionsLoader() {
 function App() {
   const { isAuthenticated, user } = useAuthStore()
   const unlocked = isAuthenticated && !user?.must_change_password
-  const needsProfileSetup = unlocked && user && user.profile_setup_complete === false
+  const needsProfileSetup = unlocked && user && (
+    user.profile_setup_complete === false ||
+    !user.email_verified_at
+  )
 
   useEffect(() => {
     // 1. Theme

@@ -72,6 +72,7 @@ export default function Settings() {
   const [designation, setDesignation] = useState(user?.designation || '')
   const [officeId, setOfficeId] = useState<string>(user?.office_id ? String(user.office_id) : '')
   const [phone, setPhone] = useState(user?.phone ? formatPhoneIntl(user.phone) : '')
+  const [email, setEmail] = useState(user?.email || '')
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [profileErrors, setProfileErrors] = useState<Record<string, string>>({})
@@ -389,8 +390,9 @@ export default function Settings() {
       rank !== (user?.rank || '') ||
       designation !== (user?.designation || '') ||
       officeId !== (user?.office_id ? String(user.office_id) : '') ||
-      phone !== (user?.phone || ''),
-    [firstName, lastName, middleName, name, rank, designation, officeId, phone, user]
+      phone !== (user?.phone || '') ||
+      (!user?.email_verified_at && email !== (user?.email || '')),
+    [firstName, lastName, middleName, name, rank, designation, officeId, phone, email, user]
   )
   const canSaveProfile = isProfileDirty && Object.keys(profileErrors).length === 0
 
@@ -443,6 +445,7 @@ export default function Settings() {
       designation,
       office_id: officeId ? Number(officeId) : null,
       phone,
+      ...(!user?.email_verified_at && { email: email.trim() || null }),
     })
   }
 
@@ -455,6 +458,7 @@ export default function Settings() {
     setDesignation(user?.designation || '')
     setOfficeId(user?.office_id ? String(user.office_id) : '')
     setPhone(user?.phone ? formatPhoneIntl(user.phone) : '')
+    setEmail(user?.email || '')
     setTouched({})
     setProfileErrors({})
   }
@@ -862,36 +866,62 @@ export default function Settings() {
 
                 <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
                   <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Email Address</label>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="input !py-1.5 !text-sm bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 truncate flex-1 min-w-[200px]">
-                      {user?.email}
-                    </div>
-                    {user?.email_verified_at ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-success-600 dark:text-success-400 bg-success-50 dark:bg-success-900/30 px-2 py-1 rounded-md">
-                        <MailCheck className="w-3.5 h-3.5" />
-                        Verified
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-1 rounded-md">
-                        <MailWarning className="w-3.5 h-3.5" />
-                        Not verified
-                      </span>
-                    )}
-                  </div>
-                  {!user?.email_verified_at && (
-                    <div className="mt-2">
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-sm !py-1.5 !px-3 !text-xs"
-                        onClick={() => sendVerificationMutation.mutate()}
-                        disabled={sendVerificationMutation.isPending}
-                      >
-                        {sendVerificationMutation.isPending ? 'Sending...' : 'Send verification email'}
-                      </button>
+                  {user?.email_verified_at ? (
+                    <>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="input !py-1.5 !text-sm bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 truncate flex-1 min-w-[200px]">
+                          {user?.email}
+                        </div>
+                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-success-600 dark:text-success-400 bg-success-50 dark:bg-success-900/30 px-2 py-1 rounded-md">
+                          <MailCheck className="w-3.5 h-3.5" />
+                          Verified
+                        </span>
+                      </div>
                       <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
-                        Your email is verified by clicking the link sent to your inbox. Some actions may require a verified email.
+                        Your email is verified and cannot be changed.
                       </p>
-                    </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <input
+                          type="email"
+                          className={`input !py-1.5 !text-sm flex-1 min-w-[200px] ${profileErrors.email && touched.email ? '!border-danger-400 focus:!ring-danger-500' : ''}`}
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          onBlur={(e) => {
+                            setTouched((t) => ({ ...t, email: true }))
+                            const val = e.target.value.trim()
+                            if (val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+                              setProfileErrors((prev) => ({ ...prev, email: 'Enter a valid email address' }))
+                            } else {
+                              setProfileErrors((prev) => { const n = { ...prev }; delete n.email; return n })
+                            }
+                          }}
+                          placeholder="your.email@example.com"
+                        />
+                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-1 rounded-md">
+                          <MailWarning className="w-3.5 h-3.5" />
+                          Not verified
+                        </span>
+                      </div>
+                      {touched.email && profileErrors.email && (
+                        <p role="alert" className="text-xs text-danger-600 dark:text-danger-400 mt-1">{profileErrors.email}</p>
+                      )}
+                      <div className="mt-2">
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm !py-1.5 !px-3 !text-xs"
+                          onClick={() => sendVerificationMutation.mutate()}
+                          disabled={sendVerificationMutation.isPending || !email.trim()}
+                        >
+                          {sendVerificationMutation.isPending ? 'Sending...' : 'Send verification email'}
+                        </button>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
+                          Verify your email by clicking the link sent to your inbox. Some actions may require a verified email.
+                        </p>
+                      </div>
+                    </>
                   )}
                 </div>
               </div>

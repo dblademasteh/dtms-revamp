@@ -198,7 +198,9 @@ class AuthController extends Controller
 
     public function updateProfile(Request $request)
     {
-        $request->validate([
+        $user = $request->user();
+
+        $rules = [
             'name' => 'sometimes|string|max:255',
             'first_name' => 'sometimes|string|max:255',
             'last_name' => 'sometimes|string|max:255',
@@ -208,9 +210,14 @@ class AuthController extends Controller
             'unit_assignment' => 'sometimes|nullable|string|max:255',
             'office_id' => 'sometimes|nullable|exists:offices,id',
             'phone' => 'sometimes|nullable|string|max:20',
-        ]);
+        ];
 
-        $user = $request->user();
+        if (!$user->email_verified_at) {
+            $rules['email'] = 'sometimes|nullable|email|max:255|unique:users,email,' . $user->id;
+        }
+
+        $request->validate($rules);
+
         $data = $request->only([
             'name',
             'first_name',
@@ -221,6 +228,14 @@ class AuthController extends Controller
             'unit_assignment',
             'phone',
         ]);
+
+        if (!$user->email_verified_at && $request->has('email')) {
+            $newEmail = $request->input('email');
+            if ($newEmail !== $user->email) {
+                $data['email'] = $newEmail;
+                $data['email_verified_at'] = null;
+            }
+        }
 
         if ($request->has('office_id')) {
             $data['office_id'] = $request->input('office_id');
@@ -524,9 +539,10 @@ class AuthController extends Controller
             'last_name' => 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
             'suffix' => 'nullable|string|max:10',
-            'rank' => 'nullable|string|max:50',
-            'designation' => 'nullable|string|max:255',
-            'unit_assignment' => 'nullable|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email,' . $request->user()->id,
+            'rank' => 'required|string|max:50',
+            'designation' => 'required|string|max:255',
+            'unit_assignment' => 'required|string|max:255',
         ]);
 
         $user = $request->user();
@@ -536,6 +552,7 @@ class AuthController extends Controller
             'last_name',
             'middle_name',
             'suffix',
+            'email',
             'rank',
             'designation',
             'unit_assignment',

@@ -37,6 +37,7 @@ export default function ProfileSetupModal({ onComplete }: ProfileSetupModalProps
   const [lastName, setLastName] = useState(user?.last_name || '')
   const [middleName, setMiddleName] = useState(user?.middle_name || '')
   const [suffix, setSuffix] = useState(user?.suffix || '')
+  const [email, setEmail] = useState(user?.email || '')
   const [rank, setRank] = useState(user?.rank || '')
   const [designation, setDesignation] = useState(user?.designation || '')
   const [unitAssignment, setUnitAssignment] = useState(user?.unit_assignment || '')
@@ -59,14 +60,35 @@ export default function ProfileSetupModal({ onComplete }: ProfileSetupModalProps
       toast.error('First name and last name are required')
       return
     }
+    if (!email.trim()) {
+      toast.error('Email is required')
+      return
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      toast.error('Please enter a valid email address')
+      return
+    }
+    if (!rank) {
+      toast.error('Rank is required')
+      return
+    }
+    if (!designation.trim()) {
+      toast.error('Designation is required')
+      return
+    }
+    if (!unitAssignment.trim()) {
+      toast.error('Unit assignment is required')
+      return
+    }
     mutation.mutate({
       first_name: firstName.trim(),
       last_name: lastName.trim(),
       middle_name: middleName.trim() || null,
       suffix: suffix.trim() || null,
-      rank: rank || null,
-      designation: designation.trim() || null,
-      unit_assignment: unitAssignment.trim() || null,
+      email: email.trim(),
+      rank,
+      designation: designation.trim(),
+      unit_assignment: unitAssignment.trim(),
     })
   }
 
@@ -143,12 +165,27 @@ export default function ProfileSetupModal({ onComplete }: ProfileSetupModalProps
 
           <div>
             <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">
-              Rank
+              Email <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="input w-full"
+              placeholder="your.email@example.com"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">
+              Rank <span className="text-red-500">*</span>
             </label>
             <select
               value={rank}
               onChange={(e) => setRank(e.target.value)}
               className="input w-full"
+              required
             >
               <option value="">Select rank...</option>
               {ranks.map((r) => (
@@ -159,7 +196,7 @@ export default function ProfileSetupModal({ onComplete }: ProfileSetupModalProps
 
           <div>
             <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">
-              Designation
+              Designation <span className="text-red-500">*</span>
             </label>
             <SearchableSelect
               options={designationOptions}
@@ -172,7 +209,7 @@ export default function ProfileSetupModal({ onComplete }: ProfileSetupModalProps
 
           <div>
             <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">
-              Unit Assignment
+              Unit Assignment <span className="text-red-500">*</span>
             </label>
             <SearchableSelect
               options={officeOptions}
