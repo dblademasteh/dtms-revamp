@@ -32,6 +32,9 @@ backend/bootstrap/cache/*.php
 
 # Local DB / OS temp
 db_items.txt
+postgres/
+redis/
+meilisearch/
 
 # Old/obsolete deployment artifacts
 test.js
