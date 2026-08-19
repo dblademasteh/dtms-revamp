@@ -44,7 +44,7 @@ class SendSmsNotification
             }
         }
 
-        $message = "DTS: {$event->title} — {$event->message}";
+        $message = "DTMS: {$event->title} — {$event->message}";
 
         $this->sms->send($user->phone, $message);
     }

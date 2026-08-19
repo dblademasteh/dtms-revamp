@@ -21,7 +21,7 @@
 </head>
 <body>
     <div class="header">
-        <div class="brand">DTS Report — {{ ucfirst($type) }}</div>
+        <div class="brand">DTMS Report — {{ ucfirst($type) }}</div>
         <div class="sub">{{ $fromDate->format('M d, Y') }} to {{ $toDate->format('M d, Y') }} · Generated {{ now()->format('M d, Y h:i A') }}</div>
     </div>
 
@@ -56,6 +56,6 @@
         </tbody>
     </table>
 
-    <div class="footer">DTS · Report generated automatically. Figures are as of {{ now()->format('M d, Y h:i A') }}.</div>
+    <div class="footer">DTMS · Report generated automatically. Figures are as of {{ now()->format('M d, Y h:i A') }}.</div>
 </body>
 </html>

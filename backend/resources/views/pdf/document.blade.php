@@ -30,7 +30,7 @@
         $label = fn ($v) => ucfirst(str_replace('_', ' ', (string) $val($v)));
     @endphp
     <div class="header">
-        <div class="brand">Department Tracking System (DTS)</div>
+        <div class="brand">Department Tracking and Management System (DTMS)</div>
         <div class="sub">{{ $title }} · Generated {{ now()->format('M d, Y h:i A') }}</div>
     </div>
 
@@ -165,6 +165,6 @@
         </div>
     @endif
 
-    <div class="footer">DTS · {{ $document->tracking_number }} · Confidentiality applies per DTS classification rules.</div>
+    <div class="footer">DTMS · {{ $document->tracking_number }} · Confidentiality applies per DTMS classification rules.</div>
 </body>
 </html>

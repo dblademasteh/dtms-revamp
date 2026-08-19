@@ -8,7 +8,7 @@ services:
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     environment:
-      - APP_NAME=${APP_NAME:-DTS - Document Tracking System}
+      - APP_NAME=${APP_NAME:-DTMS - Document Tracking and Management System}
       - APP_ENV=production
       - APP_DEBUG=false
       - APP_TIMEZONE=Asia/Manila
@@ -49,7 +49,7 @@ services:
       - MAIL_PASSWORD=${MAIL_PASSWORD:-trkprhwxzwlktgas}
       - MAIL_ENCRYPTION=${MAIL_ENCRYPTION:-tls}
       - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS:-doubleblade341@gmail.com}
-      - MAIL_FROM_NAME=${MAIL_FROM_NAME:-DTS}
+      - MAIL_FROM_NAME=${MAIL_FROM_NAME:-DTMS}
       - SEMAPHORE_SENDER_NAME=${SEMAPHORE_SENDER_NAME:-DTS}
       - QRCODE_SIZE=300
       - LOG_LEVEL=warning
