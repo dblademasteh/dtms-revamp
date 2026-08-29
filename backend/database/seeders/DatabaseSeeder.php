@@ -42,14 +42,6 @@ class DatabaseSeeder extends Seeder
             'phone' => '+639171234567',
             'status' => 'active',
         ]);
-        // Ensure the P15024 account (whether pre-existing or just created)
-        // is promoted to superadmin with a known password.
-        $p15024Admin->update([
-            'role' => UserRole::SUPERADMIN,
-            'password' => Hash::make('password'),
-            'status' => 'active',
-            'office_id' => $p15024Admin->office_id ?? $rootOffice->id,
-        ]);
 
         $adminOffice = Office::firstOrCreate(['code' => 'ADS'], [
             'name' => 'Administrative Services',
@@ -73,7 +65,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $admin = User::firstOrCreate(['email' => 'admin@dts.gov.ph'], [
-            'accnt_no' => 'ADMIN',
+            'accnt_no' => 'P15024',
             'name' => 'System Administrator',
             'password' => Hash::make('password'),
             'role' => UserRole::SUPERADMIN,
