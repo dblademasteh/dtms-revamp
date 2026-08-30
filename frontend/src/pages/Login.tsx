@@ -1068,7 +1068,7 @@ function PincodeModal({ onClose }: { onClose: () => void }) {
                   <input
                     key={idx}
                     ref={(el) => { inputRefs.current[idx] = el }}
-                    type="text"
+                    type="password"
                     inputMode="numeric"
                     autoComplete="one-time-code"
                     maxLength={1}

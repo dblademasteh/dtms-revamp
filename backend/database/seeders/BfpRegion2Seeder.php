@@ -67,6 +67,7 @@ class BfpRegion2Seeder extends Seeder
             'password' => Hash::make('password'),
             'status' => 'active',
             'phone' => '+639171234567',
+            'profile_setup_complete' => true,
         ], $attributes));
     }
 

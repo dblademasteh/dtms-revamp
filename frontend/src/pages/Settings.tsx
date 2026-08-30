@@ -2067,7 +2067,7 @@ function PinInputs(props: {
         <input
           key={idx}
           id={`${props.prefix}-${idx}`}
-          type="text"
+          type="password"
           inputMode="numeric"
           maxLength={1}
           aria-label={`Digit ${idx + 1} of 4`}

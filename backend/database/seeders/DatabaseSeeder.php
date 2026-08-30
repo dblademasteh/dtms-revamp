@@ -41,6 +41,7 @@ class DatabaseSeeder extends Seeder
             'office_id' => $rootOffice->id,
             'phone' => '+639171234567',
             'status' => 'active',
+            'profile_setup_complete' => true,
         ]);
 
         $adminOffice = Office::firstOrCreate(['code' => 'ADS'], [
@@ -72,11 +73,13 @@ class DatabaseSeeder extends Seeder
             'office_id' => $rootOffice->id,
             'phone' => '+639171234567',
             'status' => 'active',
+            'profile_setup_complete' => true,
         ]);
         $admin->update([
             'accnt_no' => 'ADMIN',
             'password' => Hash::make('password'),
             'status' => 'active',
+            'profile_setup_complete' => true,
         ]);
 
         $rootOffice->update(['head_user_id' => $admin->id]);
@@ -88,6 +91,7 @@ class DatabaseSeeder extends Seeder
             'office_id' => $hrOffice->id,
             'phone' => '+639181234567',
             'status' => 'active',
+            'profile_setup_complete' => true,
         ]);
 
         $approver = User::firstOrCreate(['email' => 'approver@dts.gov.ph'], [
@@ -97,6 +101,7 @@ class DatabaseSeeder extends Seeder
             'office_id' => $hrOffice->id,
             'phone' => '+639191234567',
             'status' => 'active',
+            'profile_setup_complete' => true,
         ]);
 
         $hrHead = User::firstOrCreate(['email' => 'hrhead@dts.gov.ph'], [
@@ -106,6 +111,7 @@ class DatabaseSeeder extends Seeder
             'office_id' => $hrOffice->id,
             'phone' => '+639201234567',
             'status' => 'active',
+            'profile_setup_complete' => true,
         ]);
 
         $hrOffice->update(['head_user_id' => $hrHead->id]);
