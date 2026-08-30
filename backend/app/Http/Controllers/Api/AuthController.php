@@ -569,6 +569,60 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * Update the superadmin's own account (identity + password).
+     */
+    public function updateAdminAccount(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->role !== 'superadmin') {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|nullable|email|max:255|unique:users,email,' . $user->id,
+            'accnt_no' => 'sometimes|nullable|string|max:50|unique:users,accnt_no,' . $user->id,
+            'current_password' => 'required_with:password',
+            'password' => 'required_with:current_password|min:6|confirmed',
+            'password_confirmation' => 'nullable|string|min:6',
+        ]);
+
+        $data = [];
+
+        if ($request->filled('name')) {
+            $data['name'] = $request->input('name');
+        }
+
+        if ($request->filled('email')) {
+            $data['email'] = $request->input('email');
+            $data['email_verified_at'] = now();
+            $data['email_verify_token'] = null;
+        }
+
+        if ($request->filled('accnt_no')) {
+            $data['accnt_no'] = $request->input('accnt_no');
+        }
+
+        if ($request->filled('password')) {
+            if (!Hash::check($request->input('current_password'), $user->password)) {
+                throw ValidationException::withMessages([
+                    'current_password' => ['Current password is incorrect.'],
+                ]);
+            }
+            $data['password'] = Hash::make($request->input('password'));
+            $data['must_change_password'] = false;
+        }
+
+        $user->update($data);
+
+        return response()->json([
+            'message' => 'Admin account updated',
+            'user' => $user->refresh()->load('office'),
+        ]);
+    }
+
     private function maxLoginAttempts(): int
     {
         return (int) env('LOGIN_MAX_ATTEMPTS', 5);

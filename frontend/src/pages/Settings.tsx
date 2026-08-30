@@ -622,6 +622,7 @@ export default function Settings() {
       ? [
           { id: 'system', label: 'System', icon: SettingsIcon, admin: true },
           { id: 'database', label: 'Database', icon: Database, admin: true },
+          { id: 'account', label: 'Admin Account', icon: ShieldCheck, admin: true },
         ]
       : []),
   ]
@@ -1641,6 +1642,7 @@ export default function Settings() {
 
       {/* Database Management (Superadmin only) */}
       {activeTab === 'database' && isSuperadmin && <DatabaseManagement />}
+      {activeTab === 'account' && isSuperadmin && <AdminAccountForm />}
     </div>
   )
 }
@@ -2037,6 +2039,121 @@ function TwoFactorCard() {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+function AdminAccountForm() {
+  const { user, setUser } = useAuthStore()
+  const queryClient = useQueryClient()
+  const [name, setName] = useState(user?.name || '')
+  const [email, setEmail] = useState(user?.email || '')
+  const [accntNo, setAccntNo] = useState(user?.accnt_no || '')
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [saving, setSaving] = useState(false)
+
+  const save = async () => {
+    setErrors({})
+    if (!name.trim() || !email.trim() || !accntNo.trim()) {
+      setErrors({ _form: 'Name, email, and account number are required.' })
+      return
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setErrors({ email: 'Enter a valid email address' })
+      return
+    }
+    if (newPassword && newPassword.length < 6) {
+      setErrors({ newPassword: 'At least 6 characters' })
+      return
+    }
+    if (newPassword && newPassword !== confirmPassword) {
+      setErrors({ confirmPassword: 'Passwords do not match' })
+      return
+    }
+    try {
+      setSaving(true)
+      const payload: Record<string, any> = { name: name.trim(), email: email.trim(), accnt_no: accntNo.trim() }
+      if (newPassword) {
+        payload.current_password = currentPassword
+        payload.password = newPassword
+        payload.password_confirmation = confirmPassword
+      }
+      const res = await api.put('/auth/admin-account', payload)
+      toast.success(res.data?.message || 'Admin account updated')
+      setUser(res.data.user)
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      queryClient.invalidateQueries({ queryKey: ['auth'] })
+    } catch (e: any) {
+      if (e.response?.data?.errors) {
+        setErrors(e.response.data.errors)
+      } else {
+        toast.error(e.response?.data?.message || 'Failed to update admin account')
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="card">
+        <div className="card-header flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-slate-500" />
+          <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">Admin Account</h2>
+        </div>
+        <div className="card-body space-y-5">
+          {errors._form && <p role="alert" className="text-xs text-danger-600">{errors._form}</p>}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label htmlFor="admin-name" className="block text-[11px] font-medium text-slate-500 mb-1 uppercase tracking-wide">Full Name</label>
+              <input id="admin-name" type="text" className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" />
+              {errors.name && <p role="alert" className="text-xs text-danger-600 mt-1">{errors.name}</p>}
+            </div>
+            <div>
+              <label htmlFor="admin-email" className="block text-[11px] font-medium text-slate-500 mb-1 uppercase tracking-wide">Email</label>
+              <input id="admin-email" type="email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email" />
+              {errors.email && <p role="alert" className="text-xs text-danger-600 mt-1">{errors.email}</p>}
+            </div>
+            <div>
+              <label htmlFor="admin-accnt" className="block text-[11px] font-medium text-slate-500 mb-1 uppercase tracking-wide">Account Number</label>
+              <input id="admin-accnt" type="text" className="input" value={accntNo} onChange={(e) => setAccntNo(e.target.value)} placeholder="e.g. ADMIN" />
+              {errors.accnt_no && <p role="alert" className="text-xs text-danger-600 mt-1">{errors.accnt_no}</p>}
+            </div>
+          </div>
+
+          <div className="border-t border-slate-100 pt-5">
+            <h3 className="text-[11px] font-medium text-slate-500 uppercase tracking-wide mb-3">Change Password</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+              <div>
+                <label htmlFor="admin-curpw" className="block text-[11px] font-medium text-slate-500 mb-1 uppercase tracking-wide">Current Password</label>
+                <input id="admin-curpw" type="password" className="input" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="current" />
+              </div>
+              <div>
+                <label htmlFor="admin-newpw" className="block text-[11px] font-medium text-slate-500 mb-1 uppercase tracking-wide">New Password</label>
+                <input id="admin-newpw" type="password" className="input" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="new (min 6)" />
+                {errors.newPassword && <p role="alert" className="text-xs text-danger-600 mt-1">{errors.newPassword}</p>}
+              </div>
+              <div>
+                <label htmlFor="admin-confpw" className="block text-[11px] font-medium text-slate-500 mb-1 uppercase tracking-wide">Confirm Password</label>
+                <input id="admin-confpw" type="password" className="input" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="confirm" />
+                {errors.confirmPassword && <p role="alert" className="text-xs text-danger-600 mt-1">{errors.confirmPassword}</p>}
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-2">Leave blank to keep the current password.</p>
+          </div>
+
+          <div className="flex justify-end">
+            <button className="btn btn-primary btn-sm" disabled={saving} onClick={save}>
+              {saving ? 'Saving…' : 'Save Admin Account'}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )
