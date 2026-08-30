@@ -91,7 +91,7 @@ class DropdownOptionSeeder extends Seeder
             ],
             'ranks' => [
                 ['FCSUPT', 'FCSUPT - Fire Chief Superintendent'],
-                ['SSUPT', 'DSSUPT - Fire Senior Superintendent'],
+                ['FSSUPT', 'FSSUPT - Fire Senior Superintendent'],
                 ['FSUPT', 'FSUPT - Fire Superintendent'],
                 ['FCINSP', 'FCINSP - Fire Chief Inspector'],
                 ['FSINSP', 'FSINSP - Fire Senior Inspector'],
