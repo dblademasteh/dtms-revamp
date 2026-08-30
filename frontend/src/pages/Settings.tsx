@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
+import ConfirmModal from '@/components/ConfirmModal'
 import { useState } from 'react'
 import Select from 'react-select'
 import CreatableSelect from 'react-select/creatable'
@@ -513,6 +514,44 @@ export default function Settings() {
     },
   })
 
+  const [showEmailSaveConfirm, setShowEmailSaveConfirm] = useState(false)
+
+  const emailChanged =
+    !user?.email_verified_at && !!email.trim() && email.trim() !== (user?.email || '')
+
+  const handleSendVerification = () => {
+    if (emailChanged) {
+      setShowEmailSaveConfirm(true)
+      return
+    }
+    sendVerificationMutation.mutate()
+  }
+
+  const handleSaveEmailThenSend = async () => {
+    setShowEmailSaveConfirm(false)
+    const newEmail = email.trim()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+      toast.error('Enter a valid email address')
+      return
+    }
+    try {
+      await profileMutation.mutateAsync({
+        name,
+        first_name: firstName,
+        last_name: lastName,
+        middle_name: middleName,
+        rank,
+        designation,
+        office_id: officeId ? Number(officeId) : null,
+        phone,
+        email: newEmail,
+      })
+      sendVerificationMutation.mutate()
+    } catch {
+      // Error toast is shown by profileMutation's onError handler.
+    }
+  }
+
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -912,7 +951,7 @@ export default function Settings() {
                         <button
                           type="button"
                           className="btn btn-secondary btn-sm !py-1.5 !px-3 !text-xs"
-                          onClick={() => sendVerificationMutation.mutate()}
+                          onClick={handleSendVerification}
                           disabled={sendVerificationMutation.isPending || !email.trim()}
                         >
                           {sendVerificationMutation.isPending ? 'Sending...' : 'Send verification email'}
@@ -921,6 +960,15 @@ export default function Settings() {
                           Verify your email by clicking the link sent to your inbox. Some actions may require a verified email.
                         </p>
                       </div>
+                      <ConfirmModal
+                        open={showEmailSaveConfirm}
+                        title="Save your email first"
+                        message={`Your email address isn't saved yet. Save it now and send the verification link to ${email.trim()}?`}
+                        confirmLabel="Save & Send"
+                        danger={false}
+                        onConfirm={handleSaveEmailThenSend}
+                        onCancel={() => setShowEmailSaveConfirm(false)}
+                      />
                     </>
                   )}
                 </div>
