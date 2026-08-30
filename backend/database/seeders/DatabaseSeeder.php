@@ -74,6 +74,7 @@ class DatabaseSeeder extends Seeder
             'phone' => '+639171234567',
             'status' => 'active',
             'profile_setup_complete' => true,
+            'email_verified_at' => now(),
         ]);
         $admin->update([
             'accnt_no' => 'ADMIN',
