@@ -232,11 +232,12 @@ class BfpRegion2Seeder extends Seeder
     {
         $regionalId = $this->offices['BFP-R2']->id;
 
-        // System administrator (reuse if already created)
-        $admin = $this->user('admin@bfp-r2.gov.ph', [
+        // System administrator (the real superadmin account)
+        $admin = $this->user('dcitmbfpro02@gmail.com', [
             'name' => 'System Administrator',
             'role' => UserRole::SUPERADMIN,
             'office_id' => $regionalId,
+            'email_verified_at' => now(),
         ]);
         $this->offices['BFP-R2']->update(['head_user_id' => $admin->id]);
 

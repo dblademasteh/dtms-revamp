@@ -1,0 +1,5 @@
+# Always check out these as LF (CRLF breaks shebangs and nginx/supervisor configs)
+*.sh     text eol=lf
+backend/nginx.conf     text eol=lf
+backend/supervisord.conf text eol=lf
+frontend/nginx.conf    text eol=lf
