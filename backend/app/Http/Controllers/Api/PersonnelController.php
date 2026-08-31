@@ -102,6 +102,14 @@ class PersonnelController extends Controller
             $unitAssignment = trim($rec['unit_assignment'] ?? '') ?: null;
             $key = $accntNo ?? $email ?? "$firstName|$lastName|$itemNo";
 
+            // Skip duplicate account numbers within the same file: only the
+            // first row with a given accnt_no is imported; later rows with the
+            // same accnt_no are counted as skipped.
+            if ($accntNo !== null && array_key_exists($accntNo, $records)) {
+                $skipped++;
+                continue;
+            }
+
             $record = [
                 'name' => trim("$firstName $middle $lastName"),
                 'role' => $this->rankToRole($rec['rank'] ?? ''),

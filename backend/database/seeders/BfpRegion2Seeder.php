@@ -61,12 +61,11 @@ class BfpRegion2Seeder extends Seeder
         return $office;
     }
 
-    private function user(string $email, array $attributes): User
+    private function user(string $email, string $password, array $attributes): User
     {
         return User::firstOrCreate(['email' => $email], array_merge([
-            'password' => Hash::make('password'),
+            'password' => Hash::make($password),
             'status' => 'active',
-            'phone' => '+639171234567',
             'profile_setup_complete' => true,
         ], $attributes));
     }
@@ -233,13 +232,23 @@ class BfpRegion2Seeder extends Seeder
         $regionalId = $this->offices['BFP-R2']->id;
 
         // The real superadmin account (only user created by the seeder)
-        $admin = $this->user('dcitmbfpro02@gmail.com', [
-            'name' => 'System Administrator',
+        $admin = $this->user('dcitmbfpro02@gmail.com', '@dmiN123', [
+            'name' => 'Rani Bryan Pasinos',
+            'first_name' => 'Rani Bryan',
+            'last_name' => 'Pasinos',
             'role' => UserRole::SUPERADMIN,
             'office_id' => $regionalId,
+            'designation' => 'System Administrator',
+            'rank' => 'FO3',
+            'accnt_no' => 'P15024',
+            'phone' => '+63 917 123 4567',
             'email_verified_at' => now(),
+            'must_change_password' => false,
         ]);
         $this->offices['BFP-R2']->update(['head_user_id' => $admin->id]);
+        if (method_exists($admin, 'markEmailAsVerified') && !$admin->hasVerifiedEmail()) {
+            $admin->markEmailAsVerified();
+        }
     }
 
     private function template(string $name, string $documentType, string $description, array $steps): void
