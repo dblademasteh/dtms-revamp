@@ -19,7 +19,7 @@ services:
       - DB_PORT=5432
       - DB_DATABASE=${DB_DATABASE:-dts_database}
       - DB_USERNAME=${DB_USERNAME:-dts_user}
-      - DB_PASSWORD=${DB_PASSWORD:-dts_password_2024}
+      - DB_PASSWORD=${DB_PASSWORD:?Set DB_PASSWORD in .env}
       - SESSION_DRIVER=redis
       - SESSION_LIFETIME=120
       - SESSION_DOMAIN=${SESSION_DOMAIN:-}
@@ -27,16 +27,16 @@ services:
       - CACHE_DRIVER=redis
       - QUEUE_CONNECTION=redis
       - REDIS_HOST=redis
-      - REDIS_PASSWORD=
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - REDIS_PORT=6379
       - REDIS_CLIENT=predis
       - MEILISEARCH_HOST=http://meilisearch:7700
-      - MEILISEARCH_KEY=${MEILISEARCH_KEY:-dts_meili_key_2024}
+      - MEILISEARCH_KEY=${MEILISEARCH_KEY:?Set MEILISEARCH_KEY in .env}
       - SCOUT_DRIVER=meilisearch
       - BROADCAST_CONNECTION=reverb
-      - REVERB_APP_ID=${REVERB_APP_ID:-dts-app}
-      - REVERB_APP_KEY=${REVERB_APP_KEY:-dts-reverb-key}
-      - REVERB_APP_SECRET=${REVERB_APP_SECRET:-dts-reverb-secret}
+      - REVERB_APP_ID=${REVERB_APP_ID:?Set REVERB_APP_ID in .env}
+      - REVERB_APP_KEY=${REVERB_APP_KEY:?Set REVERB_APP_KEY in .env}
+      - REVERB_APP_SECRET=${REVERB_APP_SECRET:?Set REVERB_APP_SECRET in .env}
       - REVERB_HOST=${REVERB_HOST:-127.0.0.1}
       - REVERB_PORT=${REVERB_PORT:-8080}
       - REVERB_SCHEME=${REVERB_SCHEME:-http}
@@ -45,16 +45,16 @@ services:
       - MAIL_MAILER=${MAIL_MAILER:-smtp}
       - MAIL_HOST=${MAIL_HOST:-smtp.gmail.com}
       - MAIL_PORT=${MAIL_PORT:-587}
-      - MAIL_USERNAME=${MAIL_USERNAME:-doubleblade341@gmail.com}
-      - MAIL_PASSWORD=${MAIL_PASSWORD:-trkprhwxzwlktgas}
+      - MAIL_USERNAME=${MAIL_USERNAME:?Set MAIL_USERNAME in .env}
+      - MAIL_PASSWORD=${MAIL_PASSWORD:?Set MAIL_PASSWORD in .env}
       - MAIL_ENCRYPTION=${MAIL_ENCRYPTION:-tls}
-      - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS:-doubleblade341@gmail.com}
+      - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS:?Set MAIL_FROM_ADDRESS in .env}
       - MAIL_FROM_NAME=${MAIL_FROM_NAME:-DTMS}
       - SEMAPHORE_SENDER_NAME=${SEMAPHORE_SENDER_NAME:-DTS}
       - QRCODE_SIZE=300
       - LOG_LEVEL=warning
       - BCRYPT_ROUNDS=12
-      - TRUSTED_PROXIES=*
+      - TRUSTED_PROXIES=173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22,127.0.0.1/32
       - SESSION_SECURE_COOKIE=${SESSION_SECURE_COOKIE:-true}
       - LOGIN_MAX_ATTEMPTS=${LOGIN_MAX_ATTEMPTS:-5}
       - LOGIN_LOCKOUT_MINUTES=${LOGIN_LOCKOUT_MINUTES:-15}
@@ -104,7 +104,7 @@ services:
     environment:
       POSTGRES_DB: ${DB_DATABASE:-dts_database}
       POSTGRES_USER: ${DB_USERNAME:-dts_user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-dts_password_2024}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - ${DOCKER_BASE_PATH:-/volume1/docker/dts}/postgres/data:/var/lib/postgresql/data
     restart: unless-stopped
@@ -117,12 +117,12 @@ services:
 
   redis:
     image: redis:7-alpine
-    command: redis-server --appendonly yes
+    command: ["sh", "-c", "if [ -n \"${REDIS_PASSWORD:-}\" ]; then exec redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}; else exec redis-server --appendonly yes; fi"]
     volumes:
       - ${DOCKER_BASE_PATH:-/volume1/docker/dts}/redis/data:/data
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD-SHELL", "if [ -n \"${REDIS_PASSWORD:-}\" ]; then redis-cli -a \"${REDIS_PASSWORD:-}\" ping | grep -q PONG; else redis-cli ping | grep -q PONG; fi"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -131,7 +131,7 @@ services:
   meilisearch:
     image: getmeili/meilisearch:v1.10
     environment:
-      MEILI_MASTER_KEY: ${MEILISEARCH_KEY:-dts_meili_key_2024}
+      MEILI_MASTER_KEY: ${MEILISEARCH_KEY}
       MEILI_ENV: production
       MEILI_NO_ANALYTICS: "true"
     volumes:
@@ -150,4 +150,10 @@ services:
     restart: unless-stopped
     depends_on:
       - frontend
-    command: ["tunnel", "--no-autoupdate", "run", "--protocol", "http2", "--token=${CLOUDFLARE_TUNNEL_TOKEN}"]
+    command: ["tunnel", "--no-autoupdate", "run", "--protocol", "http2", "--token=${CLOUDFLARE_TUNNEL_TOKEN:?Set CLOUDFLARE_TUNNEL_TOKEN in .env}"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

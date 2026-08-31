@@ -52,9 +52,11 @@ cd "$PROJECT_PATH"
 
 echo "=== 2/7 Pull latest changes ==="
 git pull --ff-only || {
-    echo "WARNING: fast-forward pull failed; resetting to upstream"
-    git fetch origin
-    git reset --hard '@{u}'
+    echo "WARNING: fast-forward pull failed. Attempting rebase..."
+    git pull --rebase || {
+        echo "ERROR: pull failed. Manual intervention needed. Skipping this step."
+        echo "  Run: git status && git log --oneline -3"
+    }
 }
 
 echo "=== 3/7 Ensure environment files ==="

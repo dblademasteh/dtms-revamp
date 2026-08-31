@@ -171,6 +171,8 @@ ls -lh /volume1/docker/dts/backend/storage/app/backups/
 
 Default accounts (seed):
 
+> **WARNING**: Change these passwords immediately after first login.
+
 | Role | Email | Password |
 |---|---|---|
 | Administrator | `admin@dts.gov.ph` | `password` |
