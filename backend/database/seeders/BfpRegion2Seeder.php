@@ -20,8 +20,8 @@ class BfpRegion2Seeder extends Seeder
         $this->seedUsers();
         $this->seedTemplates();
 
-        echo "BFP Region 2 (Cagayan Valley) data seeded successfully!\n";
-        echo "Regional Director login: rd@bfp-r2.gov.ph / password\n";
+        echo "BFP Region 2 (Cagayan Valley) offices seeded successfully!\n";
+        echo "Superadmin login: dcitmbfpro02@gmail.com\n";
     }
 
     private function office(string $code, string $name, ?string $parentCode, string $description, string $type = 'division'): Office
@@ -232,7 +232,7 @@ class BfpRegion2Seeder extends Seeder
     {
         $regionalId = $this->offices['BFP-R2']->id;
 
-        // System administrator (the real superadmin account)
+        // The real superadmin account (only user created by the seeder)
         $admin = $this->user('dcitmbfpro02@gmail.com', [
             'name' => 'System Administrator',
             'role' => UserRole::SUPERADMIN,
@@ -240,81 +240,6 @@ class BfpRegion2Seeder extends Seeder
             'email_verified_at' => now(),
         ]);
         $this->offices['BFP-R2']->update(['head_user_id' => $admin->id]);
-
-        // Regional Director
-        $rd = $this->user('rd@bfp-r2.gov.ph', [
-            'name' => 'FSSUPT Rolando A. Garcia',
-            'role' => UserRole::SUPERADMIN,
-            'office_id' => $regionalId,
-        ]);
-
-        // Regional Office staff (transferred from the former division/unit structure)
-        $this->user('arda@bfp-r2.gov.ph', [
-            'name' => 'SSUPT Maria L. Cruz',
-            'role' => UserRole::OFFICER,
-            'office_id' => $regionalId,
-        ]);
-        $this->user('ardo@bfp-r2.gov.ph', [
-            'name' => 'SSUPT Jose P. Reyes',
-            'role' => UserRole::OFFICER,
-            'office_id' => $regionalId,
-        ]);
-        $this->user('ad@bfp-r2.gov.ph', [
-            'name' => 'SUPT Ana M. Santos',
-            'role' => UserRole::OFFICER,
-            'office_id' => $regionalId,
-        ]);
-        $this->user('od@bfp-r2.gov.ph', [
-            'name' => 'SUPT Pedro D. Lopez',
-            'role' => UserRole::OFFICER,
-            'office_id' => $regionalId,
-        ]);
-        $this->user('ts@bfp-r2.gov.ph', [
-            'name' => 'INSP Mark T. Bautista',
-            'role' => UserRole::OFFICER,
-            'office_id' => $regionalId,
-        ]);
-        $this->user('dis@bfp-r2.gov.ph', [
-            'name' => 'INSP Carlo V. Mendoza',
-            'role' => UserRole::OFFICER,
-            'office_id' => $regionalId,
-        ]);
-        $this->user('enc.ad@bfp-r2.gov.ph', [
-            'name' => 'FO1 Jenny C. Reyes',
-            'role' => UserRole::NON_OFFICER,
-            'office_id' => $regionalId,
-        ]);
-        $this->user('enc.od@bfp-r2.gov.ph', [
-            'name' => 'FO1 Mark L. Cruz',
-            'role' => UserRole::NON_OFFICER,
-            'office_id' => $regionalId,
-        ]);
-
-        // Provincial Fire Marshals
-        $provinces = [
-            'BFP-CAG' => ['cag@bfp-r2.gov.ph', 'FO1 Gerardo S. Cruz', 'Cagayan'],
-            'BFP-ISA' => ['isa@bfp-r2.gov.ph', 'INSP Elena R. Garcia', 'Isabela'],
-            'BFP-NV'  => ['nv@bfp-r2.gov.ph', 'FO1 Ramon L. Torres', 'Nueva Vizcaya'],
-            'BFP-QZN' => ['qzn@bfp-r2.gov.ph', 'INSP Susan P. Diaz', 'Quirino'],
-            'BFP-BTN' => ['btn@bfp-r2.gov.ph', 'FO1 Benjamin A. Aguinaldo', 'Batanes'],
-        ];
-
-        foreach ($provinces as $code => [$email, $name, $prov]) {
-            $marshal = $this->user($email, [
-                'name' => $name,
-                'role' => UserRole::OFFICER,
-                'office_id' => $this->offices[$code]->id,
-            ]);
-            $this->offices[$code]->update(['head_user_id' => $marshal->id]);
-        }
-
-        // City fire station head
-        $stationHead = $this->user('tug@bfp-r2.gov.ph', [
-            'name' => 'SO2 Luis M. Fernandez',
-            'role' => UserRole::OFFICER,
-            'office_id' => $this->offices['BFP-TUG']->id,
-        ]);
-        $this->offices['BFP-TUG']->update(['head_user_id' => $stationHead->id]);
     }
 
     private function template(string $name, string $documentType, string $description, array $steps): void
