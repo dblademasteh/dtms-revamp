@@ -161,6 +161,11 @@ class User extends Authenticatable
         return $this->role === UserRole::SUPERADMIN;
     }
 
+    public function isSuperadmin(): bool
+    {
+        return $this->role === UserRole::SUPERADMIN;
+    }
+
     public function canApprove(): bool
     {
         return in_array($this->role, [

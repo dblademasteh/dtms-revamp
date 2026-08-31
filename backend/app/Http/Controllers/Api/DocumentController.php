@@ -549,8 +549,35 @@ class DocumentController extends Controller
         $action = $request->input('action');
         $transition = \App\Models\Document::transitionFor($action);
 
-        if ($transition === 'file' && $document->status !== DocumentStatus::RELEASED) {
-            return response()->json(['message' => 'Only released documents can be filed'], 422);
+        // Enforce workflow status preconditions for each transition so a
+        // document cannot jump arbitrarily between states.
+        switch ($transition) {
+            case 'approve':
+            case 'reject':
+                if (!in_array($document->status, [DocumentStatus::RECEIVED, DocumentStatus::IN_REVIEW], true)) {
+                    return response()->json(['message' => 'Only received or in-review documents can be reviewed'], 422);
+                }
+                break;
+            case 'return':
+                if (!in_array($document->status, [DocumentStatus::RECEIVED, DocumentStatus::IN_REVIEW], true)) {
+                    return response()->json(['message' => 'Only received or in-review documents can be returned'], 422);
+                }
+                break;
+            case 'resubmit':
+                if ($document->status !== DocumentStatus::RETURNED) {
+                    return response()->json(['message' => 'Only returned documents can be resubmitted'], 422);
+                }
+                break;
+            case 'send':
+                if ($document->status !== DocumentStatus::CREATED) {
+                    return response()->json(['message' => 'Only created documents can be sent'], 422);
+                }
+                break;
+            case 'file':
+                if ($document->status !== DocumentStatus::RELEASED) {
+                    return response()->json(['message' => 'Only released documents can be filed'], 422);
+                }
+                break;
         }
 
         DB::beginTransaction();
@@ -1422,6 +1449,10 @@ class DocumentController extends Controller
 
         if (in_array($document->classification, ['restricted', 'confidential'], true)) {
             return response()->json(['message' => 'Restricted/confidential documents cannot be disseminated'], 403);
+        }
+
+        if ($document->status !== DocumentStatus::APPROVED) {
+            return response()->json(['message' => 'Only approved documents can be released to all users'], 422);
         }
 
         $request->validate([

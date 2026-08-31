@@ -152,9 +152,9 @@ Route::put('/auth/notification-preferences', [AuthController::class, 'updateNoti
                 return $user;
             });
     });
-    Route::post('/personnel', [PersonnelController::class, 'store']);
-    Route::post('/personnel/import', [PersonnelController::class, 'import']);
-    Route::get('/personnel/export', [PersonnelController::class, 'export']);
+    Route::post('/personnel', [PersonnelController::class, 'store'])->middleware('admin');
+    Route::post('/personnel/import', [PersonnelController::class, 'import'])->middleware('admin');
+    Route::get('/personnel/export', [PersonnelController::class, 'export'])->middleware('admin');
 
     // Reports
      Route::prefix('reports')->group(function () {
@@ -405,7 +405,7 @@ Route::put('/auth/notification-preferences', [AuthController::class, 'updateNoti
                 $r = strtoupper((string) $rank);
                 if (preg_match('/SUPT/', $r)) return 'officer';
                 if (preg_match('/(F|FC)?INSP/', $r)) return 'officer';
-                if (preg_match('/^SFO/', $r)) return 'officer';
+                if (preg_match('/^SFO/', $r)) return 'non_officer';
                 return 'non_officer';
             })($person->rank);
 

@@ -32,7 +32,9 @@ class AppServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('auth', function (Request $request) {
-            $account = strtolower((string) $request->input('accnt_no', ''));
+            // Key per account (accnt_no OR email) plus IP so a single credential
+            // can't be brute-forced regardless of the login identifier used.
+            $account = strtolower((string) ($request->input('accnt_no') ?: $request->input('email', '')));
             return Limit::perMinute(5)->by(($account ?: $request->ip()) . '|' . $request->ip());
         });
     }

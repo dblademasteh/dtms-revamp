@@ -151,7 +151,7 @@ class AuthController extends Controller
             }
         }
 
-        if (!$user || $user->pincode !== $request->pincode) {
+        if (!$user || !Hash::check($request->pincode, (string) $user->pincode)) {
             if ($user) {
                 $this->registerFailedAttempt($user, $request, 'invalid_pincode');
             } else {
@@ -173,6 +173,17 @@ class AuthController extends Controller
 
         $this->clearLockout($user);
         $this->recordLoginAudit($user->id, $user->email, true, 'pincode', $request);
+
+        // Two-factor authentication gate: pincode must not bypass 2FA.
+        if ($user->two_factor_enabled) {
+            $twoFaToken = sha1($user->id . '|' . $user->password . '|' . now()->timestamp);
+            cache([$twoFaToken => $user->id], now()->addMinutes(10));
+
+            return response()->json([
+                'requires_2fa' => true,
+                'two_fa_token' => $twoFaToken,
+            ]);
+        }
 
         $token = $user->createToken('auth-token-pincode')->plainTextToken;
 
@@ -238,7 +249,12 @@ class AuthController extends Controller
         }
 
         if ($request->has('office_id')) {
-            $data['office_id'] = $request->input('office_id');
+            // Only superadmins may directly reassign their own office via the
+            // profile. Non-admins cannot self-assign an arbitrary office; their
+            // office is derived from unit_assignment or set by an admin.
+            if ($user->isAdmin()) {
+                $data['office_id'] = $request->input('office_id');
+            }
         } elseif (array_key_exists('unit_assignment', $data)) {
             $resolved = (new \App\Services\PersonnelOfficeResolver())->resolveForUnitId($data['unit_assignment']);
             if ($resolved !== null) {
@@ -372,13 +388,12 @@ class AuthController extends Controller
         }
 
         $token = \Illuminate\Support\Str::random(64);
+        $hashedToken = \Illuminate\Support\Facades\Hash::make($token);
 
         \DB::table('password_reset_tokens')->updateOrInsert(
             ['email' => $user->email],
-            ['token' => $token, 'created_at' => now()]
+            ['token' => $hashedToken, 'created_at' => now()]
         );
-
-        \Log::info("Password reset token for {$user->email}: {$token}");
 
         try {
             Mail::to($user->email)->send(new PasswordReset($user, $token));
@@ -401,10 +416,9 @@ class AuthController extends Controller
 
         $record = \DB::table('password_reset_tokens')
             ->where('email', $request->email)
-            ->where('token', $request->token)
             ->first();
 
-        if (!$record) {
+        if (!$record || !\Illuminate\Support\Facades\Hash::check($request->token, $record->token)) {
             return response()->json(['message' => 'Invalid or expired reset token'], 422);
         }
 
@@ -528,7 +542,7 @@ class AuthController extends Controller
             ]);
         }
 
-        $user->update(['pincode' => $request->pincode]);
+        $user->update(['pincode' => Hash::make($request->pincode)]);
 
         return response()->json(['message' => 'PIN code changed successfully']);
     }
@@ -647,18 +661,25 @@ class AuthController extends Controller
 
     private function registerFailedAttempt(User $user, Request $request, string $reason): void
     {
-        $attempts = (int) $user->failed_login_attempts + 1;
+        // Enclose the read-increment-write in a transaction with a FOR UPDATE
+        // row lock so concurrent failed logins cannot bypass the lockout
+        // threshold by reading a stale counter.
+        \DB::transaction(function () use ($user, $request, $reason) {
+            $locked = \App\Models\User::whereKey($user->id)->lockForUpdate()->first();
 
-        $update = ['failed_login_attempts' => $attempts];
+            $attempts = (int) $locked->failed_login_attempts + 1;
 
-        if ($attempts >= $this->maxLoginAttempts()) {
-            $update['locked_until'] = now()->addMinutes($this->loginLockoutMinutes());
-            $update['failed_login_attempts'] = 0;
-        }
+            $update = ['failed_login_attempts' => $attempts];
 
-        $user->update($update);
+            if ($attempts >= $this->maxLoginAttempts()) {
+                $update['locked_until'] = now()->addMinutes($this->loginLockoutMinutes());
+                $update['failed_login_attempts'] = 0;
+            }
 
-        $this->recordLoginAudit($user->id, $user->email, false, $reason, $request);
+            $locked->update($update);
+
+            $this->recordLoginAudit($locked->id, $locked->email, false, $reason, $request);
+        });
     }
 
     private function clearLockout(User $user): void
