@@ -1047,11 +1047,20 @@ export default function Users() {
                   {(personnelList || [])
                     .filter((p: any) => {
                       const q = personnelSearch.toLowerCase()
-                      return (
-                        !personnelSearch ||
-                        `${p.name} ${p.rank} ${p.item_no} ${p.unit_assignment} ${p.designation}`.toLowerCase().includes(q)
-                      )
+                      if (!personnelSearch) return true
+                      const searchable = [
+                        p.name,
+                        p.rank,
+                        p.item_no,
+                        p.unit_assignment,
+                        p.designation,
+                      ]
+                        .filter(Boolean)
+                        .join(' ')
+                        .toLowerCase()
+                      return searchable.includes(q)
                     })
+                    .slice(0, 50)
                     .map((p: any) => (
                       <div
                         key={p.id}
@@ -1075,6 +1084,31 @@ export default function Users() {
                         </button>
                       </div>
                     ))}
+                  {personnelList && personnelList.filter((p: any) => {
+                    const q = personnelSearch.toLowerCase()
+                    if (!personnelSearch) return true
+                    return [p.name, p.rank, p.item_no, p.unit_assignment, p.designation]
+                      .filter(Boolean)
+                      .join(' ')
+                      .toLowerCase()
+                      .includes(q)
+                  }).length > 50 && (
+                    <p className="text-[11px] text-slate-400 text-center">
+                      Showing first 50 results. Refine your search for more.
+                    </p>
+                  )}
+                  {personnelList && personnelSearch && personnelList.filter((p: any) => {
+                    const q = personnelSearch.toLowerCase()
+                    return [p.name, p.rank, p.item_no, p.unit_assignment, p.designation]
+                      .filter(Boolean)
+                      .join(' ')
+                      .toLowerCase()
+                      .includes(q)
+                  }).length === 0 && (
+                    <p className="text-sm text-slate-500 text-center py-8">
+                      No personnel matching "{personnelSearch}".
+                    </p>
+                  )}
                 </div>
               )}
             </div>
