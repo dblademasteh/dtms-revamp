@@ -107,20 +107,28 @@ export default function Users() {
     },
   })
 
-  const personnelList = useMemo(() => {
-    // Exclude office_station (already has accounts) and superadmin
+  const pickerPersonnelList = useMemo(() => {
+    // Excludes office_station (already has accounts) and superadmin
     // (provisioning these resets their password / role and can lock
     // the admin out of the panel).
     //
-    // We use the /personnel endpoint instead of /admin/users because
-    // /admin/users filters by whereNotNull('accnt_no'), which excludes
-    // the vast majority of imported personnel (who have accnt_no=NULL
-    // until they're provisioned here). The /personnel endpoint returns
-    // all non-office users regardless of accnt_no.
+    // This data source feeds the "Add from Personnel" modal picker only.
+    // The main Personnel Accounts table uses adminUsersPersonnelList
+    // (derived from /admin/users) so it only shows provisioned users.
     return (personnel || []).filter((u: any) =>
       u.role !== 'office_station' && u.role !== 'superadmin'
     )
   }, [personnel])
+
+  // Personnel Accounts table uses the /admin/users endpoint (which
+  // filters whereNotNull('accnt_no')), so only provisioned personnel
+  // appear here. This is separate from the picker (which uses /personnel
+  // to see all personnel regardless of provisioning status).
+  const adminUsersPersonnelList = useMemo(() => {
+    return (users || []).filter((u: any) =>
+      u.role !== 'office_station' && u.role !== 'superadmin'
+    )
+  }, [users])
 
   const officeList = useMemo(() => {
     return (users || []).filter((u: any) => u.role === 'office_station')
@@ -132,7 +140,7 @@ export default function Users() {
 
   const filteredPersonnel = useMemo(() => {
     const q = search.toLowerCase()
-    return personnelList.filter((u: any) =>
+    return adminUsersPersonnelList.filter((u: any) =>
       !search ||
       (u.full_name || u.name)?.toLowerCase().includes(q) ||
       u.email?.toLowerCase().includes(q) ||
@@ -140,7 +148,7 @@ export default function Users() {
       u.designation?.toLowerCase().includes(q) ||
       u.rank?.toLowerCase().includes(q)
     )
-  }, [personnelList, search])
+  }, [adminUsersPersonnelList, search])
 
   const filteredOffice = useMemo(() => {
     const q = search.toLowerCase()
@@ -1047,7 +1055,7 @@ export default function Users() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {(personnelList || [])
+                  {(pickerPersonnelList || [])
                     .filter((p: any) => {
                       const q = personnelSearch.toLowerCase()
                       if (!personnelSearch) return true
@@ -1087,7 +1095,7 @@ export default function Users() {
                         </button>
                       </div>
                     ))}
-                  {personnelList && personnelList.filter((p: any) => {
+                  {pickerPersonnelList && pickerPersonnelList.filter((p: any) => {
                     const q = personnelSearch.toLowerCase()
                     if (!personnelSearch) return true
                     return [p.name, p.rank, p.item_no, p.unit_assignment, p.designation]
@@ -1100,7 +1108,7 @@ export default function Users() {
                       Showing first 50 results. Refine your search for more.
                     </p>
                   )}
-                  {personnelList && personnelSearch && personnelList.filter((p: any) => {
+                  {pickerPersonnelList && personnelSearch && pickerPersonnelList.filter((p: any) => {
                     const q = personnelSearch.toLowerCase()
                     return [p.name, p.rank, p.item_no, p.unit_assignment, p.designation]
                       .filter(Boolean)
