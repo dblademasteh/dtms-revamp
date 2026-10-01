@@ -17,8 +17,8 @@ class PersonnelController extends Controller
         'first_name',
         'middle_name',
         'item_no',
-        'accnt_no',
-        'unit_assignment',
+        'account_number',
+        'station',
         'designation',
         'email',
     ];
@@ -77,6 +77,7 @@ class PersonnelController extends Controller
         $errors = [];
 
         $records = [];
+        $seq = 1;
 
         while (($row = fgetcsv($handle)) !== false) {
             if (count($row) !== count($headerKeys)) {
@@ -96,10 +97,27 @@ class PersonnelController extends Controller
             }
 
             $rank = strtoupper(trim($rec['rank'] ?? '')) ?: null;
-            $accntNo = trim($rec['accnt_no'] ?? '') ?: null;
+            // The CSV uses "account_number" as the column header (BFP roster
+            // convention). Support "accnt_no" as an alias for backward compat.
+            $accntNo = trim($rec['account_number'] ?? $rec['accnt_no'] ?? '') ?: null;
             $email = strtolower(trim($rec['email'] ?? '')) ?: null;
             $itemNo = trim($rec['item_no'] ?? '') ?: null;
-            $unitAssignment = trim($rec['unit_assignment'] ?? '') ?: null;
+            $unitAssignment = trim($rec['station'] ?? $rec['unit_assignment'] ?? '') ?: null;
+
+            // Auto-generate an account number if the roster doesn't provide one.
+            // Format: BFP-{item_no} when an employee/item number is present,
+            // otherwise a sequential BFP-EMP-{seq} counter. This ensures every
+            // imported personnel has a login credential instead of showing
+            // "Not provisioned" in the Users page.
+            if ($accntNo === null) {
+                if ($itemNo !== null && $itemNo !== '') {
+                    $accntNo = 'BFP-' . $itemNo;
+                } else {
+                    $accntNo = 'BFP-EMP-' . str_pad($seq, 6, '0', STR_PAD_LEFT);
+                }
+            }
+            $seq++;
+
             $key = $accntNo ?? $email ?? "$firstName|$lastName|$itemNo";
 
             // Skip duplicate account numbers within the same file: only the

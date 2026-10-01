@@ -563,8 +563,11 @@ export default function Personnel() {
                   <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Expected CSV columns</p>
                   <code className="text-[11px] leading-5 text-slate-600 dark:text-slate-300 font-mono">
                     rank, last_name, first_name, middle_name, item_no,<br />
-                    accnt_no, unit_assignment, designation, email
+                    account_number, unit_assignment, designation, email
                   </code>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2">
+                    account_number is optional — an ID will be auto-generated if not provided.
+                  </p>
                 </div>
 
                 {importResult ? (
