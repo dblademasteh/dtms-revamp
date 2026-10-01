@@ -987,11 +987,9 @@ export default function Users() {
                                   }
                                 : null}
                               onChange={(opt: any) => {
-                                const selectedUser = users?.find((u: any) => String(u.id) === String(opt?.value))
                                 setNewAccount({
                                   ...newAccount,
                                   chief_user_id: opt ? opt.value : '',
-                                  username: selectedUser?.accnt_no || '',
                                 })
                               }}
                               formatOptionLabel={(option: any) => {
@@ -1010,8 +1008,8 @@ export default function Users() {
                               }}
                             />
                             <p className="text-[11px] text-slate-400 mt-1">
-                              Selecting a user assigns them as chief and their account number
-                              is used as the login username.
+                              Select an existing user to assign them as this office's chief.
+                              The new account's username will still derive from the office unit code.
                             </p>
                           </div>
                         </div>
