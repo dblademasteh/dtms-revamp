@@ -41,7 +41,17 @@ const Help = lazy(() => import('@/pages/Help'))
 const NotFound = lazy(() => import('@/pages/NotFound'))
 const Dropdowns = lazy(() => import('@/pages/admin/Dropdowns'))
 
-const queryClient = new QueryClient()
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 2 * 60 * 1000,
+      gcTime: 5 * 60 * 1000,
+      retry: 1,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
+    },
+  },
+})
 
 function PageFallback() {
   return (
