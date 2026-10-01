@@ -549,22 +549,26 @@ class AuthController extends Controller
 
     public function completeProfileSetup(Request $request)
     {
+        $skip = $request->boolean('skip');
+
         $request->validate([
-            'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
+            'skip' => 'sometimes|boolean',
+            'first_name' => $skip ? 'sometimes|string|max:255' : 'required|string|max:255',
+            'last_name' => $skip ? 'sometimes|string|max:255' : 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
             'suffix' => 'nullable|string|max:10',
-            'email' => 'required|email|max:255|unique:users,email,' . $request->user()->id,
+            'email' => $skip
+                ? 'sometimes|email|max:255|unique:users,email,' . $request->user()->id
+                : 'required|email|max:255|unique:users,email,' . $request->user()->id,
             'rank' => 'nullable|string|max:50',
             'designation' => 'nullable|string|max:255',
             'unit_assignment' => 'nullable|string|max:255',
-            'skip' => 'nullable|boolean',
         ]);
 
         $user = $request->user();
 
         // If skipping, just mark profile as complete (fields stay as-is)
-        if ($request->boolean('skip')) {
+        if ($skip) {
             $user->update(['profile_setup_complete' => true]);
             return response()->json([
                 'message' => 'Profile setup skipped',
