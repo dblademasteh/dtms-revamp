@@ -43,7 +43,7 @@ export default function Users() {
   // Build select styles once on mount (dark-mode aware)
   const selectStyles = useMemo(() => buildSelectStyles(), [])
   const [showOfficeAccount, setShowOfficeAccount] = useState(false)
-  const [newAccount, setNewAccount] = useState({ name: '', email: '', role: 'office_station', office_id: '', password: 'bfp12345', username: '', chief_user_id: '', is_chief: true })
+  const [newAccount, setNewAccount] = useState({ name: '', email: '', role: 'office_station', office_id: '', password: 'bfp12345', username: '', chief_user_id: '' })
   const [showPersonnel, setShowPersonnel] = useState(false)
   const [personnelSearch, setPersonnelSearch] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<any>(null)
@@ -100,7 +100,7 @@ export default function Users() {
       queryClient.invalidateQueries({ queryKey: ['offices-all'] })
       toast.success('Office account created')
       setShowOfficeAccount(false)
-      setNewAccount({ name: '', email: '', role: 'office_station', office_id: '', password: 'bfp12345', username: '', chief_user_id: '', is_chief: true })
+      setNewAccount({ name: '', email: '', role: 'office_station', office_id: '', password: 'bfp12345', username: '', chief_user_id: '' })
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Failed to create account')
@@ -963,7 +963,7 @@ export default function Users() {
                           {/* Select existing user as chief */}
                           <div>
                             <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                              Assign existing user as chief
+                              Assign an existing user as chief
                             </label>
                             <Select
                               styles={selectStyles}
@@ -991,7 +991,6 @@ export default function Users() {
                                 setNewAccount({
                                   ...newAccount,
                                   chief_user_id: opt ? opt.value : '',
-                                  is_chief: false,
                                   username: selectedUser?.accnt_no || '',
                                 })
                               }}
@@ -1011,36 +1010,9 @@ export default function Users() {
                               }}
                             />
                             <p className="text-[11px] text-slate-400 mt-1">
-                              Selecting an existing user assigns them as chief. Their account number will be used as the
-                              login username.
+                              Selecting a user assigns them as chief and their account number
+                              is used as the login username.
                             </p>
-                          </div>
-
-                          {/* OR: make the new account the chief */}
-                          <div className="border-t border-primary-100 dark:border-primary-800/60 pt-3">
-                            <label className="flex items-center gap-3 cursor-pointer select-none">
-                              <input
-                                type="checkbox"
-                                checked={newAccount.is_chief && !newAccount.chief_user_id}
-                                onChange={(e) => {
-                                  const checked = e.target.checked
-                                  setNewAccount({
-                                    ...newAccount,
-                                    is_chief: checked,
-                                    chief_user_id: checked ? '' : newAccount.chief_user_id,
-                                  })
-                                }}
-                                className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-                              />
-                              <div>
-                                <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                                  Make new account the office chief
-                                </span>
-                                <p className="text-[11px] text-slate-400 dark:text-slate-400 mt-0.5">
-                                  The new office account will lead this office.
-                                </p>
-                              </div>
-                            </label>
                           </div>
                         </div>
                       )
@@ -1078,7 +1050,6 @@ export default function Users() {
                       role: newAccount.role,
                       password: newAccount.password,
                       email: newAccount.email || null,
-                      is_chief: newAccount.is_chief ? !newAccount.chief_user_id : false,
                       chief_user_id: newAccount.chief_user_id ? Number(newAccount.chief_user_id) : undefined,
                     })
                   }}

@@ -461,7 +461,6 @@ Route::put('/auth/notification-preferences', [AuthController::class, 'updateNoti
                 'role' => 'nullable|in:office_station,officer,non_officer,fcos,superadmin',
                 'password' => 'nullable|min:6',
                 'email' => 'nullable|email|unique:users,email',
-                'is_chief' => 'nullable|boolean',
                 'chief_user_id' => 'nullable|exists:users,id',
             ]);
 
@@ -492,13 +491,13 @@ Route::put('/auth/notification-preferences', [AuthController::class, 'updateNoti
                 'must_change_password' => true,
             ]);
 
-            // Assign chief: either the new account itself (is_chief=true)
-            // or a pre-existing user specified via chief_user_id.
-            if ($request->boolean('is_chief', true)) {
-                $office->head_user_id = $user->id;
-            } elseif ($request->chief_user_id) {
+            // Assign chief: if chief_user_id provided, that existing user
+            // becomes head of the office; otherwise the new account is chief.
+            if ($request->chief_user_id) {
                 $existingChief = \App\Models\User::find($request->chief_user_id);
                 $office->head_user_id = $existingChief ? $existingChief->id : $user->id;
+            } else {
+                $office->head_user_id = $user->id;
             }
             $office->save();
 
