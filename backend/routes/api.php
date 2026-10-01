@@ -408,6 +408,8 @@ Route::put('/auth/notification-preferences', [AuthController::class, 'updateNoti
             if ($person->is(auth()->user())) {
                 return response()->json(['message' => 'You cannot provision your own account this way.'], 403);
             }
+
+            $password = $request->password ?: 'bfp12345';
             $role = $request->role ?: (function ($rank) {
                 $r = strtoupper((string) $rank);
                 if (preg_match('/SUPT/', $r)) return 'officer';
