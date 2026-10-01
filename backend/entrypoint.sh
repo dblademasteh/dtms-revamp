@@ -15,6 +15,14 @@ fi
 
 php artisan config:clear || true
 php artisan route:clear || true
+
+# Ensure Laravel storage skeleton exists (fresh clones lack these dirs
+# because their contents are gitignored). Missing framework/views causes
+# "Please provide a valid cache path" on every request.
+mkdir -p storage/framework/views storage/framework/cache storage/framework/sessions storage/logs bootstrap/cache storage/app/public storage/app/private
+chown -R www-data:www-data storage bootstrap/cache 2>/dev/null || true
+chmod -R 775 storage bootstrap/cache 2>/dev/null || true
+
 php artisan migrate --force || true
 
 # The public/storage folder must be a symlink to storage/app/public so

@@ -26,7 +26,7 @@ RUN COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader --n
 
 COPY . .
 
-RUN mkdir -p bootstrap/cache storage /run/nginx \
+RUN mkdir -p bootstrap/cache storage/framework/views storage/framework/cache storage/framework/sessions storage/logs storage/app/public storage/app/private /run/nginx \
     && chown -R www-data:www-data /var/www/html storage bootstrap/cache \
     && chmod -R u+rwX,go+rX /var/www/html \
     && chmod -R 775 storage bootstrap/cache

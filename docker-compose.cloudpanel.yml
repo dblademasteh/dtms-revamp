@@ -1,0 +1,173 @@
+# ============================================================
+# CloudPanel (Hostinger VPS) compose override for DTMS
+# ============================================================
+# Public path:
+#   Internet -> CloudPanel Nginx (80/443, SSL) -> 127.0.0.1:${FRONTEND_PORT:-8080}
+#   -> frontend (nginx) -> backend:8000 (compose network, /api /app /storage)
+#
+# Only the frontend port binds to the host (on loopback). Postgres, Redis
+# and Meilisearch stay inside the compose network. CloudPanel owns ports
+# 80/443 — do NOT map anything to 80 here.
+#
+# Usage on the VPS:
+#   cp .env.cloudpanel .env
+#   $EDITOR .env                      # set domain + secrets
+#   mkdir -p /opt/dtms/backend && touch /opt/dtms/backend/.env
+#   COMPOSE_FILE=docker-compose.cloudpanel.yml docker compose up -d --build
+# ============================================================
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: dts-backend:latest
+    pull_policy: never
+    # No published ports: reachable only via the compose network
+    # (frontend proxies /api, /app, /broadcasting, /storage to backend:8000).
+    # Uncomment for direct on-box debugging only (never expose publicly):
+    # ports:
+    #   - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
+    environment:
+      - APP_NAME=${APP_NAME:-DTMS - Document Tracking and Management System}
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - APP_TIMEZONE=Asia/Manila
+      - APP_URL=${APP_URL:?Set APP_URL in .env (https://your-domain)}
+      - FRONTEND_URL=${FRONTEND_URL:?Set FRONTEND_URL in .env (https://your-domain)}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-}
+      - TRUSTED_PROXIES=${TRUSTED_PROXIES:-127.0.0.1/32,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=${DB_DATABASE:-dts_database}
+      - DB_USERNAME=${DB_USERNAME:-dts_user}
+      - DB_PASSWORD=${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      - SESSION_DRIVER=redis
+      - SESSION_LIFETIME=120
+      - SESSION_DOMAIN=${SESSION_DOMAIN:?Set SESSION_DOMAIN in .env (bare domain, no scheme)}
+      - SESSION_SECURE_COOKIE=${SESSION_SECURE_COOKIE:-true}
+      - SANCTUM_STATEFUL_DOMAINS=${SANCTUM_STATEFUL_DOMAINS:?Set SANCTUM_STATEFUL_DOMAINS in .env}
+      - CACHE_DRIVER=redis
+      - QUEUE_CONNECTION=redis
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - REDIS_PORT=6379
+      - REDIS_CLIENT=predis
+      - MEILISEARCH_HOST=http://meilisearch:7700
+      - MEILISEARCH_KEY=${MEILISEARCH_KEY:?Set MEILISEARCH_KEY in .env}
+      - SCOUT_DRIVER=meilisearch
+      - BROADCAST_CONNECTION=reverb
+      - REVERB_APP_ID=${REVERB_APP_ID:-dts-app}
+      - REVERB_APP_KEY=${REVERB_APP_KEY:?Set REVERB_APP_KEY in .env}
+      - REVERB_APP_SECRET=${REVERB_APP_SECRET:?Set REVERB_APP_SECRET in .env}
+      - REVERB_HOST=${REVERB_HOST:-127.0.0.1}
+      - REVERB_PORT=${REVERB_PORT:-8080}
+      - REVERB_SCHEME=${REVERB_SCHEME:-http}
+      - REVERB_SERVER_HOST=0.0.0.0
+      - REVERB_SERVER_PORT=8080
+      - MAIL_MAILER=${MAIL_MAILER:-smtp}
+      - MAIL_HOST=${MAIL_HOST:-smtp.gmail.com}
+      - MAIL_PORT=${MAIL_PORT:-587}
+      - MAIL_USERNAME=${MAIL_USERNAME:?Set MAIL_USERNAME in .env}
+      - MAIL_PASSWORD=${MAIL_PASSWORD:?Set MAIL_PASSWORD in .env}
+      - MAIL_ENCRYPTION=${MAIL_ENCRYPTION:-tls}
+      - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS:?Set MAIL_FROM_ADDRESS in .env}
+      - MAIL_FROM_NAME=${MAIL_FROM_NAME:-DTMS}
+      - SEMAPHORE_SENDER_NAME=${SEMAPHORE_SENDER_NAME:-DTS}
+      - SEMAPHORE_API_KEY=${SEMAPHORE_API_KEY:-}
+      - QRCODE_SIZE=300
+      - LOG_LEVEL=warning
+      - BCRYPT_ROUNDS=12
+      - LOGIN_MAX_ATTEMPTS=${LOGIN_MAX_ATTEMPTS:-5}
+      - LOGIN_LOCKOUT_MINUTES=${LOGIN_LOCKOUT_MINUTES:-15}
+      - DB_BACKUP_RETENTION=${DB_BACKUP_RETENTION:-14}
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      meilisearch:
+        condition: service_started
+    restart: unless-stopped
+    env_file:
+      - ${DOCKER_BASE_PATH:-/opt/dtms}/backend/.env
+    volumes:
+      - ${DOCKER_BASE_PATH:-/opt/dtms}/backend/.env:/var/www/html/.env
+      - ${DOCKER_BASE_PATH:-/opt/dtms}/backend/storage:/var/www/html/storage
+      - ${DOCKER_BASE_PATH:-/opt/dtms}/backend/bootstrap/cache:/var/www/html/bootstrap/cache
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null http://localhost:8000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Same-origin: browser calls /api on the public domain, frontend
+        # nginx proxies to backend:8000 inside the compose network.
+        VITE_API_URL: ${VITE_API_URL:-/api}
+        VITE_APP_NAME: ${VITE_APP_NAME:-DTS}
+        VITE_REVERB_HOST: ${VITE_REVERB_HOST:-}
+        VITE_REVERB_PORT: ${VITE_REVERB_PORT:-}
+        VITE_REVERB_SCHEME: ${VITE_REVERB_SCHEME:-https}
+        VITE_REVERB_APP_KEY: ${VITE_REVERB_APP_KEY:-dts-reverb-key}
+    image: dts-frontend:latest
+    pull_policy: never
+    ports:
+      # Loopback only — CloudPanel reverse-proxies to this port.
+      # Never expose this on 0.0.0.0; CloudPanel handles 80/443 + SSL.
+      - "127.0.0.1:${FRONTEND_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-dts_database}
+      POSTGRES_USER: ${DB_USERNAME:-dts_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    volumes:
+      - ${DOCKER_BASE_PATH:-/opt/dtms}/postgres/data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-dts_user} -d ${DB_DATABASE:-dts_database}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    command: ["sh", "-c", "if [ -n \"${REDIS_PASSWORD:-}\" ]; then exec redis-server --appendonly yes --requirepass \"${REDIS_PASSWORD:-}\"; else exec redis-server --appendonly yes; fi"]
+    volumes:
+      - ${DOCKER_BASE_PATH:-/opt/dtms}/redis/data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "if [ -n \"${REDIS_PASSWORD:-}\" ]; then redis-cli -a \"${REDIS_PASSWORD:-}\" ping | grep -q PONG; else redis-cli ping | grep -q PONG; fi"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.10
+    environment:
+      MEILI_MASTER_KEY: ${MEILISEARCH_KEY:?Set MEILISEARCH_KEY in .env}
+      MEILI_ENV: production
+      MEILI_NO_ANALYTICS: "true"
+    volumes:
+      - ${DOCKER_BASE_PATH:-/opt/dtms}/meilisearch/data:/meili_data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:7700/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s

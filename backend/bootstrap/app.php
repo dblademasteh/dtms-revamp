@@ -20,6 +20,19 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('db:backup')->dailyAt('03:00')->withoutOverlapping();
     })
     ->withMiddleware(function (Middleware $middleware) {
+        // Behind CloudPanel / Cloudflare / Docker the app only ever sees
+        // http on localhost. Trust the proxy so X-Forwarded-Proto is
+        // honoured (correct https URLs + secure cookies).
+        // Set TRUSTED_PROXIES to a comma-separated list to restrict,
+        // or leave unset for the container-safe default (*).
+        $trusted = env('TRUSTED_PROXIES', '*');
+        if (is_string($trusted)) {
+            $trusted = trim($trusted);
+            $middleware->trustProxies(at: $trusted === '' || $trusted === '*' ? '*' : array_map('trim', explode(',', $trusted)));
+        } elseif (is_array($trusted)) {
+            $middleware->trustProxies(at: $trusted);
+        }
+
         $middleware->validateCsrfTokens(except: [
             'api/*',
         ]);
