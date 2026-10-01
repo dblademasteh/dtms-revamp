@@ -61,13 +61,16 @@ export default function Users() {
   const { data: personnel, isLoading: personnelLoading } = useQuery({
     queryKey: ['personnel-picker'],
     queryFn: () => api.get('/personnel').then(res => res.data),
-    enabled: showPersonnel || showOfficeAccount,
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   })
 
   const fromPersonnelMutation = useMutation({
     mutationFn: (data: any) => api.post('/admin/users/from-personnel', data),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] })
+      queryClient.invalidateQueries({ queryKey: ['personnel-picker'] })
       toast.success(res?.data?.message || 'Account created')
       setShowPersonnel(false)
       setPersonnelSearch('')
