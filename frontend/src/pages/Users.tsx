@@ -970,11 +970,21 @@ export default function Users() {
                               <span className="font-medium text-slate-700 dark:text-slate-200">None</span>
                             )}
                           </p>
-                          {newAccount.is_chief && sel.head && (
-                            <p className="text-[12px] text-primary-600 dark:text-primary-400 mt-1">
-                              The new account will replace the current chief.
-                            </p>
-                          )}
+                    {newAccount.is_chief && sel.head && (
+                        <p className="text-[12px] text-amber-600 dark:text-amber-400 mt-1">
+                          Unchecking will not replace the current chief: {sel.head.full_name || sel.head.name}
+                        </p>
+                      )}
+                      {!newAccount.is_chief && sel.head && (
+                        <p className="text-[12px] text-green-600 dark:text-green-400 mt-1">
+                          Current chief retained: {sel.head.full_name || sel.head.name}
+                        </p>
+                      )}
+                      {!newAccount.is_chief && !sel.head && (
+                        <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-1">
+                          This office has no chief assigned.
+                        </p>
+                      )}
                         </div>
                       )
                     })()}
