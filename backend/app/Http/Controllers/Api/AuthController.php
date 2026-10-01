@@ -555,12 +555,22 @@ class AuthController extends Controller
             'middle_name' => 'nullable|string|max:255',
             'suffix' => 'nullable|string|max:10',
             'email' => 'required|email|max:255|unique:users,email,' . $request->user()->id,
-            'rank' => 'required|string|max:50',
-            'designation' => 'required|string|max:255',
-            'unit_assignment' => 'required|string|max:255',
+            'rank' => 'nullable|string|max:50',
+            'designation' => 'nullable|string|max:255',
+            'unit_assignment' => 'nullable|string|max:255',
+            'skip' => 'nullable|boolean',
         ]);
 
         $user = $request->user();
+
+        // If skipping, just mark profile as complete (fields stay as-is)
+        if ($request->boolean('skip')) {
+            $user->update(['profile_setup_complete' => true]);
+            return response()->json([
+                'message' => 'Profile setup skipped',
+                'user' => $user->refresh()->load('office'),
+            ]);
+        }
 
         $data = $request->only([
             'first_name',

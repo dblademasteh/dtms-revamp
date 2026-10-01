@@ -228,6 +228,16 @@ export default function ProfileSetupModal({ onComplete }: ProfileSetupModalProps
             >
               {mutation.isPending ? 'Saving...' : 'Complete Setup'}
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                mutation.mutate({ skip: true })
+              }}
+              disabled={mutation.isPending}
+              className="w-full mt-2 text-sm text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+            >
+              Skip for now (fill in later)
+            </button>
           </div>
         </form>
       </div>
