@@ -165,6 +165,17 @@ class PersonnelController extends Controller
         $existingByAccnt = User::whereIn('accnt_no', $accntNos)->where('role', '!=', 'superadmin')->get()->keyBy('accnt_no');
         $existingByEmail = User::whereIn('email', $emails)->where('role', '!=', 'superadmin')->get()->keyBy('email');
 
+        // Build a lookup of existing non-provisioned users keyed by
+        // (first_name, last_name, item_no) so that re-importing a roster
+        // updates the existing record (which has accnt_no=NULL) instead
+        // of creating a duplicate with the same name.
+        $existingByName = User::where('role', '!=', 'superadmin')
+            ->whereNull('accnt_no')
+            ->get()
+            ->keyBy(function ($u) {
+                return strtolower(trim($u->first_name . '|' . $u->last_name . '|' . ($u->item_no ?? '')));
+            });
+
         // Compute the shared placeholder hash once (records have no login access)
         $passwordHash = Hash::make('bfp12345');
         $newRecords = [];
@@ -177,9 +188,12 @@ class PersonnelController extends Controller
                 continue;
             }
 
+            $nameKey = strtolower(trim(($data['first_name'] ?? '') . '|' . ($data['last_name'] ?? '') . '|' . (($data['item_no'] ?? '') ?: '')));
             $existing = $data['accnt_no'] && $existingByAccnt->has($data['accnt_no'])
                 ? $existingByAccnt[$data['accnt_no']]
-                : ($data['email'] && $existingByEmail->has($data['email']) ? $existingByEmail[$data['email']] : null);
+                : ($data['email'] && $existingByEmail->has($data['email'])
+                    ? $existingByEmail[$data['email']]
+                    : ($existingByName->has($nameKey) ? $existingByName[$nameKey] : null));
 
             if ($existing) {
                 $existing->fill($data);
