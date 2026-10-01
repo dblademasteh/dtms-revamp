@@ -418,6 +418,17 @@ Route::put('/auth/notification-preferences', [AuthController::class, 'updateNoti
                 return 'non_officer';
             })($person->rank);
 
+            // Assign an account number so the provisioned user can log in
+            // (auth accepts accnt_no or email) and appears in the admin Users
+            // table (which filters whereNotNull('accnt_no')). Use a stable
+            // format based on the personnel's item_no if present, otherwise
+            // fall back to a user-id-derived value.
+            if (!$person->accnt_no) {
+                $person->accnt_no = $person->item_no
+                    ? 'P-' . $person->item_no
+                    : 'P-' . $person->id;
+            }
+
             $person->update([
                 'password' => \Illuminate\Support\Facades\Hash::make($password),
                 'role' => $role,
@@ -457,11 +468,6 @@ Route::put('/auth/notification-preferences', [AuthController::class, 'updateNoti
             // unit_code is the per-office login username. Fall back to the
             // office's `code` (legacy seeded offices only populate `code`).
             $unitCode = $office->unit_code ?: $office->code;
-            if (!$unitCode) {
-                return response()->json([
-                    'message' => 'This office has no unit code yet. Set a unit code in Offices first.',
-                ], 422);
-            }
 
             if (\App\Models\User::where('accnt_no', $unitCode)->exists()) {
                 return response()->json([

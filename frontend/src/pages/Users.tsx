@@ -31,7 +31,7 @@ export default function Users() {
   const queryClient = useQueryClient()
   const ranks = useRanks()
   const [search, setSearch] = useState('')
-  const [activeTab, setActiveTab] = useState<'personnel' | 'office'>('personnel')
+  const [activeTab, setActiveTab] = useState<'personnel' | 'office' | 'admin'>('personnel')
   const [editingUser, setEditingUser] = useState<any>(null)
   const [editRole, setEditRole] = useState('')
   const [editStatus, setEditStatus] = useState('')
@@ -108,13 +108,23 @@ export default function Users() {
     // Exclude office_station (already has accounts) and superadmin
     // (provisioning these resets their password / role and can lock
     // the admin out of the panel).
-    return (users || []).filter((u: any) =>
+    //
+    // We use the /personnel endpoint instead of /admin/users because
+    // /admin/users filters by whereNotNull('accnt_no'), which excludes
+    // the vast majority of imported personnel (who have accnt_no=NULL
+    // until they're provisioned here). The /personnel endpoint returns
+    // all non-office users regardless of accnt_no.
+    return (personnel || []).filter((u: any) =>
       u.role !== 'office_station' && u.role !== 'superadmin'
     )
-  }, [users])
+  }, [personnel])
 
   const officeList = useMemo(() => {
     return (users || []).filter((u: any) => u.role === 'office_station')
+  }, [users])
+
+  const adminList = useMemo(() => {
+    return (users || []).filter((u: any) => u.role === 'superadmin')
   }, [users])
 
   const filteredPersonnel = useMemo(() => {
@@ -140,6 +150,17 @@ export default function Users() {
       u.office?.code?.toLowerCase().includes(q)
     )
   }, [officeList, search])
+
+  const filteredAdmins = useMemo(() => {
+    const q = search.toLowerCase()
+    return adminList.filter((u: any) =>
+      !search ||
+      (u.full_name || u.name)?.toLowerCase().includes(q) ||
+      u.email?.toLowerCase().includes(q) ||
+      u.accnt_no?.toLowerCase().includes(q) ||
+      u.designation?.toLowerCase().includes(q)
+    )
+  }, [adminList, search])
 
   const getRoleBadge = (role: string) => ROLES.find(r => r.value === role)?.color || 'bg-slate-50 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
   const getRoleLabel = (role: string) => ROLES.find(r => r.value === role)?.label || role
@@ -250,20 +271,35 @@ export default function Users() {
               </span>
             </button>
 
-            <button
-              onClick={() => setActiveTab('office')}
-              className={`flex items-center gap-2 pb-3 text-xs sm:text-sm font-bold border-b-2 transition-all ${
-                activeTab === 'office'
-                  ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-              }`}
-            >
-              <Building2 className="w-4 h-4" />
-              <span>Office / Station Accounts</span>
-              <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                {filteredOffice.length}
-              </span>
-            </button>
+             <button
+               onClick={() => setActiveTab('office')}
+               className={`flex items-center gap-2 pb-3 text-xs sm:text-sm font-bold border-b-2 transition-all ${
+                 activeTab === 'office'
+                   ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+                   : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+               }`}
+             >
+               <Building2 className="w-4 h-4" />
+               <span>Office / Station Accounts</span>
+               <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                 {filteredOffice.length}
+               </span>
+             </button>
+
+             <button
+               onClick={() => setActiveTab('admin')}
+               className={`flex items-center gap-2 pb-3 text-xs sm:text-sm font-bold border-b-2 transition-all ${
+                 activeTab === 'admin'
+                   ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+                   : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+               }`}
+             >
+               <Shield className="w-4 h-4" />
+               <span>Administrators</span>
+               <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                 {filteredAdmins.length}
+               </span>
+             </button>
           </div>
 
           {/* Search Box */}
@@ -271,7 +307,13 @@ export default function Users() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text"
-              placeholder={activeTab === 'personnel' ? "Search personnel by name, rank, email..." : "Search office by name, code, email..."}
+              placeholder={
+                activeTab === 'personnel'
+                  ? 'Search personnel by name, rank, email...'
+                  : activeTab === 'admin'
+                    ? 'Search admin by name, email, account no...'
+                    : 'Search office by name, code, email...'
+              }
               className="input pl-9 text-xs sm:text-sm"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -392,7 +434,7 @@ export default function Users() {
               </tbody>
             </table>
           </div>
-        ) : (
+        ) : activeTab === 'office' ? (
           /* Office Accounts Table */
           <div className="overflow-x-auto">
             <table className="table">
@@ -460,6 +502,100 @@ export default function Users() {
                           onClick={() => startEdit(u)}
                           className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50 transition-colors"
                           title="Edit Office Account"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          /* Admin Accounts Table */
+          <div className="overflow-x-auto">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Full Name</th>
+                  <th>Account No</th>
+                  <th>Email</th>
+                  <th>Rank</th>
+                  <th>Designation</th>
+                  <th>Assigned Office</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Setup</th>
+                  <th className="text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredAdmins.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="text-center py-8 text-slate-500">
+                      No administrator accounts found.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredAdmins.map((u: any) => (
+                    <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                      <td>
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center flex-shrink-0 border border-amber-200 dark:border-amber-800">
+                            <Shield className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="text-sm font-bold text-slate-900 dark:text-slate-100">{u.full_name || u.name}</span>
+                            {u.can_view_all_documents && (
+                              <span className="badge bg-indigo-100 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-800 text-[10px] ml-1" title="Granted permission to view all system documents">
+                                View All Docs
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="text-sm font-mono text-slate-600 dark:text-slate-400">{u.accnt_no || '—'}</span>
+                      </td>
+                      <td>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">{u.email || '—'}</span>
+                      </td>
+                      <td>
+                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{u.rank || '—'}</span>
+                      </td>
+                      <td>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">{u.designation || '—'}</span>
+                      </td>
+                      <td>
+                        <span className="text-xs text-slate-600 dark:text-slate-400">{u.office?.name || '—'}</span>
+                      </td>
+                      <td>
+                        <span className={`badge ${getRoleBadge(u.role)}`}>
+                          {getRoleLabel(u.role)}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`badge ${getStatusBadge(u.status)}`}>
+                          {getStatusLabel(u.status)}
+                        </span>
+                      </td>
+                      <td>
+                        {u.profile_setup_complete ? (
+                          <span className="badge bg-green-100 text-green-700 border border-green-200 dark:bg-green-900/40 dark:text-green-400 dark:border-green-800">
+                            Complete
+                          </span>
+                        ) : (
+                          <span className="badge bg-amber-100 text-amber-700 border border-amber-200 dark:bg-amber-900/40 dark:text-amber-400 dark:border-amber-800">
+                            Pending
+                          </span>
+                        )}
+                      </td>
+                      <td className="text-right">
+                        <button
+                          onClick={() => startEdit(u)}
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50 transition-colors"
+                          title="Edit Admin"
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>
