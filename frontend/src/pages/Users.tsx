@@ -860,12 +860,12 @@ export default function Users() {
                         placeholder="Auto-filled from unit code"
                         value={(() => {
                           const off = offices?.find((o: any) => String(o.id) === newAccount.office_id)
-                          return off?.unit_code || ''
+                          return off?.unit_code || off?.code || ''
                         })()}
                         disabled
                         readOnly
                       />
-                      <p className="text-[11px] text-slate-400 mt-1">The office unit code is the login username (e.g. 20500).</p>
+                      <p className="text-[11px] text-slate-400 mt-1">Derived from the office's unit code (falls back to station code). Used as the login username.</p>
                     </div>
                     <div>
                       <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-1.5">Email</label>
