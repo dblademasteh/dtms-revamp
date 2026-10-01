@@ -454,22 +454,25 @@ Route::put('/auth/notification-preferences', [AuthController::class, 'updateNoti
 
             $office = \App\Models\Office::findOrFail($request->office_id);
 
-            if (!$office->unit_code) {
+            // unit_code is the per-office login username. Fall back to the
+            // office's `code` (legacy seeded offices only populate `code`).
+            $unitCode = $office->unit_code ?: $office->code;
+            if (!$unitCode) {
                 return response()->json([
                     'message' => 'This office has no unit code yet. Set a unit code in Offices first.',
                 ], 422);
             }
 
-            if (\App\Models\User::where('accnt_no', $office->unit_code)->exists()) {
+            if (\App\Models\User::where('accnt_no', $unitCode)->exists()) {
                 return response()->json([
-                    'message' => 'An account for this office already exists (username: ' . $office->unit_code . ').',
+                    'message' => 'An account for this office already exists (username: ' . $unitCode . ').',
                 ], 422);
             }
 
             $user = \App\Models\User::create([
                 'name' => $request->name ?: $office->name,
                 'email' => $request->email,
-                'accnt_no' => $office->unit_code,
+                'accnt_no' => $unitCode,
                 'password' => \Illuminate\Support\Facades\Hash::make($request->password ?: 'bfp12345'),
                 'role' => $request->role ?: 'office_station',
                 'office_id' => $office->id,
@@ -483,7 +486,7 @@ Route::put('/auth/notification-preferences', [AuthController::class, 'updateNoti
             }
 
             return response()->json([
-                'message' => 'Office account created (username: ' . $office->unit_code . ')',
+                'message' => 'Office account created (username: ' . $unitCode . ')',
                 'user' => $user->load('office'),
             ], 201);
         });
