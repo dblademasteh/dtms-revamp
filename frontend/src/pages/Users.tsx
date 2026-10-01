@@ -43,7 +43,7 @@ export default function Users() {
   // Build select styles once on mount (dark-mode aware)
   const selectStyles = useMemo(() => buildSelectStyles(), [])
   const [showOfficeAccount, setShowOfficeAccount] = useState(false)
-  const [newAccount, setNewAccount] = useState({ name: '', email: '', role: 'office_station', office_id: '', password: 'bfp12345', username: '', is_chief: true })
+  const [newAccount, setNewAccount] = useState({ name: '', email: '', role: 'office_station', office_id: '', password: 'bfp12345', username: '', chief_user_id: '', is_chief: true })
   const [showPersonnel, setShowPersonnel] = useState(false)
   const [personnelSearch, setPersonnelSearch] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<any>(null)
@@ -100,7 +100,7 @@ export default function Users() {
       queryClient.invalidateQueries({ queryKey: ['offices-all'] })
       toast.success('Office account created')
       setShowOfficeAccount(false)
-      setNewAccount({ name: '', email: '', role: 'office_station', office_id: '', password: 'bfp12345', username: '', is_chief: true })
+      setNewAccount({ name: '', email: '', role: 'office_station', office_id: '', password: 'bfp12345', username: '', chief_user_id: '', is_chief: true })
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Failed to create account')
@@ -924,7 +924,7 @@ export default function Users() {
                         value={newAccount.office_id ? { value: newAccount.office_id, label: offices?.find((o: any) => String(o.id) === newAccount.office_id)?.name.replace(/^[\d\.]+\s*/, '') } : null}
                         onChange={(opt: any) => {
                           const off = offices?.find((o: any) => String(o.id) === opt?.value)
-                          setNewAccount({ ...newAccount, office_id: opt ? opt.value : '', name: off ? off.name : newAccount.name, username: '' })
+                                  setNewAccount({ ...newAccount, office_id: opt ? opt.value : '', name: off ? off.name : newAccount.name, username: '', chief_user_id: '' })
                         }}
                         placeholder="Search office..."
                         styles={selectStyles}
@@ -939,52 +939,109 @@ export default function Users() {
                 <section>
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">Chief Assignment</h4>
                   <div className="p-4 rounded-xl border-2 border-primary-100 bg-gradient-to-br from-primary-50/60 to-white dark:border-primary-800/60 dark:from-primary-900/20 dark:to-slate-900">
-                    <label className="flex items-start gap-3 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={newAccount.is_chief}
-                        onChange={(e) => setNewAccount({ ...newAccount, is_chief: e.target.checked })}
-                        className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-                      />
-                      <div>
-                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">Set as office chief</span>
-                        <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5">
-                          The new account leads this office and appears in the office hierarchy.
-                        </p>
-                      </div>
-                    </label>
                     {(() => {
                       const sel = offices?.find((o: any) => String(o.id) === newAccount.office_id)
                       if (!sel) {
-                        return <p className="text-[12px] text-amber-600 dark:text-amber-400 mt-3">Select an office to see its current chief.</p>
+                        return <p className="text-[12px] text-amber-600 dark:text-amber-400">Select an office to see its current chief.</p>
                       }
                       return (
-                        <div className="mt-3 pt-3 border-t border-primary-100 dark:border-primary-800/60">
-                          <p className="text-[12px] text-slate-500 dark:text-slate-400">
-                            Current chief:{' '}
-                            {sel.head ? (
-                              <span className="font-medium text-slate-700 dark:text-slate-200">
-                                {[sel.head.rank, sel.head.full_name || sel.head.name].filter(Boolean).join(' ')}
-                              </span>
-                            ) : (
-                              <span className="font-medium text-slate-700 dark:text-slate-200">None</span>
-                            )}
-                          </p>
-                    {newAccount.is_chief && sel.head && (
-                        <p className="text-[12px] text-amber-600 dark:text-amber-400 mt-1">
-                          Unchecking will not replace the current chief: {sel.head.full_name || sel.head.name}
-                        </p>
-                      )}
-                      {!newAccount.is_chief && sel.head && (
-                        <p className="text-[12px] text-green-600 dark:text-green-400 mt-1">
-                          Current chief retained: {sel.head.full_name || sel.head.name}
-                        </p>
-                      )}
-                      {!newAccount.is_chief && !sel.head && (
-                        <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-1">
-                          This office has no chief assigned.
-                        </p>
-                      )}
+                        <div className="space-y-4">
+                          {/* Current chief display */}
+                          <div>
+                            <p className="text-[12px] text-slate-500 dark:text-slate-400">
+                              Current chief:
+                              {sel.head ? (
+                                <span className="font-medium text-slate-700 dark:text-slate-200 ml-1">
+                                  {[sel.head.rank, sel.head.full_name || sel.head.name].filter(Boolean).join(' ')}
+                                </span>
+                              ) : (
+                                <span className="font-medium text-slate-700 dark:text-slate-200 ml-1">None</span>
+                              )}
+                            </p>
+                          </div>
+
+                          {/* Select existing user as chief */}
+                          <div>
+                            <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                              Assign existing user as chief
+                            </label>
+                            <Select
+                              styles={selectStyles}
+                              placeholder="Search a user..."
+                              isClearable
+                              menuPortalTarget={document.body}
+                              menuPosition="fixed"
+                              options={(users || []).map((u: any) => ({
+                                value: u.id,
+                                label: [u.rank, u.full_name || u.name].filter(Boolean).join(' '),
+                                accnt_no: u.accnt_no,
+                              }))}
+                              value={newAccount.chief_user_id
+                                ? {
+                                    value: newAccount.chief_user_id,
+                                    label: [users?.find((u:any)=>String(u.id)===String(newAccount.chief_user_id))?.rank,
+                                            users?.find((u:any)=>String(u.id)===String(newAccount.chief_user_id))?.full_name ||
+                                            users?.find((u:any)=>String(u.id)===String(newAccount.chief_user_id))?.name]
+                                      .filter(Boolean).join(' ') || '',
+                                    accnt_no: users?.find((u:any)=>String(u.id)===String(newAccount.chief_user_id))?.accnt_no || '',
+                                  }
+                                : null}
+                              onChange={(opt: any) => {
+                                const selectedUser = users?.find((u: any) => String(u.id) === String(opt?.value))
+                                setNewAccount({
+                                  ...newAccount,
+                                  chief_user_id: opt ? opt.value : '',
+                                  is_chief: false,
+                                  username: selectedUser?.accnt_no || '',
+                                })
+                              }}
+                              formatOptionLabel={(option: any) => {
+                                return (
+                                  <div className="flex flex-col">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium text-sm">{option.label}</span>
+                                      {option.accnt_no && (
+                                        <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.25 rounded">
+                                          {option.accnt_no}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )
+                              }}
+                            />
+                            <p className="text-[11px] text-slate-400 mt-1">
+                              Selecting an existing user assigns them as chief. Their account number will be used as the
+                              login username.
+                            </p>
+                          </div>
+
+                          {/* OR: make the new account the chief */}
+                          <div className="border-t border-primary-100 dark:border-primary-800/60 pt-3">
+                            <label className="flex items-center gap-3 cursor-pointer select-none">
+                              <input
+                                type="checkbox"
+                                checked={newAccount.is_chief && !newAccount.chief_user_id}
+                                onChange={(e) => {
+                                  const checked = e.target.checked
+                                  setNewAccount({
+                                    ...newAccount,
+                                    is_chief: checked,
+                                    chief_user_id: checked ? '' : newAccount.chief_user_id,
+                                  })
+                                }}
+                                className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                              />
+                              <div>
+                                <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                                  Make new account the office chief
+                                </span>
+                                <p className="text-[11px] text-slate-400 dark:text-slate-400 mt-0.5">
+                                  The new office account will lead this office.
+                                </p>
+                              </div>
+                            </label>
+                          </div>
                         </div>
                       )
                     })()}
@@ -1021,7 +1078,8 @@ export default function Users() {
                       role: newAccount.role,
                       password: newAccount.password,
                       email: newAccount.email || null,
-                      is_chief: newAccount.is_chief,
+                      is_chief: newAccount.is_chief ? !newAccount.chief_user_id : false,
+                      chief_user_id: newAccount.chief_user_id ? Number(newAccount.chief_user_id) : undefined,
                     })
                   }}
                   disabled={createAccountMutation.isPending}

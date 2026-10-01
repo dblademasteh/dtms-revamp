@@ -462,6 +462,7 @@ Route::put('/auth/notification-preferences', [AuthController::class, 'updateNoti
                 'password' => 'nullable|min:6',
                 'email' => 'nullable|email|unique:users,email',
                 'is_chief' => 'nullable|boolean',
+                'chief_user_id' => 'nullable|exists:users,id',
             ]);
 
             $office = \App\Models\Office::findOrFail($request->office_id);
@@ -491,10 +492,15 @@ Route::put('/auth/notification-preferences', [AuthController::class, 'updateNoti
                 'must_change_password' => true,
             ]);
 
+            // Assign chief: either the new account itself (is_chief=true)
+            // or a pre-existing user specified via chief_user_id.
             if ($request->boolean('is_chief', true)) {
                 $office->head_user_id = $user->id;
-                $office->save();
+            } elseif ($request->chief_user_id) {
+                $existingChief = \App\Models\User::find($request->chief_user_id);
+                $office->head_user_id = $existingChief ? $existingChief->id : $user->id;
             }
+            $office->save();
 
             return response()->json([
                 'message' => 'Office account created (username: ' . $unitCode . ')',
