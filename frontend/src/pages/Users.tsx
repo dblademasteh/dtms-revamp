@@ -355,7 +355,7 @@ export default function Users() {
                   <th>Full Name</th>
                   <th>Email</th>
                   <th>Designation</th>
-                  <th>Account No</th>
+                  <th>Login (Account No)</th>
                   <th>Assigned Office</th>
                   <th>Role</th>
                   <th>Status</th>
@@ -386,7 +386,11 @@ export default function Users() {
                         <span className="text-xs text-slate-500 dark:text-slate-400">{u.designation || '—'}</span>
                       </td>
                       <td>
-                        <span className="text-sm font-mono text-slate-600 dark:text-slate-400">{u.accnt_no || '—'}</span>
+                        {u.accnt_no ? (
+                          <span className="text-sm font-mono text-slate-600 dark:text-slate-400">{u.accnt_no}</span>
+                        ) : (
+                          <span className="text-xs text-slate-400 italic">Not provisioned</span>
+                        )}
                       </td>
                       <td>
                         <span className="text-xs text-slate-600 dark:text-slate-400">{u.office?.name || '—'}</span>
