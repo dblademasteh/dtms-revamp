@@ -1044,7 +1044,7 @@ export default function Users() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {(personnel ?? [])
+                  {(personnelList || [])
                     .filter((p: any) => {
                       const q = personnelSearch.toLowerCase()
                       return (
