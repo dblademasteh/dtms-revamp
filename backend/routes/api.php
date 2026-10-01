@@ -400,7 +400,14 @@ Route::put('/auth/notification-preferences', [AuthController::class, 'updateNoti
 
             $person = \App\Models\User::findOrFail($request->user_id);
 
-            $password = $request->password ?: 'bfp12345';
+            // Prevent provisioning a superadmin account (would demote them)
+            // or provisioning your own account (password reset / lockout loop).
+            if ($person->isSuperadmin()) {
+                return response()->json(['message' => 'Cannot provision a superadmin account from personnel.'], 403);
+            }
+            if ($person->is(auth()->user())) {
+                return response()->json(['message' => 'You cannot provision your own account this way.'], 403);
+            }
             $role = $request->role ?: (function ($rank) {
                 $r = strtoupper((string) $rank);
                 if (preg_match('/SUPT/', $r)) return 'officer';

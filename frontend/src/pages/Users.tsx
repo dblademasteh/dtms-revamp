@@ -105,7 +105,12 @@ export default function Users() {
   })
 
   const personnelList = useMemo(() => {
-    return (users || []).filter((u: any) => u.role !== 'office_station')
+    // Exclude office_station (already has accounts) and superadmin
+    // (provisioning these resets their password / role and can lock
+    // the admin out of the panel).
+    return (users || []).filter((u: any) =>
+      u.role !== 'office_station' && u.role !== 'superadmin'
+    )
   }, [users])
 
   const officeList = useMemo(() => {
