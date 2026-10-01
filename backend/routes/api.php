@@ -457,6 +457,7 @@ Route::put('/auth/notification-preferences', [AuthController::class, 'updateNoti
             $request->validate([
                 'office_id' => 'required|exists:offices,id',
                 'name' => 'nullable|string|max:255',
+                'username' => 'nullable|string|max:50|unique:users,accnt_no',
                 'role' => 'nullable|in:office_station,officer,non_officer,fcos,superadmin',
                 'password' => 'nullable|min:6',
                 'email' => 'nullable|email|unique:users,email',
@@ -469,16 +470,20 @@ Route::put('/auth/notification-preferences', [AuthController::class, 'updateNoti
             // office's `code` (legacy seeded offices only populate `code`).
             $unitCode = $office->unit_code ?: $office->code;
 
-            if (\App\Models\User::where('accnt_no', $unitCode)->exists()) {
+            // Allow caller to override the username if unit code already
+            // has an account (and the caller wants a different username).
+            $accntNo = $request->username ?: $unitCode;
+
+            if (\App\Models\User::where('accnt_no', $accntNo)->exists()) {
                 return response()->json([
-                    'message' => 'An account for this office already exists (username: ' . $unitCode . ').',
+                    'message' => 'An account with that username already exists (username: ' . $accntNo . ').',
                 ], 422);
             }
 
             $user = \App\Models\User::create([
                 'name' => $request->name ?: $office->name,
                 'email' => $request->email,
-                'accnt_no' => $unitCode,
+                'accnt_no' => $accntNo,
                 'password' => \Illuminate\Support\Facades\Hash::make($request->password ?: 'bfp12345'),
                 'role' => $request->role ?: 'office_station',
                 'office_id' => $office->id,

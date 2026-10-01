@@ -43,7 +43,7 @@ export default function Users() {
   // Build select styles once on mount (dark-mode aware)
   const selectStyles = useMemo(() => buildSelectStyles(), [])
   const [showOfficeAccount, setShowOfficeAccount] = useState(false)
-  const [newAccount, setNewAccount] = useState({ name: '', email: '', role: 'office_station', office_id: '', password: 'bfp12345', is_chief: true })
+  const [newAccount, setNewAccount] = useState({ name: '', email: '', role: 'office_station', office_id: '', password: 'bfp12345', username: '', is_chief: true })
   const [showPersonnel, setShowPersonnel] = useState(false)
   const [personnelSearch, setPersonnelSearch] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<any>(null)
@@ -100,7 +100,7 @@ export default function Users() {
       queryClient.invalidateQueries({ queryKey: ['offices-all'] })
       toast.success('Office account created')
       setShowOfficeAccount(false)
-      setNewAccount({ name: '', email: '', role: 'office_station', office_id: '', password: 'bfp12345', is_chief: true })
+      setNewAccount({ name: '', email: '', role: 'office_station', office_id: '', password: 'bfp12345', username: '', is_chief: true })
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Failed to create account')
@@ -864,19 +864,24 @@ export default function Users() {
                       <p className="text-[11px] text-slate-400 mt-1">This is a new dedicated account for the office — it does not modify any personnel record.</p>
                     </div>
                     <div>
-                      <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-1.5">Username (login)</label>
+                      <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                        Username (login)
+                        <span className="text-danger-500">*</span>
+                      </label>
                       <input
                         type="text"
-                        className="input bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500"
+                        className="input"
                         placeholder="Auto-filled from unit code"
-                        value={(() => {
+                        value={newAccount.username || (() => {
                           const off = offices?.find((o: any) => String(o.id) === newAccount.office_id)
                           return off?.unit_code || off?.code || ''
                         })()}
-                        disabled
-                        readOnly
+                        onChange={(e) => setNewAccount({ ...newAccount, username: e.target.value })}
                       />
-                      <p className="text-[11px] text-slate-400 mt-1">Derived from the office's unit code (falls back to station code). Used as the login username.</p>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Derived from the office's unit code. You can override it to use a
+                        custom username (must be unique).
+                      </p>
                     </div>
                     <div>
                       <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-1.5">Email</label>
@@ -919,7 +924,7 @@ export default function Users() {
                         value={newAccount.office_id ? { value: newAccount.office_id, label: offices?.find((o: any) => String(o.id) === newAccount.office_id)?.name.replace(/^[\d\.]+\s*/, '') } : null}
                         onChange={(opt: any) => {
                           const off = offices?.find((o: any) => String(o.id) === opt?.value)
-                          setNewAccount({ ...newAccount, office_id: opt ? opt.value : '', name: off ? off.name : newAccount.name })
+                          setNewAccount({ ...newAccount, office_id: opt ? opt.value : '', name: off ? off.name : newAccount.name, username: '' })
                         }}
                         placeholder="Search office..."
                         styles={selectStyles}
@@ -1002,6 +1007,7 @@ export default function Users() {
                     createAccountMutation.mutate({
                       office_id: Number(newAccount.office_id),
                       name: newAccount.name || undefined,
+                      username: newAccount.username || undefined,
                       role: newAccount.role,
                       password: newAccount.password,
                       email: newAccount.email || null,
