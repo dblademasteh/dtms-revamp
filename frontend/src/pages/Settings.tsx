@@ -1708,8 +1708,23 @@ function DatabaseManagement() {
     onError: (e: any) => toast.error(e.response?.data?.message || 'Delete failed'),
   })
 
-  const downloadBackup = (file: string) => {
-    window.open(`${api.defaults.baseURL}/admin/database/download/${encodeURIComponent(file)}`, '_blank')
+  const downloadBackup = async (file: string) => {
+    // Must go through the axios instance so the Bearer token is attached;
+    // window.open() would hit the auth:sanctum guard and return 401.
+    try {
+      const res = await api.get(`/admin/database/download/${encodeURIComponent(file)}`, {
+        responseType: 'blob',
+      })
+      const url = window.URL.createObjectURL(new Blob([res.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.download = file
+      const clickEvent = new MouseEvent('click', { view: window, bubbles: false, cancelable: true })
+      link.dispatchEvent(clickEvent)
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000)
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Download failed')
+    }
   }
 
   const run = (id: string, fn: () => void) => {

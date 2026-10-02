@@ -404,13 +404,7 @@ class DocumentController extends Controller
     {
         $user = $request->user();
 
-        $roleValue = is_object($user->role) ? $user->role->value : $user->role;
-        $canView = $user->isAdmin()
-            || !empty($user->can_view_all_documents)
-            || in_array($roleValue, ['superadmin', 'fcos'], true)
-            || $document->isVisibleTo($user);
-
-        if (!$canView) {
+        if (!$this->canViewDocument($document, $user)) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
@@ -470,13 +464,7 @@ class DocumentController extends Controller
     {
         $user = $request->user();
 
-        $roleValue = is_object($user->role) ? $user->role->value : $user->role;
-        $canView = $user->isAdmin()
-            || !empty($user->can_view_all_documents)
-            || in_array($roleValue, ['superadmin', 'fcos'], true)
-            || $document->isVisibleTo($user);
-
-        if (!$canView) {
+        if (!$this->canViewDocument($document, $user)) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
@@ -1044,13 +1032,7 @@ class DocumentController extends Controller
     {
         $user = $request->user();
 
-        $roleValue = is_object($user->role) ? $user->role->value : $user->role;
-        $canView = $user->isAdmin()
-            || !empty($user->can_view_all_documents)
-            || in_array($roleValue, ['superadmin', 'fcos'], true)
-            || $document->isVisibleTo($user);
-
-        if (!$canView) {
+        if (!$this->canViewDocument($document, $user)) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
@@ -1152,8 +1134,12 @@ class DocumentController extends Controller
         ], 201);
     }
 
-    public function attachmentVersions(Document $document, \App\Models\DocumentAttachment $attachment)
+    public function attachmentVersions(Request $request, Document $document, \App\Models\DocumentAttachment $attachment)
     {
+        if (!$this->canViewDocument($document, $request->user())) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
         if ($attachment->document_id !== $document->id) {
             return response()->json(['message' => 'Attachment does not belong to this document'], 404);
         }
@@ -1188,7 +1174,25 @@ class DocumentController extends Controller
             'user_agent' => request()->userAgent(),
         ]);
 
+        // Collect physical paths before the cascade removes the rows. The FK is
+        // cascadeOnDelete, so once $document->delete() runs the file_path values
+        // are gone and the files on disk can never be reclaimed.
+        $paths = $document->attachments()->pluck('file_path')->all();
+
         $document->delete();
+
+        $disk = \Illuminate\Support\Facades\Storage::disk('public');
+        foreach ($paths as $path) {
+            if ($path) {
+                try {
+                    $disk->delete($path);
+                } catch (\Throwable $e) {
+                    // Never block the delete on a filesystem error; the row is
+                    // already gone, so a leftover file is surfaced by orphanScan().
+                    report($e);
+                }
+            }
+        }
 
         return response()->json(['message' => 'Document deleted successfully']);
     }
@@ -1305,15 +1309,40 @@ class DocumentController extends Controller
         }
     }
 
-    public function downloadAttachment(Document $document, \App\Models\DocumentAttachment $attachment)
+    /**
+     * Shared read-authorization gate for document-scoped endpoints.
+     * Keeps attachment download/version reads on the same visibility model
+     * as show()/exportPdf()/storeComment().
+     */
+    private function canViewDocument(Document $document, $user): bool
     {
+        if (!$user) {
+            return false;
+        }
+
+        $roleValue = is_object($user->role) ? $user->role->value : $user->role;
+
+        return $user->isAdmin()
+            || !empty($user->can_view_all_documents)
+            || in_array($roleValue, ['superadmin', 'fcos'], true)
+            || $document->isVisibleTo($user);
+    }
+
+    public function downloadAttachment(Request $request, Document $document, \App\Models\DocumentAttachment $attachment)
+    {
+        // Authorize before revealing whether the attachment exists.
+        if (!$this->canViewDocument($document, $request->user())) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
         if ($attachment->document_id !== $document->id) {
             return response()->json(['message' => 'Attachment not found'], 404);
         }
 
-        $path = storage_path('app/public/' . $attachment->file_path);
+        $disk = \Illuminate\Support\Facades\Storage::disk('public');
+        $path = $disk->path($attachment->file_path);
 
-        if (!file_exists($path)) {
+        if (!$disk->exists($attachment->file_path)) {
             return response()->json(['message' => 'File not found on disk'], 404);
         }
 
@@ -1359,12 +1388,6 @@ class DocumentController extends Controller
 
         $version = $currentLatest ? $currentLatest->version + 1 : 1;
 
-        if ($currentLatest) {
-            $document->attachments()
-                ->where('file_name', $originalName)
-                ->update(['is_latest' => false]);
-        }
-
         // Compress supported images (re-encode to JPEG, strips EXIF).
         $compressed = ImageProcessor::compressImage($file->getRealPath());
         $isCompressed = $compressed !== null && $compressed['size'] < $file->getSize();
@@ -1374,28 +1397,54 @@ class DocumentController extends Controller
             $fileType = $compressed['mime'];
             $fileSize = $compressed['size'];
         } else {
-            $path = $file->store('documents/' . $document->id, 'public');
+            $extension = preg_replace('/[^A-Za-z0-9]/', '', $file->guessExtension() ?: '') ?: 'bin';
+            $path = 'documents/' . $document->id . '/' . Str::random(40) . '.' . $extension;
             $fileType = $file->getMimeType();
             $fileSize = $file->getSize();
         }
 
+        // Enforce quota BEFORE writing to disk. Writing first would leave an
+        // untracked file behind on every rejection, which no cleanup path can
+        // reclaim because no DocumentAttachment row would exist for it.
         $this->enforceOfficeQuota($document, $fileSize);
 
-        if ($isCompressed) {
-            Storage::disk('public')->put($path, $compressed['content']);
+        $stored = $isCompressed
+            ? Storage::disk('public')->put($path, $compressed['content'])
+            : $file->storeAs('documents/' . $document->id, basename($path), 'public');
+
+        if ($stored === false) {
+            throw ValidationException::withMessages([
+                'file' => 'Failed to store the uploaded file.',
+            ]);
         }
 
-        $attachment = $document->attachments()->create([
-            'file_name' => $originalName,
-            'file_path' => $path,
-            'file_type' => $fileType,
-            'file_size' => $fileSize,
-            'file_hash' => $hash,
-            'version' => $version,
-            'is_latest' => true,
-            'is_compressed' => $isCompressed,
-            'uploaded_by' => $userId,
-        ]);
+        try {
+            // Demote the previous latest only once the new file is safely on
+            // disk, so a failure never leaves the document with no current
+            // version of this filename.
+            if ($currentLatest) {
+                $document->attachments()
+                    ->where('file_name', $originalName)
+                    ->update(['is_latest' => false]);
+            }
+
+            $attachment = $document->attachments()->create([
+                'file_name' => $originalName,
+                'file_path' => $path,
+                'file_type' => $fileType,
+                'file_size' => $fileSize,
+                'file_hash' => $hash,
+                'version' => $version,
+                'is_latest' => true,
+                'is_compressed' => $isCompressed,
+                'uploaded_by' => $userId,
+            ]);
+        } catch (\Throwable $e) {
+            // Roll the physical file back so a failed insert cannot orphan it.
+            Storage::disk('public')->delete($path);
+
+            throw $e;
+        }
 
         return ['attachment' => $attachment, 'duplicate' => null, 'version' => $version];
     }
