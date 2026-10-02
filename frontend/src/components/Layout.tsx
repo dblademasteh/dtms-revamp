@@ -215,29 +215,39 @@ export default function Layout() {
             {item.name}
           </Link>
         ))}
-        {user?.role !== 'superadmin' && (
-          <Link
-            to="/help"
-            className={`nav-item ${
-              isActive('/help') ? 'nav-item-active' : 'nav-item-inactive'
-            }`}
-            onClick={() => setSidebarOpen(false)}
-          >
-            <LifeBuoy className="w-5 h-5 flex-shrink-0" />
-            Help & Feedback
-          </Link>
-        )}
         {user?.role === 'office_station' && (
-          <Link
-            to="/office-profile"
-            className={`nav-item ${
-              isActive('/office-profile') ? 'nav-item-active' : 'nav-item-inactive'
-            }`}
-            onClick={() => setSidebarOpen(false)}
-          >
-            <Building2 className="w-5 h-5 flex-shrink-0" />
-            Office Profile
-          </Link>
+          <>
+            <div className="sidebar-section pt-4 mt-4 border-t border-slate-200/80 dark:border-slate-800">
+              <div className="sidebar-label">Office</div>
+            </div>
+            <Link
+              to="/office-profile"
+              className={`nav-item ${
+                isActive('/office-profile') ? 'nav-item-active' : 'nav-item-inactive'
+              }`}
+              onClick={() => setSidebarOpen(false)}
+            >
+              <Building2 className="w-5 h-5 flex-shrink-0" />
+              Office Profile
+            </Link>
+          </>
+        )}
+        {user?.role !== 'superadmin' && (
+          <>
+            <div className="sidebar-section pt-4 mt-4 border-t border-slate-200/80 dark:border-slate-800">
+              <div className="sidebar-label">Support</div>
+            </div>
+            <Link
+              to="/help"
+              className={`nav-item ${
+                isActive('/help') ? 'nav-item-active' : 'nav-item-inactive'
+              }`}
+              onClick={() => setSidebarOpen(false)}
+            >
+              <LifeBuoy className="w-5 h-5 flex-shrink-0" />
+              Help & Feedback
+            </Link>
+          </>
         )}
         {user?.role === 'superadmin' && (
           <>
@@ -255,24 +265,14 @@ export default function Layout() {
               Users
             </Link>
             <Link
-              to="/gateway"
+              to="/personnel"
               className={`nav-item ${
-                isActive('/gateway') ? 'nav-item-active' : 'nav-item-inactive'
+                isActive('/personnel') ? 'nav-item-active' : 'nav-item-inactive'
               }`}
               onClick={() => setSidebarOpen(false)}
             >
-              <Globe className="w-5 h-5 flex-shrink-0" />
-              Agency Gateway
-            </Link>
-            <Link
-              to="/admin/templates"
-              className={`nav-item ${
-                isActive('/admin/templates') ? 'nav-item-active' : 'nav-item-inactive'
-              }`}
-              onClick={() => setSidebarOpen(false)}
-            >
-              <GitBranch className="w-5 h-5 flex-shrink-0" />
-              Templates
+              <Users className="w-5 h-5 flex-shrink-0" />
+              Personnel
             </Link>
             <Link
               to="/admin/offices"
@@ -285,15 +285,28 @@ export default function Layout() {
               Offices
             </Link>
             <Link
-              to="/personnel"
+              to="/admin/templates"
               className={`nav-item ${
-                isActive('/personnel') ? 'nav-item-active' : 'nav-item-inactive'
+                isActive('/admin/templates') ? 'nav-item-active' : 'nav-item-inactive'
               }`}
               onClick={() => setSidebarOpen(false)}
             >
-              <Users className="w-5 h-5 flex-shrink-0" />
-              Personnel
+              <GitBranch className="w-5 h-5 flex-shrink-0" />
+              Templates
             </Link>
+            <Link
+              to="/gateway"
+              className={`nav-item ${
+                isActive('/gateway') ? 'nav-item-active' : 'nav-item-inactive'
+              }`}
+              onClick={() => setSidebarOpen(false)}
+            >
+              <Globe className="w-5 h-5 flex-shrink-0" />
+              Agency Gateway
+            </Link>
+            <div className="sidebar-section pt-4 mt-4 border-t border-slate-200/80 dark:border-slate-800">
+              <div className="sidebar-label">System</div>
+            </div>
             <Link
               to="/admin/storage"
               className={`nav-item ${
