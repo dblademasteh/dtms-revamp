@@ -43,8 +43,14 @@ export default function Personnel() {
     staleTime: 30_000,
   })
 
-  const personnel = useMemo(() => (personnelResult as any)?.data ?? [], [personnelResult])
-  const totalRecords = (personnelResult as any)?.meta?.total ?? 0
+  const personnel = useMemo(() => {
+    const res = personnelResult as any
+    if (!res) return []
+    if (Array.isArray(res.data)) return res.data
+    if (Array.isArray(res)) return res
+    return []
+  }, [personnelResult])
+  const totalRecords = (personnelResult as any)?.meta?.total ?? personnel.length
   const lastPage = (personnelResult as any)?.meta?.last_page ?? 1
 
   const { data: offices } = useQuery({
