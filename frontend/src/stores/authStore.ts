@@ -38,12 +38,14 @@ interface AuthState {
   token: string | null
   isAuthenticated: boolean
   twoFaToken: string | null
+  showProfileSetup: boolean
   login: (accnt_no: string, password: string) => Promise<void>
   verify2fa: (code: string) => Promise<void>
   logout: () => Promise<void>
   setUser: (user: User) => void
   setAuth: (user: User, token: string) => void
   isSuperadmin: () => boolean
+  setShowProfileSetup: (show: boolean) => void
 }
 
 // Normalize the avatar URL to a root-relative path (/storage/avatars/...)
@@ -76,11 +78,12 @@ function normalizeUser(user: User): User {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set, get) => ({
+     (set, get) => ({
       user: null,
       token: null,
       isAuthenticated: false,
       twoFaToken: null,
+      showProfileSetup: false,
 
       login: async (accnt_no: string, password: string) => {
         const response = await api.post('/auth/login', { accnt_no, password })
@@ -98,6 +101,7 @@ export const useAuthStore = create<AuthState>()(
           token,
           isAuthenticated: true,
           twoFaToken: null,
+          showProfileSetup: false,
         })
       },
 
@@ -116,6 +120,7 @@ export const useAuthStore = create<AuthState>()(
           token,
           isAuthenticated: true,
           twoFaToken: null,
+          showProfileSetup: false,
         })
       },
 
@@ -136,6 +141,7 @@ export const useAuthStore = create<AuthState>()(
           user: null,
           token: null,
           isAuthenticated: false,
+          showProfileSetup: false,
         })
       },
 
@@ -148,10 +154,12 @@ export const useAuthStore = create<AuthState>()(
           token,
           isAuthenticated: true,
           twoFaToken: null,
+          showProfileSetup: false,
         })
       },
 
       isSuperadmin: () => get().user?.role === 'superadmin',
+      setShowProfileSetup: (show: boolean) => set({ showProfileSetup: show }),
     }),
     {
       name: 'auth-storage',

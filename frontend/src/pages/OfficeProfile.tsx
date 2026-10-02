@@ -4,6 +4,7 @@ import api from '@/services/api'
 import toast from 'react-hot-toast'
 import Select from 'react-select'
 import { buildSelectStyles } from '@/utils/selectStyles'
+import { useAuthStore } from '@/stores/authStore'
 import {
   Building2,
   Camera,
@@ -15,7 +16,6 @@ import {
   ChevronRight,
   Plus,
 } from 'lucide-react'
-import { useAuthStore } from '@/stores/authStore'
 import { useDropdownGroup } from '@/hooks/useDropdownOptions'
 
 function normalizeLogo(office: any): string | null {
@@ -26,6 +26,7 @@ function normalizeLogo(office: any): string | null {
 export default function OfficeProfile() {
   const queryClient = useQueryClient()
   const officeTypes = useDropdownGroup('office_types')
+  const { user, setShowProfileSetup } = useAuthStore()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [unitCode, setUnitCode] = useState('')
@@ -465,11 +466,22 @@ export default function OfficeProfile() {
 
       {/* Editable details */}
       <div className="card">
-        <div className="card-header flex items-center gap-2">
-          <Building2 className="w-4 h-4 text-slate-500" />
-          <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
-            Office Information
-          </h2>
+        <div className="card-header flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Building2 className="w-4 h-4 text-slate-500" />
+            <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
+              Office Information
+            </h2>
+          </div>
+          {user?.profile_setup_skipped && (
+            <button
+              type="button"
+              onClick={() => setShowProfileSetup(true)}
+              className="btn btn-primary btn-sm !py-1 !px-3 !text-xs"
+            >
+              Complete Your Profile
+            </button>
+          )}
         </div>
         <div className="card-body space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

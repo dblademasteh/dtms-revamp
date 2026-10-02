@@ -120,7 +120,7 @@ function DropdownOptionsLoader() {
 }
 
 function App() {
-  const { isAuthenticated, user } = useAuthStore()
+  const { isAuthenticated, user, showProfileSetup, setShowProfileSetup } = useAuthStore()
   const onVerifyEmailPage = window.location.pathname === '/verify-email'
   const unlocked = isAuthenticated && !user?.must_change_password
   const needsProfileSetup = unlocked && user && user.profile_setup_complete === false
@@ -128,7 +128,6 @@ function App() {
   // not a self-registered identity, so they are never asked to verify it.
   const needsEmailVerification = unlocked && user && user.role !== 'office_station' && user.profile_setup_complete === true && !user.email_verified_at
   const profileSetupSkipped = unlocked && user && user.profile_setup_complete === true && user.profile_setup_skipped === true
-  const [showProfileSetup, setShowProfileSetup] = useState(false)
   const [skippedBannerDismissed, setSkippedBannerDismissed] = useState(() => {
     return sessionStorage.getItem('profile-setup-banner-dismissed') === '1'
   })
@@ -141,7 +140,7 @@ function App() {
       setSkippedBannerDismissed(sessionStorage.getItem('profile-setup-banner-dismissed') === '1')
       setUserSynced(false)
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated, setShowProfileSetup])
 
   // Sync the user object from the server on load — the persisted
   // localStorage snapshot goes stale after server-side changes

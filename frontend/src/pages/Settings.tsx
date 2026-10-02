@@ -58,7 +58,7 @@ function formatPhoneIntl(value: string): string {
 }
 
 export default function Settings() {
-  const { user, setUser } = useAuthStore()
+  const { user, setUser, setShowProfileSetup } = useAuthStore()
   const queryClient = useQueryClient()
   const ranks = useRanks()
   const designations = useDropdownGroup('designations')
@@ -687,11 +687,22 @@ export default function Settings() {
       {activeTab === 'profile' && (
         user?.role === 'office_station' ? (
           <div className="card">
-            <div className="card-header flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-slate-500" />
-              <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
-                Office Account
-              </h2>
+            <div className="card-header flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-slate-500" />
+                <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">
+                  Office Account
+                </h2>
+              </div>
+              {user?.profile_setup_skipped && (
+                <button
+                  type="button"
+                  onClick={() => setShowProfileSetup(true)}
+                  className="btn btn-primary btn-sm"
+                >
+                  Complete Your Profile
+                </button>
+              )}
             </div>
             <div className="card-body">
               <p className="text-sm text-slate-500">
