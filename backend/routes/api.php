@@ -435,6 +435,8 @@ Route::put('/auth/notification-preferences', [AuthController::class, 'updateNoti
                 'role' => $role,
                 'office_id' => $request->office_id,
                 'email' => $request->filled('email') ? $request->email : null,
+                // Admin-provisioned email — no verification loop needed.
+                'email_verified_at' => $request->filled('email') ? now() : null,
                 'status' => 'active',
                 'must_change_password' => true,
                 'profile_setup_complete' => true,
@@ -484,6 +486,8 @@ Route::put('/auth/notification-preferences', [AuthController::class, 'updateNoti
             $user = \App\Models\User::create([
                 'name' => $request->name ?: $office->name,
                 'email' => $request->email,
+                // Admin-provisioned email — no verification loop needed.
+                'email_verified_at' => $request->email ? now() : null,
                 'accnt_no' => $accntNo,
                 'password' => \Illuminate\Support\Facades\Hash::make($request->password ?: 'bfp12345'),
                 'role' => $request->role ?: 'office_station',

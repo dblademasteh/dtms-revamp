@@ -255,6 +255,8 @@ class PersonnelController extends Controller
         $user = User::create([
             'name' => trim("$firstName $middle $lastName"),
             'email' => $request->email,
+            // Admin-provisioned email — no verification loop needed.
+            'email_verified_at' => $request->email ? now() : null,
             'password' => Hash::make('bfp12345'),
             'role' => $this->rankToRole($request->rank ?? ''),
             'rank' => strtoupper(trim($request->rank ?? '')) ?: null,
