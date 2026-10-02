@@ -27,6 +27,7 @@ export default function OfficeProfile() {
   const queryClient = useQueryClient()
   const officeTypes = useDropdownGroup('office_types')
   const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
   const [unitCode, setUnitCode] = useState('')
   const [description, setDescription] = useState('')
   const [officeType, setOfficeType] = useState('')
@@ -115,6 +116,7 @@ export default function OfficeProfile() {
   useEffect(() => {
     if (office) {
       setName(office.name || '')
+      setEmail(office.email || '')
       setUnitCode(office.unit_code || '')
       setDescription(office.description || '')
       setOfficeType(office.office_type || '')
@@ -161,6 +163,7 @@ export default function OfficeProfile() {
       queryClient.invalidateQueries({ queryKey: ['offices'] })
       queryClient.invalidateQueries({ queryKey: ['offices-hierarchy'] })
       setName(res.data.office.name || '')
+      setEmail(res.data.office.email || '')
       setUnitCode(res.data.office.unit_code || '')
       setDescription(res.data.office.description || '')
       setOfficeType(res.data.office.office_type || '')
@@ -182,7 +185,7 @@ export default function OfficeProfile() {
   }))
 
   const handleSave = () => {
-    saveMutation.mutate({ name, unit_code: unitCode, description, office_type: officeType, head_user_id: headUserId || null })
+    saveMutation.mutate({ name, email, unit_code: unitCode, description, office_type: officeType, head_user_id: headUserId || null })
   }
 
   const typeLabel = office?.office_type
@@ -473,6 +476,10 @@ export default function OfficeProfile() {
             <div>
               <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Office Name</label>
               <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Email</label>
+              <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="office@example.com" />
             </div>
             <div>
               <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Unit Code</label>

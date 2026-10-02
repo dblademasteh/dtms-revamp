@@ -41,6 +41,7 @@ class OfficeController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
+            'email' => 'nullable|email|max:255',
             'code' => 'required|string|unique:offices,code',
             'unit_code' => 'nullable|string|max:20',
             'parent_office_id' => 'nullable|exists:offices,id',
@@ -69,6 +70,7 @@ class OfficeController extends Controller
     {
         $request->validate([
             'name' => 'sometimes|string|max:255',
+            'email' => 'nullable|email|max:255',
             'code' => 'sometimes|string|max:10|unique:offices,code,' . $office->id,
             'unit_code' => 'nullable|string|max:20',
             'parent_office_id' => 'nullable|exists:offices,id',
@@ -183,6 +185,7 @@ class OfficeController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255',
+            'email' => 'nullable|email|max:255',
             'unit_code' => 'nullable|string|max:20|unique:offices,unit_code',
             'office_type' => 'nullable|string|max:50',
             'description' => 'nullable|string',
@@ -191,6 +194,7 @@ class OfficeController extends Controller
 
         $office = Office::create([
             'name' => $request->name,
+            'email' => $request->email,
             'code' => $this->generateOfficeCode($request->unit_code),
             'unit_code' => $request->unit_code,
             'parent_office_id' => $request->parent_office_id,
@@ -288,13 +292,14 @@ class OfficeController extends Controller
 
         $request->validate([
             'name' => 'sometimes|string|max:255',
+            'email' => 'nullable|email|max:255',
             'unit_code' => 'nullable|string|max:20',
             'description' => 'nullable|string',
             'office_type' => 'nullable|string|max:50',
             'head_user_id' => 'nullable|exists:users,id',
         ]);
 
-        $data = $request->only(['name', 'unit_code', 'description', 'office_type']);
+        $data = $request->only(['name', 'email', 'unit_code', 'description', 'office_type']);
 
         if ($request->exists('head_user_id')) {
             $canManageChief = $user->isAdmin()

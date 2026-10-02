@@ -11,6 +11,7 @@ class Office extends Model
 
     protected $fillable = [
         'name',
+        'email',
         'code',
         'unit_code',
         'parent_office_id',
