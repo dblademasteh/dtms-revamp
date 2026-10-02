@@ -36,6 +36,7 @@ export default function Users() {
   const [editRole, setEditRole] = useState('')
   const [editStatus, setEditStatus] = useState('')
   const [editOffice, setEditOffice] = useState('')
+  const [editUsername, setEditUsername] = useState('')
   const [editRank, setEditRank] = useState('')
   const [editCanViewAllDocs, setEditCanViewAllDocs] = useState(false)
   const [resetPassword, setResetPassword] = useState('')
@@ -229,6 +230,7 @@ export default function Users() {
     setEditRole(u.role)
     setEditStatus(u.status)
     setEditOffice(u.office_id ? String(u.office_id) : '')
+    setEditUsername(u.accnt_no || '')
     setEditRank(u.rank || '')
     setEditCanViewAllDocs(Boolean(u.can_view_all_documents))
     setResetPassword('')
@@ -237,12 +239,20 @@ export default function Users() {
 
   const saveEdit = () => {
     if (!editingUser) return
-    const data: any = { 
-      role: editRole, 
-      status: editStatus, 
-      office_id: editOffice || null, 
-      rank: editRank || null,
-      can_view_all_documents: editCanViewAllDocs 
+    const data: any = {
+      role: editRole,
+      status: editStatus,
+      can_view_all_documents: editCanViewAllDocs
+    }
+    if (editingUser.role === 'office_station') {
+      // Office account: the office is inherent to the account — only the
+      // login username (accnt_no) is editable. Do not send office_id/rank.
+      if (editUsername && editUsername !== editingUser.accnt_no) {
+        data.accnt_no = editUsername
+      }
+    } else {
+      data.office_id = editOffice || null
+      data.rank = editRank || null
     }
     if (resetPassword) data.password = resetPassword
     updateMutation.mutate({ id: editingUser.id, data })
@@ -700,7 +710,8 @@ export default function Users() {
 
               {/* Body */}
               <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-                {/* Rank */}
+                {/* Rank (personnel accounts only) */}
+                {editingUser.role !== 'office_station' && (
                 <div>
                   <label className="block text-[13px] font-bold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wide">
                     Rank
@@ -718,6 +729,7 @@ export default function Users() {
                     ))}
                   </select>
                 </div>
+                )}
 
                 {/* Role */}
                 <div>
@@ -796,7 +808,25 @@ export default function Users() {
                   </div>
                 </div>
 
-                {/* Office */}
+                {/* Office (personnel/admin) or Username (office accounts) */}
+                {editingUser.role === 'office_station' ? (
+                  <div>
+                    <label className="block text-[13px] font-bold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wide">
+                      Username (login)
+                    </label>
+                    <input
+                      type="text"
+                      className="input"
+                      placeholder="Login username"
+                      value={editUsername}
+                      onChange={(e) => setEditUsername(e.target.value)}
+                    />
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      The account's login username. Must be unique — it is how this
+                      office account signs in.
+                    </p>
+                  </div>
+                ) : (
                 <div>
                   <label className="block text-[13px] font-bold text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wide">
                     Assigned Office
@@ -813,6 +843,7 @@ export default function Users() {
                     menuPosition="fixed"
                   />
                 </div>
+                )}
 
                 {/* Reset Password */}
                 <div>
@@ -826,7 +857,7 @@ export default function Users() {
                   {showResetPassword && (
                     <div className="mt-3 flex gap-2">
                       <input
-                        type="text"
+                        type="password"
                         className="input flex-1"
                         placeholder="Enter new password (min. 6 chars)"
                         value={resetPassword}
