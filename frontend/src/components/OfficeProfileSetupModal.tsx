@@ -52,9 +52,9 @@ export default function OfficeProfileSetupModal({ onComplete }: OfficeProfileSet
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
         {/* Header */}
-        <div className="px-6 pt-6 pb-4 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-950/30 dark:to-blue-950/30">
+        <div className="px-6 pt-6 pb-4 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-cyan-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
               <Building2 className="w-5 h-5 text-white" />
@@ -62,24 +62,6 @@ export default function OfficeProfileSetupModal({ onComplete }: OfficeProfileSet
             <div>
               <h2 className="text-lg font-bold text-slate-900 dark:text-white">Complete Your Profile</h2>
               <p className="text-sm text-slate-500 dark:text-slate-400">Set up your office account details</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Account info (read-only) */}
-        <div className="px-6 pt-5">
-          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-cyan-50 dark:bg-cyan-950/50 text-cyan-600 dark:text-cyan-400 flex items-center justify-center border border-cyan-200 dark:border-cyan-800 flex-shrink-0">
-              <Building2 className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
-                {user?.full_name || user?.name}
-              </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                {user?.accnt_no}
-                {user?.office?.name ? ` · ${user.office.name}` : ''}
-              </p>
             </div>
           </div>
         </div>
@@ -143,7 +125,7 @@ export default function OfficeProfileSetupModal({ onComplete }: OfficeProfileSet
             />
           </div>
 
-          <div className="pt-2">
+          <div className="pt-2 space-y-2">
             <button
               type="submit"
               disabled={mutation.isPending}
@@ -157,7 +139,7 @@ export default function OfficeProfileSetupModal({ onComplete }: OfficeProfileSet
                 mutation.mutate({ skip: true })
               }}
               disabled={mutation.isPending}
-              className="w-full mt-2 text-sm text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+              className="w-full btn btn-ghost btn-sm"
             >
               Skip for now (fill in later)
             </button>
