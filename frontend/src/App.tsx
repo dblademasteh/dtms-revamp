@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import { useAuthStore } from '@/stores/authStore'
+import api from '@/services/api'
 import Layout from '@/components/Layout'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import PrivacyNotice from '@/components/PrivacyNotice'
@@ -131,13 +132,32 @@ function App() {
   const [skippedBannerDismissed, setSkippedBannerDismissed] = useState(() => {
     return sessionStorage.getItem('profile-setup-banner-dismissed') === '1'
   })
+  const [userSynced, setUserSynced] = useState(false)
 
   // Re-opening the profile setup modal must not leak across sessions/users.
   useEffect(() => {
     if (!isAuthenticated) {
       setShowProfileSetup(false)
       setSkippedBannerDismissed(sessionStorage.getItem('profile-setup-banner-dismissed') === '1')
+      setUserSynced(false)
     }
+  }, [isAuthenticated])
+
+  // Sync the user object from the server on load — the persisted
+  // localStorage snapshot goes stale after server-side changes
+  // (profile setup, email verification, role changes).
+  useEffect(() => {
+    if (!isAuthenticated) return
+    setUserSynced(false)
+    api.get('/auth/me')
+      .then((res) => {
+        if (res.data?.user) {
+          useAuthStore.getState().setUser(res.data.user)
+        }
+      })
+      .finally(() => {
+        setUserSynced(true)
+      })
   }, [isAuthenticated])
 
   const dismissSkippedBanner = () => {
@@ -236,7 +256,7 @@ function App() {
           onDismiss={dismissSkippedBanner}
         />
       )}
-      {((needsProfileSetup && !onVerifyEmailPage) || showProfileSetup) && (
+      {((needsProfileSetup && !onVerifyEmailPage) || showProfileSetup) && userSynced && (
         user?.role === 'office_station'
           ? <OfficeProfileSetupModal onComplete={() => setShowProfileSetup(false)} />
           : <ProfileSetupModal onComplete={() => setShowProfileSetup(false)} />

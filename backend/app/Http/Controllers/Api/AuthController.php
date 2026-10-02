@@ -612,7 +612,7 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        if ($user->role !== 'office_station') {
+        if (strtolower((string) $user->role) !== 'office_station') {
             return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
