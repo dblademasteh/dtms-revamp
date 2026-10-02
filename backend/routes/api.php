@@ -125,9 +125,10 @@ Route::put('/auth/notification-preferences', [AuthController::class, 'updateNoti
 
     // Offices
     Route::get('/offices/claimable', [OfficeController::class, 'claimable']);
+    // Must be registered before apiResource, otherwise GET /offices/{office} shadows it.
+    Route::get('/offices/min', fn () => \App\Models\Office::select('id', 'name')->orderBy('name')->get());
     Route::apiResource('offices', OfficeController::class);
     Route::get('/offices-hierarchy', [OfficeController::class, 'hierarchy']);
-    Route::get('/offices/min', fn () => \App\Models\Office::select('id', 'name')->orderBy('name')->get());
 
     // Self-service office management for office accounts
     Route::post('/my-office/claim', [OfficeController::class, 'claim']);
