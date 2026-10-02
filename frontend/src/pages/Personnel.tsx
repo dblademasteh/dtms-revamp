@@ -66,6 +66,7 @@ export default function Personnel() {
       api.put(`/admin/users/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['personnel'] })
+      queryClient.invalidateQueries({ queryKey: ['personnel-min'] })
       toast.success('Personnel updated')
     },
     onError: (error: any) => {
@@ -77,6 +78,7 @@ export default function Personnel() {
     mutationFn: () => api.delete('/admin/personnel/clear'),
     onSuccess: (res: any) => {
       queryClient.invalidateQueries({ queryKey: ['personnel'] })
+      queryClient.invalidateQueries({ queryKey: ['personnel-min'] })
       toast.success(res?.data?.message || 'All personnel data cleared')
       setShowClearConfirm(false)
       setPage(1)
@@ -90,6 +92,7 @@ export default function Personnel() {
     mutationFn: (data: any) => api.post('/personnel', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['personnel'] })
+      queryClient.invalidateQueries({ queryKey: ['personnel-min'] })
       toast.success('Personnel created')
       setShowCreatePersonnel(false)
       setNewPersonnel({
@@ -112,6 +115,7 @@ export default function Personnel() {
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['personnel'] })
+      queryClient.invalidateQueries({ queryKey: ['personnel-min'] })
       setImportResult(data)
       toast.success(data?.message || 'Import complete')
     },

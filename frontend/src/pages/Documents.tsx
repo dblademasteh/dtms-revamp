@@ -73,8 +73,8 @@ export default function Documents() {
   })
 
   const { data: personnel } = useQuery({
-    queryKey: ['personnel'],
-    queryFn: () => api.get('/personnel').then((r) => r.data),
+    queryKey: ['personnel-min'],
+    queryFn: () => api.get('/personnel/min').then((r) => r.data),
   })
 
   const officeOptions = useMemo(() => [

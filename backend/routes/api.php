@@ -165,6 +165,19 @@ Route::put('/auth/notification-preferences', [AuthController::class, 'updateNoti
 
         return $q->orderBy('name')->paginate($request->integer('per_page', 50));
     });
+
+    // Lean, unpaginated personnel list for recipient/office dropdowns and the
+    // "Add from Personnel" picker. These consumers need the complete roster to
+    // populate a select, so they must not share the paginated /personnel
+    // directory (which would silently truncate them to one page).
+    Route::get('/personnel/min', fn () => \App\Models\User::whereNotIn('role', ['office_station', 'office'])
+        ->select([
+            'id', 'name', 'first_name', 'middle_name', 'last_name', 'suffix',
+            'rank', 'role', 'email', 'office_id', 'designation',
+            'unit_assignment', 'accnt_no', 'item_no',
+        ])
+        ->orderBy('name')
+        ->get());
     Route::post('/personnel', [PersonnelController::class, 'store'])->middleware('admin');
     Route::post('/personnel/import', [PersonnelController::class, 'import'])->middleware('admin');
     Route::get('/personnel/export', [PersonnelController::class, 'export'])->middleware('admin');

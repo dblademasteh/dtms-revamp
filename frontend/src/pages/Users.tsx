@@ -83,7 +83,7 @@ export default function Users() {
 
   const { data: personnel, isLoading: personnelLoading } = useQuery({
     queryKey: ['personnel-picker'],
-    queryFn: () => api.get('/personnel').then(res => res.data),
+    queryFn: () => api.get('/personnel/min').then(res => res.data),
     enabled: !!user,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,

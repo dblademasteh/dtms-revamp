@@ -161,7 +161,7 @@ export default function Login() {
   })
   const { data: personnelRaw } = useQuery({
     queryKey: ['personnel-min'],
-    queryFn: () => publicApi.get('/personnel').then((res) => res.data),
+    queryFn: () => publicApi.get('/personnel/min').then((res) => res.data),
     staleTime: 5 * 60 * 1000,
     retry: false,
   })

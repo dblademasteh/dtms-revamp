@@ -92,7 +92,7 @@ export default function CreateDocument() {
   })
   const { data: personnelRaw } = useQuery({
     queryKey: ['personnel-min'],
-    queryFn: () => api.get('/personnel').then(res => res.data),
+    queryFn: () => api.get('/personnel/min').then(res => res.data),
   })
   const offices = Array.isArray(officesRaw) ? officesRaw : (officesRaw?.data ?? [])
   const personnel = Array.isArray(personnelRaw) ? personnelRaw : (personnelRaw?.data ?? [])

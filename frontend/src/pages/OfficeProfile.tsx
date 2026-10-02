@@ -45,7 +45,7 @@ export default function OfficeProfile() {
 
   const personnelQuery = useQuery({
     queryKey: ['my-office-personnel'],
-    queryFn: () => api.get('/personnel').then((r) => r.data),
+    queryFn: () => api.get('/personnel/min').then((r) => r.data),
   })
 
   const office = officeQuery.data
@@ -99,6 +99,8 @@ export default function OfficeProfile() {
     queryClient.invalidateQueries({ queryKey: ['offices-hierarchy'] })
     queryClient.invalidateQueries({ queryKey: ['offices-claimable'] })
     queryClient.invalidateQueries({ queryKey: ['personnel'] })
+    queryClient.invalidateQueries({ queryKey: ['personnel-min'] })
+    queryClient.invalidateQueries({ queryKey: ['my-office-personnel'] })
     queryClient.invalidateQueries({ queryKey: ['documents'] })
   }
 
@@ -161,6 +163,7 @@ export default function OfficeProfile() {
       queryClient.invalidateQueries({ queryKey: ['my-office'] })
       queryClient.invalidateQueries({ queryKey: ['my-office-personnel'] })
       queryClient.invalidateQueries({ queryKey: ['personnel'] })
+      queryClient.invalidateQueries({ queryKey: ['personnel-min'] })
       queryClient.invalidateQueries({ queryKey: ['offices'] })
       queryClient.invalidateQueries({ queryKey: ['offices-hierarchy'] })
       setName(res.data.office.name || '')
