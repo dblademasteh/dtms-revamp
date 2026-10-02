@@ -123,7 +123,9 @@ function App() {
   const onVerifyEmailPage = window.location.pathname === '/verify-email'
   const unlocked = isAuthenticated && !user?.must_change_password
   const needsProfileSetup = unlocked && user && user.profile_setup_complete === false
-  const needsEmailVerification = unlocked && user && user.profile_setup_complete === true && !user.email_verified_at
+  // Office accounts are admin-provisioned — their email is a contact alias,
+  // not a self-registered identity, so they are never asked to verify it.
+  const needsEmailVerification = unlocked && user && user.role !== 'office_station' && user.profile_setup_complete === true && !user.email_verified_at
   const profileSetupSkipped = unlocked && user && user.profile_setup_complete === true && user.profile_setup_skipped === true
   const [showProfileSetup, setShowProfileSetup] = useState(false)
   const [skippedBannerDismissed, setSkippedBannerDismissed] = useState(() => {

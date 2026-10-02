@@ -642,6 +642,9 @@ class AuthController extends Controller
             'phone' => $request->phone,
             'profile_setup_complete' => true,
             'profile_setup_skipped' => false,
+            // Office accounts are admin-provisioned; their email is a contact
+            // alias set at setup — no verification loop needed.
+            'email_verified_at' => now(),
         ]);
 
         $office = $user->office;
