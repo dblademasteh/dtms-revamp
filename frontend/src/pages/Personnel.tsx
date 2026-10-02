@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/services/api'
 import toast from 'react-hot-toast'
-import { Search, Users as UsersIcon, Building2, X, UserPlus, Trash2, AlertTriangle, Grid3X3, UserX, Award, Upload, FileSpreadsheet, CheckCircle2, AlertCircle } from 'lucide-react'
-import { useState } from 'react'
+import { Search, Users as UsersIcon, Building2, X, UserPlus, Trash2, AlertTriangle, Grid3X3, UserX, Award, Upload, FileSpreadsheet, CheckCircle2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
 import StatCard from '@/components/StatCard'
 import ModalPortal from '@/components/ModalPortal'
 import Select from 'react-select'
@@ -10,12 +10,18 @@ import { buildSelectStyles } from '@/utils/selectStyles'
 import { useRanks } from '@/hooks/useRanks'
 import { useDropdownGroup } from '@/hooks/useDropdownOptions'
 
+const OFFICER_RANKS = new Set(['SUPT', 'INSP', 'CINSP', 'FO1', 'FO2', 'FO3', 'SFO1', 'SFO2', 'SFO3', 'SFO4'])
+
 export default function Personnel() {
   const queryClient = useQueryClient()
   const ranks = useRanks()
   const designations = useDropdownGroup('designations')
   const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState('')
   const [officeFilter, setOfficeFilter] = useState('')
+  const [rankFilter, setRankFilter] = useState('')
+  const [page, setPage] = useState(1)
+  const [rowsPerPage, setRowsPerPage] = useState(50)
   const [selected, setSelected] = useState<any>(null)
   const [editForm, setEditForm] = useState<any>({})
   const [targetOfficeId, setTargetOfficeId] = useState<string>('')
@@ -29,15 +35,25 @@ export default function Personnel() {
   const [importFile, setImportFile] = useState<File | null>(null)
   const [importResult, setImportResult] = useState<any>(null)
 
-  const { data: personnel, isLoading } = useQuery({
-    queryKey: ['personnel'],
-    queryFn: () => api.get('/personnel').then((res) => res.data),
+  const { data: personnelResult, isLoading: personnelLoading } = useQuery({
+    queryKey: ['personnel', { search, officeFilter, rankFilter, page, rowsPerPage }],
+    queryFn: () => api.get('/personnel', {
+      params: { search, office_id: officeFilter, rank: rankFilter, page, per_page: rowsPerPage },
+    }).then((res) => res.data),
+    staleTime: 30_000,
   })
+
+  const personnel = useMemo(() => (personnelResult as any)?.data ?? [], [personnelResult])
+  const totalRecords = (personnelResult as any)?.meta?.total ?? 0
+  const lastPage = (personnelResult as any)?.meta?.last_page ?? 1
 
   const { data: offices } = useQuery({
     queryKey: ['offices-min'],
-    queryFn: () => api.get('/offices').then((res) => res.data),
+    queryFn: () => api.get('/offices/min').then((res) => res.data),
+    staleTime: 300_000,
   })
+
+  const officesArr = useMemo(() => Array.isArray(offices) ? offices : [], [offices])
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number, data: any }) =>
@@ -57,6 +73,7 @@ export default function Personnel() {
       queryClient.invalidateQueries({ queryKey: ['personnel'] })
       toast.success(res?.data?.message || 'All personnel data cleared')
       setShowClearConfirm(false)
+      setPage(1)
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Failed to clear data')
@@ -97,31 +114,16 @@ export default function Personnel() {
     },
   })
 
-  const officesArr = Array.isArray(offices)
-    ? offices
-    : (offices?.data ?? [])
-
   const selectStyles = buildSelectStyles()
 
-  const [rankFilter, setRankFilter] = useState('')
+  useEffect(() => {
+    const t = setTimeout(() => { setSearch(searchInput) }, 300)
+    return () => clearTimeout(t)
+  }, [searchInput])
 
-  const filtered = (personnel ?? []).filter((u: any) => {
-    const q = search.toLowerCase()
-    const matchesSearch =
-      !search ||
-      u.name?.toLowerCase().includes(q) ||
-      u.email?.toLowerCase().includes(q) ||
-      u.rank?.toLowerCase().includes(q) ||
-      u.last_name?.toLowerCase().includes(q) ||
-      u.first_name?.toLowerCase().includes(q) ||
-      u.unit_assignment?.toLowerCase().includes(q) ||
-      u.designation?.toLowerCase().includes(q)
-    const matchesOffice =
-      !officeFilter || String(u.office_id) === String(officeFilter)
-    const matchesRank =
-      !rankFilter || u.rank === rankFilter
-    return matchesSearch && matchesOffice && matchesRank
-  })
+  useEffect(() => {
+    setPage(1)
+  }, [officeFilter, rankFilter])
 
   const openDetail = (u: any) => {
     setSelected(u)
@@ -199,33 +201,30 @@ export default function Personnel() {
 
       {/* Dashboard */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label="Total Personnel"
-          value={(personnel ?? []).length}
-          icon={<UsersIcon className="w-5 h-5" />}
-          color="stat-icon-primary"
-        />
-        <StatCard
-          label="Distinct Units"
-          value={new Set((personnel ?? []).map((u: any) => u.unit_assignment).filter(Boolean)).size}
-          icon={<Grid3X3 className="w-5 h-5" />}
-          color="stat-icon-cyan"
-        />
-        <StatCard
-          label="Without Office"
-          value={(personnel ?? []).filter((u: any) => !u.office_id).length}
-          icon={<UserX className="w-5 h-5" />}
-          color="stat-icon-amber"
-        />
-        <StatCard
-          label="Officers"
-          value={(personnel ?? []).filter((u: any) =>
-            ['SUPT', 'INSP', 'CINSP', 'FO1', 'FO2', 'FO3', 'SFO1', 'SFO2', 'SFO3', 'SFO4']
-              .includes((u.rank || '').toUpperCase())
-          ).length}
-          icon={<Award className="w-5 h-5" />}
-          color="stat-icon-green"
-        />
+        {useMemo(() => {
+          const units = new Set<string>()
+          let withoutOffice = 0
+          let officers = 0
+          for (const u of personnel) {
+            if (u.unit_assignment) units.add(u.unit_assignment)
+            if (!u.office_id) withoutOffice++
+            if (OFFICER_RANKS.has((u.rank || '').toUpperCase())) officers++
+          }
+          return [
+            { label: 'Total Personnel', value: personnel.length, icon: UsersIcon, color: 'stat-icon-primary' },
+            { label: 'Distinct Units', value: units.size, icon: Grid3X3, color: 'stat-icon-cyan' },
+            { label: 'Without Office', value: withoutOffice, icon: UserX, color: 'stat-icon-amber' },
+            { label: 'Officers', value: officers, icon: Award, color: 'stat-icon-green' },
+          ]
+        }, [personnel])?.map((s) => (
+          <StatCard
+            key={s.label}
+            label={s.label}
+            value={s.value}
+            icon={<s.icon className="w-5 h-5" />}
+            color={s.color}
+          />
+        ))}
       </div>
 
       {/* Filters */}
@@ -237,8 +236,8 @@ export default function Personnel() {
                 type="text"
                 placeholder="Search by name, rank, unit, designation..."
                 className="input pl-9"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
               />
           </div>
           <select
@@ -268,7 +267,7 @@ export default function Personnel() {
 
       {/* Directory */}
       <div className="card overflow-hidden">
-        {isLoading ? (
+        {personnelLoading ? (
           <div className="p-8 space-y-4">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="flex items-center gap-4 animate-pulse">
@@ -280,7 +279,7 @@ export default function Personnel() {
               </div>
             ))}
           </div>
-        ) : filtered.length === 0 ? (
+        ) : personnel.length === 0 ? (
           <div className="flex flex-col items-center py-16 px-4">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
               <UsersIcon className="h-6 w-6 text-slate-400 dark:text-slate-500" />
@@ -301,7 +300,7 @@ export default function Personnel() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((u: any) => (
+                {personnel.map((u: any) => (
                   <tr
                     key={u.id}
                     onClick={() => openDetail(u)}
@@ -349,6 +348,41 @@ export default function Personnel() {
             </table>
           </div>
         )}
+      </div>
+
+      {/* Pagination */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="text-sm text-slate-600 dark:text-slate-400">
+          Showing {totalRecords > 0 ? (page - 1) * rowsPerPage + 1 : 0}–{Math.min(page * rowsPerPage, totalRecords)} of {totalRecords}
+        </div>
+        <div className="flex items-center gap-2">
+          <select
+            className="input input-sm w-20 text-sm"
+            value={rowsPerPage}
+            onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(1) }}
+          >
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
+          <button
+            className="btn btn-sm btn-ghost"
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1 || personnelLoading}
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="text-sm text-slate-600 dark:text-slate-400">
+            Page {page} of {lastPage}
+          </span>
+          <button
+            className="btn btn-sm btn-ghost"
+            onClick={() => setPage(p => Math.min(lastPage, p + 1))}
+            disabled={page >= lastPage || personnelLoading}
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Detail / Transfer Modal */}

@@ -127,6 +127,7 @@ Route::put('/auth/notification-preferences', [AuthController::class, 'updateNoti
     Route::get('/offices/claimable', [OfficeController::class, 'claimable']);
     Route::apiResource('offices', OfficeController::class);
     Route::get('/offices-hierarchy', [OfficeController::class, 'hierarchy']);
+    Route::get('/offices/min', fn () => \App\Models\Office::select('id', 'name')->orderBy('name')->get());
 
     // Self-service office management for office accounts
     Route::post('/my-office/claim', [OfficeController::class, 'claim']);
@@ -136,23 +137,32 @@ Route::put('/auth/notification-preferences', [AuthController::class, 'updateNoti
     Route::post('/my-office/logo', [OfficeController::class, 'uploadMyOfficeLogo']);
     Route::delete('/my-office/logo', [OfficeController::class, 'deleteMyOfficeLogo']);
 
-    // Personnel directory (all authenticated users)
-    Route::get('/personnel', function () {
-        return \App\Models\User::whereNotIn('role', ['office_station', 'office'])
-            ->with(['office', 'headedOffice'])
-            ->withCount(['documents', 'routedDocuments'])
-            ->orderBy('name')
-            ->get()
-            ->map(function ($user) {
-                // If they don't have a direct office_id, fallback to the office they head
-                if (!$user->office_id && $user->headedOffice) {
-                    $user->office_id = $user->headedOffice->id;
-                    $user->setRelation('office', $user->headedOffice);
-                }
-                // hide headedOffice to keep the payload clean
-                unset($user->headedOffice);
-                return $user;
+    // Personnel directory (all authenticated users) — paginated + server-filtered
+    Route::get('/personnel', function (\Illuminate\Http\Request $request) {
+        $q = \App\Models\User::whereNotIn('role', ['office_station', 'office'])
+            ->with('office')
+            ->withCount(['documents']);
+
+        if ($request->filled('office_id')) {
+            $q->where('office_id', $request->office_id);
+        }
+        if ($request->filled('rank')) {
+            $q->where('rank', $request->rank);
+        }
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $q->where(function ($qq) use ($s) {
+                $qq->where('name', 'like', "%{$s}%")
+                   ->orWhere('email', 'like', "%{$s}%")
+                   ->orWhere('rank', 'like', "%{$s}%")
+                   ->orWhere('first_name', 'like', "%{$s}%")
+                   ->orWhere('last_name', 'like', "%{$s}%")
+                   ->orWhere('unit_assignment', 'like', "%{$s}%")
+                   ->orWhere('designation', 'like', "%{$s}%");
             });
+        }
+
+        return $q->orderBy('name')->paginate($request->integer('per_page', 50));
     });
     Route::post('/personnel', [PersonnelController::class, 'store'])->middleware('admin');
     Route::post('/personnel/import', [PersonnelController::class, 'import'])->middleware('admin');
