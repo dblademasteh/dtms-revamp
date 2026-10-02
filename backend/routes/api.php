@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\UserRole;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DocumentController;
@@ -557,7 +558,7 @@ Route::put('/auth/notification-preferences', [AuthController::class, 'updateNoti
         });
 
         Route::delete('/users/{user}', function (\App\Models\User $user) {
-            if ($user->role === 'superadmin') {
+            if ($user->role === UserRole::SUPERADMIN) {
                 return response()->json(['message' => 'Cannot delete a superadmin account'], 422);
             }
 

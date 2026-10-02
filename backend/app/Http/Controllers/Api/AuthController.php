@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Mail\PasswordReset;
 use App\Mail\VerifyEmail;
+use App\Enums\UserRole;
 use App\Models\LoginAudit;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -612,7 +613,7 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        if (strtolower((string) $user->role) !== 'office_station') {
+        if ($user->role !== UserRole::OFFICE_STATION) {
             return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
@@ -665,7 +666,7 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        if ($user->role !== 'superadmin') {
+        if ($user->role !== UserRole::SUPERADMIN) {
             return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
