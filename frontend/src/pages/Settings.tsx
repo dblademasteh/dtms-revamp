@@ -776,6 +776,15 @@ export default function Settings() {
 
               {/* Photo actions */}
               <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                {user?.profile_setup_skipped && (
+                  <button
+                    type="button"
+                    onClick={() => setShowProfileSetup(true)}
+                    className="btn btn-primary btn-sm !py-1 !px-2.5 !text-xs"
+                  >
+                    Complete Setup
+                  </button>
+                )}
                 <label className="btn btn-secondary btn-sm cursor-pointer !py-1 !px-2.5 !text-xs">
                   Change Photo
                   <input
