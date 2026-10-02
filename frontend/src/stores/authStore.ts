@@ -26,6 +26,7 @@ interface User {
   has_pincode?: boolean
   must_change_password?: boolean
   profile_setup_complete?: boolean
+  profile_setup_skipped?: boolean
   office?: {
     id: number
     name: string

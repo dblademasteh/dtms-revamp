@@ -264,6 +264,11 @@ class AuthController extends Controller
 
         $user->update($data);
 
+        // A real profile update counts as completing a skipped setup.
+        if (!empty($user->profile_setup_skipped)) {
+            $user->update(['profile_setup_skipped' => false]);
+        }
+
         return response()->json([
             'user' => $user->refresh()->load('office'),
         ]);
@@ -569,7 +574,7 @@ class AuthController extends Controller
 
         // If skipping, just mark profile as complete (fields stay as-is)
         if ($skip) {
-            $user->update(['profile_setup_complete' => true]);
+            $user->update(['profile_setup_complete' => true, 'profile_setup_skipped' => true]);
             return response()->json([
                 'message' => 'Profile setup skipped',
                 'user' => $user->refresh()->load('office'),
@@ -588,8 +593,61 @@ class AuthController extends Controller
         ]);
 
         $data['profile_setup_complete'] = true;
+        $data['profile_setup_skipped'] = false;
 
         $user->update($data);
+
+        return response()->json([
+            'message' => 'Profile setup completed',
+            'user' => $user->refresh()->load('office'),
+        ]);
+    }
+
+    /**
+     * Complete profile setup for an office (office_station) account.
+     * The office binding is assigned at creation and cannot change here;
+     * the account completes its contact info and office details.
+     */
+    public function completeOfficeProfileSetup(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->role !== 'office_station') {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        $skip = $request->boolean('skip');
+
+        $request->validate([
+            'skip' => 'sometimes|boolean',
+            'email' => $skip
+                ? 'sometimes|nullable|email|max:255|unique:users,email,' . $user->id
+                : 'required|email|max:255|unique:users,email,' . $user->id,
+            'phone' => 'nullable|string|max:50',
+            'office_type' => 'nullable|string|max:50',
+            'description' => 'nullable|string|max:1000',
+        ]);
+
+        // If skipping, just mark profile as complete (fields stay as-is)
+        if ($skip) {
+            $user->update(['profile_setup_complete' => true, 'profile_setup_skipped' => true]);
+            return response()->json([
+                'message' => 'Profile setup skipped',
+                'user' => $user->refresh()->load('office'),
+            ]);
+        }
+
+        $user->update([
+            'email' => $request->email,
+            'phone' => $request->phone,
+            'profile_setup_complete' => true,
+            'profile_setup_skipped' => false,
+        ]);
+
+        $office = $user->office;
+        if ($office && ($request->filled('office_type') || $request->filled('description'))) {
+            $office->update($request->only(['office_type', 'description']));
+        }
 
         return response()->json([
             'message' => 'Profile setup completed',

@@ -480,7 +480,11 @@ export default function Users() {
                         </span>
                       </td>
                       <td>
-                        {u.profile_setup_complete ? (
+                        {u.profile_setup_skipped ? (
+                          <span className="badge bg-orange-100 text-orange-700 border border-orange-200 dark:bg-orange-900/40 dark:text-orange-400 dark:border-orange-800">
+                            Skipped
+                          </span>
+                        ) : u.profile_setup_complete ? (
                           <span className="badge bg-green-100 text-green-700 border border-green-200 dark:bg-green-900/40 dark:text-green-400 dark:border-green-800">
                             Complete
                           </span>
@@ -652,7 +656,11 @@ export default function Users() {
                         </span>
                       </td>
                       <td>
-                        {u.profile_setup_complete ? (
+                        {u.profile_setup_skipped ? (
+                          <span className="badge bg-orange-100 text-orange-700 border border-orange-200 dark:bg-orange-900/40 dark:text-orange-400 dark:border-orange-800">
+                            Skipped
+                          </span>
+                        ) : u.profile_setup_complete ? (
                           <span className="badge bg-green-100 text-green-700 border border-green-200 dark:bg-green-900/40 dark:text-green-400 dark:border-green-800">
                             Complete
                           </span>

@@ -6,6 +6,8 @@ import Layout from '@/components/Layout'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import PrivacyNotice from '@/components/PrivacyNotice'
 import ProfileSetupModal from '@/components/ProfileSetupModal'
+import OfficeProfileSetupModal from '@/components/OfficeProfileSetupModal'
+import ProfileSkippedBanner from '@/components/ProfileSkippedBanner'
 import EmailVerificationModal from '@/components/EmailVerificationModal'
 import { useRealtime } from '@/hooks/useRealtime'
 import { useDropdownOptions } from '@/hooks/useDropdownOptions'
@@ -122,6 +124,24 @@ function App() {
   const unlocked = isAuthenticated && !user?.must_change_password
   const needsProfileSetup = unlocked && user && user.profile_setup_complete === false
   const needsEmailVerification = unlocked && user && user.profile_setup_complete === true && !user.email_verified_at
+  const profileSetupSkipped = unlocked && user && user.profile_setup_complete === true && user.profile_setup_skipped === true
+  const [showProfileSetup, setShowProfileSetup] = useState(false)
+  const [skippedBannerDismissed, setSkippedBannerDismissed] = useState(() => {
+    return sessionStorage.getItem('profile-setup-banner-dismissed') === '1'
+  })
+
+  // Re-opening the profile setup modal must not leak across sessions/users.
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setShowProfileSetup(false)
+      setSkippedBannerDismissed(sessionStorage.getItem('profile-setup-banner-dismissed') === '1')
+    }
+  }, [isAuthenticated])
+
+  const dismissSkippedBanner = () => {
+    sessionStorage.setItem('profile-setup-banner-dismissed', '1')
+    setSkippedBannerDismissed(true)
+  }
   const [showEmailVerification, setShowEmailVerification] = useState(() => {
     return needsEmailVerification && !sessionStorage.getItem('email-verification-modal-dismissed')
   })
@@ -208,7 +228,17 @@ function App() {
       </ErrorBoundary>
       <Toaster position="top-right" />
       <PrivacyNotice />
-      {needsProfileSetup && !onVerifyEmailPage && <ProfileSetupModal onComplete={() => {}} />}
+      {unlocked && profileSetupSkipped && !skippedBannerDismissed && !needsProfileSetup && !onVerifyEmailPage && (
+        <ProfileSkippedBanner
+          onComplete={() => setShowProfileSetup(true)}
+          onDismiss={dismissSkippedBanner}
+        />
+      )}
+      {((needsProfileSetup && !onVerifyEmailPage) || showProfileSetup) && (
+        user?.role === 'office_station'
+          ? <OfficeProfileSetupModal onComplete={() => setShowProfileSetup(false)} />
+          : <ProfileSetupModal onComplete={() => setShowProfileSetup(false)} />
+      )}
       {showEmailVerification && needsEmailVerification && !onVerifyEmailPage && (
         <EmailVerificationModal onComplete={() => {
           sessionStorage.setItem('email-verification-modal-dismissed', '1')

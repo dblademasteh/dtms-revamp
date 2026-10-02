@@ -54,6 +54,7 @@ Route::middleware(['auth:sanctum', 'force-password-change'])->group(function () 
     Route::put('/auth/password', [AuthController::class, 'changePassword']);
     Route::put('/auth/pincode', [AuthController::class, 'changePincode']);
     Route::put('/auth/profile-setup', [AuthController::class, 'completeProfileSetup']);
+    Route::put('/auth/office-profile-setup', [AuthController::class, 'completeOfficeProfileSetup']);
 Route::put('/auth/notification-preferences', [AuthController::class, 'updateNotificationPreferences']);
         Route::put('/auth/admin-account', [AuthController::class, 'updateAdminAccount']);
         Route::post('/auth/email/verification/send', [AuthController::class, 'sendEmailVerification']);

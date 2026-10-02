@@ -16,6 +16,7 @@ class EnsurePasswordChanged
         'api/auth/pincode',
         'api/auth/profile',
         'api/auth/profile-setup',
+        'api/auth/office-profile-setup',
         'api/auth/avatar',
         'api/auth/me',
         'api/auth/notification-preferences',
