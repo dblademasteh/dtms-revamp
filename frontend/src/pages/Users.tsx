@@ -743,7 +743,10 @@ export default function Users() {
                 <div>
                   <label className="text-[13px] font-semibold text-slate-700 dark:text-slate-300 mb-3 block">Role</label>
                   <div className="grid grid-cols-2 gap-2">
-                    {ROLES.map(r => (
+                    {(editingUser.role === 'office_station'
+                      ? ROLES.filter(r => r.value === 'office_station')
+                      : ROLES
+                    ).map(r => (
                       <button
                         key={r.value}
                         type="button"
@@ -770,6 +773,7 @@ export default function Users() {
                 </div>
 
                 {/* Custom Permissions */}
+                {editingUser.role !== 'office_station' && (
                 <div className="p-4 rounded-xl border border-primary-200 dark:border-primary-800/60 bg-primary-50/50 dark:bg-primary-900/20">
                   <div className="flex items-center justify-between gap-3">
                     <div>
@@ -788,6 +792,7 @@ export default function Users() {
                     />
                   </div>
                 </div>
+                )}
 
                 {/* Status */}
                 <div>
