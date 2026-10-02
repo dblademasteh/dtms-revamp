@@ -556,7 +556,10 @@ Route::put('/auth/notification-preferences', [AuthController::class, 'updateNoti
                 return response()->json(['message' => 'Cannot delete a superadmin account'], 422);
             }
 
-            $user->delete();
+            \Illuminate\Support\Facades\DB::transaction(function () use ($user) {
+                \App\Models\RoutingTemplate::where('created_by', $user->id)->update(['created_by' => null]);
+                $user->delete();
+            });
 
             return response()->json(['message' => 'User deleted']);
         });

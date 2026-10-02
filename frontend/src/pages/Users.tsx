@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/services/api'
 import toast from 'react-hot-toast'
 import { Search, X, UserPlus, Users as UsersIcon, UserCheck, UserX, Shield, Trash2, Building2, Edit3 } from 'lucide-react'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import Select from 'react-select'
 import ModalPortal from '@/components/ModalPortal'
 import { useAuthStore } from '@/stores/authStore'
@@ -44,9 +44,31 @@ export default function Users() {
   const selectStyles = useMemo(() => buildSelectStyles(), [])
   const [showOfficeAccount, setShowOfficeAccount] = useState(false)
   const [newAccount, setNewAccount] = useState({ name: '', email: '', role: 'office_station', office_id: '', password: 'bfp12345', username: '', chief_user_id: '' })
+  const usernameManuallyEdited = useRef(false)
   const [showPersonnel, setShowPersonnel] = useState(false)
   const [personnelSearch, setPersonnelSearch] = useState('')
+  const [selectedPersonnel, setSelectedPersonnel] = useState<any>(null)
+  const [personnelForm, setPersonnelForm] = useState({ office_id: '', email: '', role: 'office_station', is_chief: false })
+  const [personnelStep, setPersonnelStep] = useState<'list' | 'form'>('list')
+  const [personnelPage, setPersonnelPage] = useState(0)
+  const PERSONNEL_PAGE_SIZE = 50
   const [deleteTarget, setDeleteTarget] = useState<any>(null)
+
+  useEffect(() => {
+    if (!showOfficeAccount) {
+      usernameManuallyEdited.current = false
+    }
+  }, [showOfficeAccount])
+
+  useEffect(() => {
+    if (!showPersonnel) {
+      setSelectedPersonnel(null)
+      setPersonnelForm({ office_id: '', email: '', role: 'office_station', is_chief: false })
+      setPersonnelStep('list')
+      setPersonnelSearch('')
+      setPersonnelPage(0)
+    }
+  }, [showPersonnel])
 
   const { data: users, isLoading } = useQuery({
     queryKey: ['admin-users'],
@@ -72,8 +94,10 @@ export default function Users() {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] })
       queryClient.invalidateQueries({ queryKey: ['personnel-picker'] })
       toast.success(res?.data?.message || 'Account created')
-      setShowPersonnel(false)
-      setPersonnelSearch('')
+      // Keep the modal open on the list step — the provisioned person is
+      // filtered out (accnt_no set), so the list refreshes without them.
+      setSelectedPersonnel(null)
+      setPersonnelStep('list')
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Failed to create account')
@@ -101,22 +125,26 @@ export default function Users() {
       toast.success('Office account created')
       setShowOfficeAccount(false)
       setNewAccount({ name: '', email: '', role: 'office_station', office_id: '', password: 'bfp12345', username: '', chief_user_id: '' })
+      usernameManuallyEdited.current = false
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Failed to create account')
+      setShowOfficeAccount(false)
+      setNewAccount({ name: '', email: '', role: 'office_station', office_id: '', password: 'bfp12345', username: '', chief_user_id: '' })
+      usernameManuallyEdited.current = false
     },
   })
 
   const pickerPersonnelList = useMemo(() => {
-    // Excludes office_station (already has accounts) and superadmin
-    // (provisioning these resets their password / role and can lock
-    // the admin out of the panel).
-    //
-    // This data source feeds the "Add from Personnel" modal picker only.
+    // Feeds the "Add from Personnel" modal picker only. Excludes:
+    // - office_station (dedicated accounts) and superadmin (provisioning
+    //   these resets their password / role and can lock the admin out)
+    // - anyone with an accnt_no — they already have a login account, so
+    //   once an account is provisioned the person disappears from this list
     // The main Personnel Accounts table uses adminUsersPersonnelList
     // (derived from /admin/users) so it only shows provisioned users.
     return (personnel || []).filter((u: any) =>
-      u.role !== 'office_station' && u.role !== 'superadmin'
+      u.role !== 'office_station' && u.role !== 'superadmin' && !u.accnt_no
     )
   }, [personnel])
 
@@ -149,6 +177,24 @@ export default function Users() {
       u.rank?.toLowerCase().includes(q)
     )
   }, [adminUsersPersonnelList, search])
+
+  const filteredPersonnelModal = useMemo(() => {
+    const q = personnelSearch.toLowerCase()
+    return (pickerPersonnelList || []).filter((p: any) => {
+      if (!personnelSearch) return true
+      const searchable = [
+        p.name,
+        p.rank,
+        p.item_no,
+        p.unit_assignment,
+        p.designation,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+      return searchable.includes(q)
+    })
+  }, [pickerPersonnelList, personnelSearch])
 
   const filteredOffice = useMemo(() => {
     const q = search.toLowerCase()
@@ -872,11 +918,11 @@ export default function Users() {
                         type="text"
                         className="input"
                         placeholder="Auto-filled from unit code"
-                        value={newAccount.username || (() => {
-                          const off = offices?.find((o: any) => String(o.id) === newAccount.office_id)
-                          return off?.unit_code || off?.code || ''
-                        })()}
-                        onChange={(e) => setNewAccount({ ...newAccount, username: e.target.value })}
+                        value={newAccount.username}
+                        onChange={(e) => {
+                          usernameManuallyEdited.current = true
+                          setNewAccount({ ...newAccount, username: e.target.value })
+                        }}
                       />
                       <p className="text-[11px] text-slate-400 mt-1">
                         Derived from the office's unit code. You can override it to use a
@@ -912,7 +958,6 @@ export default function Users() {
                         <option value="officer">Officer</option>
                         <option value="non_officer">Non-Officer</option>
                         <option value="fcos">FCOS</option>
-                        <option value="superadmin">Super Admin</option>
                       </select>
                     </div>
                     <div>
@@ -924,7 +969,14 @@ export default function Users() {
                         value={newAccount.office_id ? { value: newAccount.office_id, label: offices?.find((o: any) => String(o.id) === newAccount.office_id)?.name.replace(/^[\d\.]+\s*/, '') } : null}
                         onChange={(opt: any) => {
                           const off = offices?.find((o: any) => String(o.id) === opt?.value)
-                                  setNewAccount({ ...newAccount, office_id: opt ? opt.value : '', name: off ? off.name : newAccount.name, username: '', chief_user_id: '' })
+                          const derivedUsername = off ? (off?.unit_code || off?.code || '') : ''
+                          setNewAccount({
+                            ...newAccount,
+                            office_id: opt ? opt.value : '',
+                            username: opt ? (usernameManuallyEdited.current ? newAccount.username : derivedUsername) : '',
+                            chief_user_id: ''
+                          })
+                          usernameManuallyEdited.current = false
                         }}
                         placeholder="Search office..."
                         styles={selectStyles}
@@ -1024,7 +1076,7 @@ export default function Users() {
                   <div>
                     <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-1.5">Password <span className="text-danger-500">*</span></label>
                     <input
-                      type="text"
+                      type="password"
                       className="input"
                       value={newAccount.password}
                       onChange={(e) => setNewAccount({ ...newAccount, password: e.target.value })}
@@ -1071,104 +1123,208 @@ export default function Users() {
               onClick={() => setShowPersonnel(false)}
             />
             <div className="relative bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[85vh] flex flex-col">
-            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Add from Personnel</h3>
-              <button onClick={() => setShowPersonnel(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input
-                  type="text"
-                  className="input pl-9"
-                  placeholder="Search by name, rank, designation, unit..."
-                  value={personnelSearch}
-                  onChange={(e) => setPersonnelSearch(e.target.value)}
-                />
+              <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Add from Personnel</h3>
+                <button onClick={() => setShowPersonnel(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-            </div>
-            <div className="flex-1 overflow-y-auto px-6 py-4">
-              {personnelLoading ? (
-                <div className="space-y-3">
-                  {[...Array(6)].map((_, i) => (
-                    <div key={i} className="h-12 bg-slate-100 dark:bg-slate-700 rounded-lg animate-pulse" />
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {(pickerPersonnelList || [])
-                    .filter((p: any) => {
-                      const q = personnelSearch.toLowerCase()
-                      if (!personnelSearch) return true
-                      const searchable = [
-                        p.name,
-                        p.rank,
-                        p.item_no,
-                        p.unit_assignment,
-                        p.designation,
-                      ]
-                        .filter(Boolean)
-                        .join(' ')
-                        .toLowerCase()
-                      return searchable.includes(q)
-                    })
-                    .slice(0, 50)
-                    .map((p: any) => (
-                      <div
-                        key={p.id}
-                        className="flex items-center justify-between gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-100 dark:border-slate-700"
-                      >
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
-                            {p.rank ? `${p.rank} ` : ''}{p.name}
-                          </p>
-                          <p className="text-xs text-slate-400 truncate">
-                            {p.unit_assignment || '—'}
-                            {p.designation ? ` · ${p.designation}` : ''}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => fromPersonnelMutation.mutate({ user_id: p.id })}
-                          disabled={fromPersonnelMutation.isPending}
-                          className="btn btn-primary btn-sm flex-shrink-0"
-                        >
-                          <UserPlus className="w-3.5 h-3.5" /> Create
-                        </button>
+
+              {personnelStep === 'list' ? (
+                <>
+                  <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <input
+                        type="text"
+                        className="input pl-9"
+                        placeholder="Search by name, rank, designation, unit..."
+                        value={personnelSearch}
+                        onChange={(e) => {
+                          setPersonnelSearch(e.target.value)
+                          setPersonnelPage(0)
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex-1 overflow-y-auto px-6 py-4">
+                    {personnelLoading ? (
+                      <div className="space-y-3">
+                        {[...Array(6)].map((_, i) => (
+                          <div key={i} className="h-12 bg-slate-100 dark:bg-slate-700 rounded-lg animate-pulse" />
+                        ))}
                       </div>
-                    ))}
-                  {pickerPersonnelList && pickerPersonnelList.filter((p: any) => {
-                    const q = personnelSearch.toLowerCase()
-                    if (!personnelSearch) return true
-                    return [p.name, p.rank, p.item_no, p.unit_assignment, p.designation]
-                      .filter(Boolean)
-                      .join(' ')
-                      .toLowerCase()
-                      .includes(q)
-                  }).length > 50 && (
-                    <p className="text-[11px] text-slate-400 text-center">
-                      Showing first 50 results. Refine your search for more.
+                    ) : (
+                      <div className="space-y-2">
+                        {filteredPersonnelModal.length === 0 ? (
+                          <p className="text-sm text-slate-500 text-center py-8">
+                            {personnelSearch ? 'No personnel matching your search.' : 'No personnel available to provision.'}
+                          </p>
+                        ) : (
+                          filteredPersonnelModal
+                            .slice(0, (personnelPage + 1) * PERSONNEL_PAGE_SIZE)
+                            .map((p: any) => (
+                              <div
+                                key={p.id}
+                                className="flex items-center justify-between gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-100 dark:border-slate-700"
+                              >
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
+                                    {p.rank ? `${p.rank} ` : ''}{p.name}
+                                  </p>
+                                  <p className="text-xs text-slate-400 truncate">
+                                    {p.unit_assignment || '—'}
+                                    {p.designation ? ` · ${p.designation}` : ''}
+                                  </p>
+                                  {p.accnt_no && (
+                                    <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">
+                                      Already has login: <span className="font-mono">{p.accnt_no}</span>
+                                    </p>
+                                  )}
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    setSelectedPersonnel(p)
+                                    setPersonnelForm({
+                                      office_id: p.office_id || '',
+                                      email: p.email || '',
+                                      role: ['officer', 'non_officer', 'fcos', 'office_station'].includes(p.role) ? p.role : 'office_station',
+                                      is_chief: false,
+                                    })
+                                    setPersonnelStep('form')
+                                  }}
+                                  className="btn btn-primary btn-sm flex-shrink-0"
+                                >
+                                  <UserPlus className="w-3.5 h-3.5" /> Create
+                                </button>
+                              </div>
+                            ))
+                        )}
+                        {filteredPersonnelModal.length > (personnelPage + 1) * PERSONNEL_PAGE_SIZE && (
+                          <div className="text-center pt-2">
+                            <button
+                              onClick={() => setPersonnelPage((p) => p + 1)}
+                              className="text-xs text-primary-600 dark:text-primary-400 hover:underline"
+                            >
+                              Show more ({filteredPersonnelModal.length - (personnelPage + 1) * PERSONNEL_PAGE_SIZE} remaining)
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="px-6 py-3 border-t border-slate-200 dark:border-slate-700 text-xs text-slate-400">
+                    Select a personnel record to provision their login account. Role is derived from rank; default password is <span className="font-mono">bfp12345</span>.
+                  </div>
+                </>
+              ) : (
+                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
+                  <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Selected Personnel</p>
+                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                      {selectedPersonnel?.rank ? `${selectedPersonnel.rank} ` : ''}{selectedPersonnel?.name}
                     </p>
-                  )}
-                  {pickerPersonnelList && personnelSearch && pickerPersonnelList.filter((p: any) => {
-                    const q = personnelSearch.toLowerCase()
-                    return [p.name, p.rank, p.item_no, p.unit_assignment, p.designation]
-                      .filter(Boolean)
-                      .join(' ')
-                      .toLowerCase()
-                      .includes(q)
-                  }).length === 0 && (
-                    <p className="text-sm text-slate-500 text-center py-8">
-                      No personnel matching "{personnelSearch}".
+                    <p className="text-xs text-slate-400">
+                      {selectedPersonnel?.unit_assignment || '—'}
+                      {selectedPersonnel?.designation ? ` · ${selectedPersonnel.designation}` : ''}
                     </p>
-                  )}
+                    {selectedPersonnel?.accnt_no && (
+                      <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1">
+                        Already has login: <span className="font-mono">{selectedPersonnel.accnt_no}</span>
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-1.5">Office</label>
+                    <Select
+                      isSearchable
+                      isClearable
+                      options={offices?.map((o: any) => ({ value: String(o.id), label: o.name.replace(/^[\d\.]+\s*/, '') })) || []}
+                      value={personnelForm.office_id ? { value: personnelForm.office_id, label: offices?.find((o: any) => String(o.id) === personnelForm.office_id)?.name.replace(/^[\d\.]+\s*/, '') } : null}
+                      onChange={(opt: any) => setPersonnelForm({ ...personnelForm, office_id: opt ? opt.value : '' })}
+                      placeholder="Search office..."
+                      styles={selectStyles}
+                      menuPortalTarget={document.body}
+                      menuPosition="fixed"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-1.5">Email</label>
+                    <input
+                      type="email"
+                      className="input"
+                      placeholder="personnel@bfp-r2.gov.ph"
+                      value={personnelForm.email}
+                      onChange={(e) => setPersonnelForm({ ...personnelForm, email: e.target.value })}
+                    />
+                    <p className="text-[11px] text-slate-400 mt-1">Optional; can also be used to log in.</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-[13px] font-medium text-slate-700 dark:text-slate-300 mb-1.5">Role</label>
+                    <select
+                      className="input"
+                      value={personnelForm.role}
+                      onChange={(e) => setPersonnelForm({ ...personnelForm, role: e.target.value })}
+                    >
+                      <option value="office_station">Office/Station</option>
+                      <option value="officer">Officer</option>
+                      <option value="non_officer">Non-Officer</option>
+                      <option value="fcos">FCOS</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="is-chief"
+                      className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                      checked={personnelForm.is_chief}
+                      onChange={(e) => setPersonnelForm({ ...personnelForm, is_chief: e.target.checked })}
+                    />
+                    <label htmlFor="is-chief" className="text-sm text-slate-700 dark:text-slate-300">
+                      Assign as office chief
+                    </label>
+                  </div>
+
+                  <div className="p-3 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800">
+                    <p className="text-xs text-amber-700 dark:text-amber-400">
+                      This will create a login account for this personnel record. Default password: <span className="font-mono">bfp12345</span>. They will be required to change it on first login.
+                    </p>
+                  </div>
                 </div>
               )}
-            </div>
-            <div className="px-6 py-3 border-t border-slate-200 dark:border-slate-700 text-xs text-slate-400">
-              Select a personnel record to provision their login account. Role is derived from rank; default password is <span className="font-mono">bfp12345</span>.
-            </div>
+
+              <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2 bg-slate-50 dark:bg-slate-800/60">
+                {personnelStep === 'list' ? (
+                  <button onClick={() => setShowPersonnel(false)} className="btn btn-ghost btn-sm">Close</button>
+                ) : (
+                  <>
+                    <button onClick={() => setPersonnelStep('list')} className="btn btn-ghost btn-sm">Back</button>
+                    <button
+                      onClick={() => {
+                        if (!personnelForm.office_id) {
+                          toast.error('Select an office')
+                          return
+                        }
+                        fromPersonnelMutation.mutate({
+                          user_id: selectedPersonnel.id,
+                          office_id: Number(personnelForm.office_id),
+                          email: personnelForm.email || null,
+                          role: personnelForm.role,
+                          is_chief: personnelForm.is_chief,
+                        })
+                      }}
+                      disabled={fromPersonnelMutation.isPending}
+                      className="btn btn-primary btn-sm"
+                    >
+                      {fromPersonnelMutation.isPending ? 'Provisioning...' : 'Provision Account'}
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </ModalPortal>
